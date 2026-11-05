@@ -224,3 +224,8 @@ New keys, usable on a **rule**, on a **zone** and (opacity, fontFamily, fontSize
 - `timerStyle` is a style key (theme, zone, rule, app, kind) holding `none` or any of `line`, `circle`, `frame` separated by commas; per key the first matching rule wins, then the zone, then the theme (default `none`). A popup counts its own elapsed time
   in 40 ms steps (`elapsed`, using timestamps so a busy machine does not stretch it) and exposes `remaining` (1 to 0). The footer line and frame are `TimerIndicators.qml`, the ring is `TimerRing.qml`; nothing is drawn for a persistent popup (timeout 0) or a pinned one.
 - The frame is drawn by tracing the rounded outline segment by segment (Qt Quick's canvas ignores `setLineDash`).
+
+## Addendum: the daemon files are embedded from the folder
+
+- `crates/notify-cli/build.rs` embeds every `*.qml` (and the schema) in `notifd/`; nothing lists them by hand any more. 0.9.0 shipped without `TimerRing.qml` because a hand-kept list was missed, which the update's own smoke test caught before touching the live daemon.
+  `payload.rs` tests assert that every file in the folder is embedded and that the embedded daemon starts on a private bus (skipped where Quickshell is not installed).

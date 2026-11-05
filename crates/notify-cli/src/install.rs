@@ -229,7 +229,7 @@ pub fn takeover(ctx: &Ctx, now: bool, dry: bool, no_portal: bool, no_autodnd: bo
 
     {
         let (pl, dir) = (pl.clone(), p.payload.clone());
-        steps.push(Step::new(format!("copy daemon ({}) to {}", payload::FILE_NAMES.join(", "), p.payload.display()), move || {
+        steps.push(Step::new(format!("copy daemon ({}) to {}", payload::file_names().collect::<Vec<_>>().join(", "), p.payload.display()), move || {
             fs::create_dir_all(&dir)?;
             pl.write_files(&dir)
         }));
@@ -361,7 +361,7 @@ pub fn update(ctx: &Ctx) -> Result<()> {
     }
     // keep the working version so a bad update can be undone
     fs::create_dir_all(&p.prev)?;
-    for n in payload::FILE_NAMES {
+    for n in payload::file_names() {
         if p.payload.join(n).exists() {
             fs::copy(p.payload.join(n), p.prev.join(n))?;
         }
@@ -395,7 +395,7 @@ pub fn update(ctx: &Ctx) -> Result<()> {
         bail!("notifd kept crashing and the automatic fallback has handed notifications back to Plasma. Fix the problem, then re-enable with: notify takeover --now");
     }
     out.text("  ! notifd did not come back healthy; rolling back to the previous version");
-    for n in payload::FILE_NAMES {
+    for n in payload::file_names() {
         if p.prev.join(n).exists() {
             fs::copy(p.prev.join(n), p.payload.join(n))?;
         }

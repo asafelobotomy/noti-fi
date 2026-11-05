@@ -8,19 +8,15 @@ use anyhow::{Context, Result};
 
 use crate::sys::atomic_write;
 
-pub const SHELL_QML: &str = include_str!("../../../notifd/shell.qml");
-pub const POPUP_QML: &str = include_str!("../../../notifd/Popup.qml");
-pub const MEDIA_QML: &str = include_str!("../../../notifd/Media.qml");
-pub const CHART_QML: &str = include_str!("../../../notifd/TransferChart.qml");
-pub const VALIDATE_QML: &str = include_str!("../../../notifd/Validate.qml");
-pub const TRANSFERS_QML: &str = include_str!("../../../notifd/Transfers.qml");
-pub const MEDIAFILE_QML: &str = include_str!("../../../notifd/MediaFile.qml");
-pub const TIMER_QML: &str = include_str!("../../../notifd/TimerIndicators.qml");
+include!(concat!(env!("OUT_DIR"), "/payload_files.rs"));
+
 pub const SCHEMA: &str = include_str!("../../../notifd/rules.schema.json");
 pub const DEFAULT_RULES: &str = include_str!("../../../notifd/rules.json");
 
-/// The files that make up the daemon (not the user's rules.json).
-pub const FILE_NAMES: [&str; 9] = ["shell.qml", "Popup.qml", "Media.qml", "TransferChart.qml", "Validate.qml", "Transfers.qml", "MediaFile.qml", "TimerIndicators.qml", "rules.schema.json"];
+/// The names of the files that make up the daemon (not the user's rules.json).
+pub fn file_names() -> impl Iterator<Item = &'static str> {
+    FILES.iter().map(|(n, _)| *n)
+}
 
 pub struct Payload {
     pub files: Vec<(String, String)>,
@@ -31,17 +27,7 @@ pub struct Payload {
 impl Payload {
     pub fn embedded() -> Payload {
         Payload {
-            files: vec![
-                ("shell.qml".into(), SHELL_QML.into()),
-                ("Popup.qml".into(), POPUP_QML.into()),
-                ("Media.qml".into(), MEDIA_QML.into()),
-                ("TransferChart.qml".into(), CHART_QML.into()),
-                ("Validate.qml".into(), VALIDATE_QML.into()),
-                ("Transfers.qml".into(), TRANSFERS_QML.into()),
-                ("MediaFile.qml".into(), MEDIAFILE_QML.into()),
-                ("TimerIndicators.qml".into(), TIMER_QML.into()),
-                ("rules.schema.json".into(), SCHEMA.into()),
-            ],
+            files: FILES.iter().map(|(n, t)| (n.to_string(), t.to_string())).collect(),
             rules: DEFAULT_RULES.into(),
             origin: "embedded in this binary".into(),
         }
@@ -49,7 +35,7 @@ impl Payload {
 
     pub fn from_dir(dir: &Path) -> Result<Payload> {
         let mut files = Vec::new();
-        for n in FILE_NAMES {
+        for n in file_names() {
             let t = fs::read_to_string(dir.join(n)).with_context(|| format!("reading {}", dir.join(n).display()))?;
             files.push((n.to_string(), t));
         }
@@ -69,5 +55,39 @@ impl Payload {
             atomic_write(&dir.join(n), t)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn on_disk() -> Vec<String> {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../notifd");
+        let mut v: Vec<String> = fs::read_dir(dir).unwrap().flatten().map(|e| e.file_name().to_string_lossy().into_owned()).filter(|n| n.ends_with(".qml") || n == "rules.schema.json").collect();
+        v.sort();
+        v
+    }
+
+    #[test]
+    fn every_daemon_file_in_the_folder_is_embedded() {
+        let mut embedded: Vec<String> = file_names().map(String::from).collect();
+        embedded.sort();
+        assert_eq!(embedded, on_disk(), "a file in notifd/ is missing from the binary (it would be missing from `notify update` and the release archive)");
+        assert!(Payload::embedded().files.iter().all(|(_, t)| !t.is_empty()));
+    }
+
+    #[test]
+    fn the_embedded_daemon_starts_on_a_private_bus() {
+        // what `notify update` checks before it touches the live daemon; skipped where Quickshell is not installed (for example CI)
+        if which_qs().is_none() {
+            return;
+        }
+        let pl = Payload::embedded();
+        assert!(crate::install::preflight(&pl, &pl.rules), "the daemon built from the embedded files did not start: a file is missing or broken");
+    }
+
+    fn which_qs() -> Option<String> {
+        crate::sys::which("qs")
     }
 }

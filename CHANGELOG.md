@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.1
+
+- **Fix: `notify update` / `notify upgrade --apply` from 0.9.0 failed its smoke test and left the daemon on the old version** (nothing was broken: the check exists to stop exactly this). The binary's hand-kept list of daemon files was missing `TimerRing.qml`. The list is now generated from the `notifd/` folder at build time, and tests check that every file there is embedded and that the embedded daemon starts on a private bus.
+
 ## 0.9.0
 
 - **Time left on each popup.** Three optional indicators, alone or together: a footer line that shortens, a circle that empties (in the popup's header), and a frame around the card that shrinks from the top middle clockwise. Set `timerStyle` (`none`, or any of `line`, `circle`, `frame` separated by commas) on the theme, a zone, an app, a kind of notification or a rule; the Appearance page and the look sections of the Rules, Zones and Apps pages have a picker. New installs default to the footer line; existing configs stay as they are (off) until you choose.
