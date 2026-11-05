@@ -19,7 +19,33 @@ Kirigami.Page {
     property string filter: "all"          // all | sending | silent
     property string query: ""
 
-    ListModel { id: rows }
+    // grid | list | compact; --apps-view=NAME picks one at start (screenshots and tests)
+    property string view: { const a = Qt.application.arguments.filter(x => x.indexOf("--apps-view=") === 0); return a.length ? a[0].substring(12) : "list" }
+    property string selectedApp: ""         // the app whose settings the grid view shows in a window
+    property var groups: []                 // [{name, open, count, sending, apps}] in display order (the grid reads this)
+    property var collapsed: ({})            // category name -> true/false once the user opened or closed it
+    readonly property var groupOrder: ["Messaging and email", "Internet", "Office", "Development", "Media", "Graphics", "Games", "Education and science", "System", "Utilities", "Other"]
+    ListModel { id: rows }                  // the apps only (what the tests read)
+    ListModel { id: listRows }              // the list views: a heading row for each category, then its apps
+
+    function toggleGroup(name) {
+        const o = Object.assign({}, page.collapsed)
+        const g = page.groups.find(x => x.name === name)
+        o[name] = g ? !g.open : false
+        page.collapsed = o
+        page.sync()
+    }
+    function asApp(m) {
+        return {
+            appId: m.appId, name: m.name, iconName: m.iconName, sent: m.sent, count: m.count, last: m.last, reasons: m.reasons,
+            flatpak: m.flatpak, perm: m.perm, matchField: m.matchField, matchValue: m.matchValue, muted: m.muted, zone: m.zone,
+            timeout: m.timeout, kindCount: m.kindCount, appStyle: JSON.parse(m.appStyleJson), kinds: JSON.parse(m.kindsJson)
+        }
+    }
+    function appById(id) {
+        for (let i = 0; i < rows.count; i++) if (rows.get(i).appId === id) return page.asApp(rows.get(i))
+        return null
+    }
     readonly property var zoneNames: { try { return JSON.parse(page.model ? page.model.draftZonesJson : "[]") } catch (e) { return [] } }
     readonly property var zoneChoices: ["(by rules)"].concat(page.zoneNames)
 
@@ -37,7 +63,7 @@ Kirigami.Page {
     }
     function flat(a) {
         return {
-            appId: a.id, name: a.name, iconName: a.icon, sent: a.sent, count: a.count, last: a.last, capable: a.capable,
+            appId: a.id, group: a.group || "Other", name: a.name, iconName: a.icon, sent: a.sent, count: a.count, last: a.last, capable: a.capable,
             reasons: page.reasonText(a.reasons), flatpak: a.flatpak,
             perm: a.flatpak_permission === true ? 1 : a.flatpak_permission === false ? 2 : 0,
             matchField: a.match_field, matchValue: a.match_value,
@@ -73,8 +99,35 @@ Kirigami.Page {
         for (let i = 0; same && i < visible.length; i++) if (rows.get(i).appId !== visible[i].appId) same = false
         if (same) { for (let i = 0; i < visible.length; i++) rows.set(i, visible[i]) }
         else { rows.clear(); for (const v of visible) rows.append(v) }
+        page.buildGroups(visible)
     }
-    onFilterChanged: sync()
+    // categories in a fixed order; a category opens by itself when it holds an app that has sent something, or while searching
+    function buildGroups(visible) {
+        const by = {}
+        for (const v of visible) (by[v.group || "Other"] = by[v.group || "Other"] || []).push(v)
+        const names = page.groupOrder.filter(n => by[n]).concat(Object.keys(by).filter(n => page.groupOrder.indexOf(n) < 0))
+        const gs = names.map(n => {
+            const apps = by[n]
+            const sending = apps.filter(a => a.sent).length
+            const auto = sending > 0 || page.query.trim() !== "" || page.filter === "silent"
+            return { name: n, count: apps.length, sending: sending, open: page.collapsed[n] !== undefined ? page.collapsed[n] : auto, apps: apps }
+        })
+        page.groups = gs
+        const items = []
+        for (const g of gs) {
+            items.push(Object.assign({}, page.blank, { kind: "header", group: g.name, open: g.open, count: g.count, sending: g.sending, appId: "#" + g.name }))
+            if (g.open) for (const a of g.apps) items.push(Object.assign({}, a, { kind: "app", open: false, sending: 0 }))
+        }
+        let same = items.length === listRows.count
+        for (let i = 0; same && i < items.length; i++) if (listRows.get(i).appId !== items[i].appId) same = false
+        if (same) { for (let i = 0; i < items.length; i++) listRows.set(i, items[i]) }
+        else { listRows.clear(); for (const it of items) listRows.append(it) }
+    }
+    // every field a row has, empty: header rows use it so all rows share the same roles
+    readonly property var blank: ({ appId: "", group: "", name: "", iconName: "", sent: false, count: 0, last: 0, capable: false, reasons: "", flatpak: false, perm: 0,
+        matchField: "", matchValue: "", muted: false, zone: "", timeout: "", hasRule: false, appStyleJson: "{}", kindsJson: "[]", kindCount: 0,
+        kind: "app", open: false, sending: 0 })
+    onFilterChanged: { collapsed = ({}); sync() }
     onQueryChanged: sync()
     Connections { target: page.model; function onAppsJsonChanged() { page.sync() } }
     Connections { target: page.model; function onConnectedChanged() { if (page.online) page.model.appsRescan() } }
@@ -128,18 +181,38 @@ Kirigami.Page {
                 Accessible.name: "Find an app"
             }
             QQC2.ComboBox {
-                model: ["All apps", "Sending (" + page.totalSending + ")", "Could send, never has (" + page.totalSilent + ")"]
+                model: ["All apps", "Sending (" + page.totalSending + ")", "Never sent (" + page.totalSilent + ")"]
                 onActivated: index => page.filter = ["all", "sending", "silent"][index]
                 Accessible.name: "Which apps to show"
             }
-        }
-        QQC2.Label {
-            Layout.fillWidth: true
-            Layout.leftMargin: Kirigami.Units.largeSpacing
-            Layout.rightMargin: Kirigami.Units.largeSpacing
-            wrapMode: Text.Wrap
-            opacity: 0.7
-            text: "Choose where each app's popups appear, or mute it. Use the arrow for more. Changes are saved as rules (named “App: …” on the Rules tab)."
+            // how the apps are laid out
+            RowLayout {
+                spacing: 0
+                Repeater {
+                    model: [{ id: "grid", icon: "view-list-icons", tip: "Grid" }, { id: "list", icon: "view-list-details", tip: "List" }, { id: "compact", icon: "view-list-text", tip: "List (compact)" }]
+                    delegate: QQC2.ToolButton {
+                        required property var modelData
+                        icon.name: modelData.icon
+                        display: QQC2.AbstractButton.IconOnly
+                        checkable: true; autoExclusive: true
+                        checked: page.view === modelData.id
+                        onClicked: page.view = modelData.id
+                        QQC2.ToolTip.visible: hovered
+                        QQC2.ToolTip.text: modelData.tip
+                        Accessible.name: "View as " + modelData.tip
+                    }
+                }
+            }
+            QQC2.ToolButton {
+                icon.name: "help-about"
+                display: QQC2.AbstractButton.IconOnly
+                checkable: true
+                checked: page.showWays
+                onClicked: page.showWays = !page.showWays
+                QQC2.ToolTip.visible: hovered
+                QQC2.ToolTip.text: "How this page works, and what a notification can do"
+                Accessible.name: "Help"
+            }
         }
 
         Kirigami.AbstractCard {
@@ -148,6 +221,12 @@ Kirigami.Page {
             visible: page.showWays
             contentItem: ColumnLayout {
                 spacing: Kirigami.Units.smallSpacing
+                QQC2.Label { font.bold: true; text: "How this page works" }
+                QQC2.Label {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    text: "Pick where an app's popups go, or mute it. Open an app for its timeout, look and notification types. Changes are saved as rules named “App: …” (see the Rules section). Apps are grouped by their system category."
+                }
                 QQC2.Label { font.bold: true; text: "Ways a notification can arrive" }
                 QQC2.Label {
                     Layout.fillWidth: true
@@ -162,229 +241,88 @@ Kirigami.Page {
                 }
             }
         }
-        QQC2.ToolButton {
-            Layout.leftMargin: Kirigami.Units.largeSpacing
-            text: page.showWays ? "Hide" : "What can a notification do?"
-            icon.name: "help-about"
-            onClicked: page.showWays = !page.showWays
-        }
-
-        ListView {
-            id: list
+        // ---- the apps: grouped by system category, shown as a list, a compact list or a grid
+        Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            clip: true
-            model: rows
-            spacing: Kirigami.Units.smallSpacing
-            delegate: Kirigami.AbstractCard {
-                id: card
-                required property int index
-                required property string appId
-                required property string name
-                required property string iconName
-                required property bool sent
-                required property int count
-                required property double last
-                required property bool capable
-                required property string reasons
-                required property bool flatpak
-                required property int perm
-                required property string matchField
-                required property string matchValue
-                required property bool muted
-                required property string zone
-                required property string timeout
-                required property bool hasRule
-                required property string appStyleJson
-                required property string kindsJson
-                required property int kindCount
-                readonly property var appStyle: JSON.parse(appStyleJson)
-                readonly property var kinds: JSON.parse(kindsJson)
-                property bool detailsOpen: page.openAll
-                property bool lookOpen: page.openAll
-                property bool kindsOpen: page.openAll
-                width: ListView.view.width - Kirigami.Units.largeSpacing * 2
-                x: Kirigami.Units.largeSpacing
-                contentItem: ColumnLayout {
-                    spacing: Kirigami.Units.smallSpacing
-                    RowLayout {
-                        spacing: Kirigami.Units.smallSpacing
-                        Kirigami.Icon {
-                            source: card.iconName !== "" ? card.iconName : "application-x-executable"
-                            fallback: "application-x-executable"
-                            Layout.preferredWidth: Kirigami.Units.iconSizes.medium
-                            Layout.preferredHeight: Kirigami.Units.iconSizes.medium
-                        }
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 0
-                            QQC2.Label { Layout.fillWidth: true; font.bold: true; elide: Text.ElideRight; text: card.name; textFormat: Text.PlainText }
-                            QQC2.Label {
-                                Layout.fillWidth: true
-                                wrapMode: Text.Wrap
-                                opacity: 0.7
-                                textFormat: Text.PlainText
-                                text: card.sent
-                                    ? card.count + (card.count === 1 ? " notification" : " notifications") + " · " + page.ago(card.last)
-                                    : "Never sent" + (card.reasons !== "" ? " · " + card.reasons : "")
-                            }
-                        }
-                        QQC2.ComboBox {
-                            Layout.preferredWidth: Kirigami.Units.gridUnit * 8
-                            model: page.zoneChoices
-                            displayText: card.zone === "" ? "Zone: by rules" : "Zone: " + card.zone
-                            currentIndex: card.zone === "" ? 0 : Math.max(0, page.zoneChoices.indexOf(card.zone))
-                            onActivated: index => page.model.appSet(card.matchField, card.matchValue, card.name, "zone", index === 0 ? "" : page.zoneChoices[index])
-                            Accessible.name: "Zone for " + card.name
-                        }
-                        QQC2.Switch {
-                            text: "Mute"
-                            checked: card.muted
-                            onToggled: {
-                                page.model.appSet(card.matchField, card.matchValue, card.name, "muted", checked ? "true" : "false")
-                                checked = Qt.binding(() => card.muted)
-                            }
-                            Accessible.name: "Mute " + card.name
-                        }
-                        QQC2.ToolButton {
-                            icon.name: card.detailsOpen ? "go-up" : "go-down"
-                            display: QQC2.AbstractButton.IconOnly
-                            onClicked: card.detailsOpen = !card.detailsOpen
-                            QQC2.ToolTip.visible: hovered
-                            QQC2.ToolTip.text: card.detailsOpen ? "Hide details" : "Timeout, look and notification types (" + card.kindCount + ")"
-                            Accessible.name: "Details for " + card.name
-                        }
+
+            ListView {
+                id: list
+                anchors.fill: parent
+                visible: page.view !== "grid"
+                clip: true
+                model: listRows
+                spacing: page.view === "compact" ? 2 : Kirigami.Units.smallSpacing
+                delegate: Loader {
+                    id: ld
+                    required property var model
+                    width: ListView.view.width
+                    sourceComponent: model.kind === "header" ? headerComp : rowComp
+                    Component {
+                        id: headerComp
+                        GroupHeader { group: ({ name: ld.model.group, open: ld.model.open, count: ld.model.count, sending: ld.model.sending }) }
                     }
-                    ColumnLayout {
-                        visible: card.detailsOpen
-                        Layout.fillWidth: true
-                        spacing: Kirigami.Units.largeSpacing
 
-                    GridLayout {
-                            columns: 4
-                            columnSpacing: Kirigami.Units.largeSpacing
-                            rowSpacing: Kirigami.Units.smallSpacing
-                            QQC2.Label { text: "Hide after (ms):" }
-                            QQC2.TextField {
-                                id: timeoutField
-                                Layout.preferredWidth: Kirigami.Units.gridUnit * 6
-                                placeholderText: "default"
-                                inputMethodHints: Qt.ImhDigitsOnly
-                                validator: IntValidator { bottom: 0 }
-                                Binding on text { when: !timeoutField.activeFocus; value: card.timeout }
-                                onTextEdited: page.model.appSet(card.matchField, card.matchValue, card.name, "timeout", text)
-                                Accessible.name: "Timeout for " + card.name
-                            }
-                            QQC2.Label { visible: card.flatpak; text: "Flatpak permission:" }
-                            QQC2.ComboBox {
-                                visible: card.flatpak
-                                Layout.preferredWidth: Kirigami.Units.gridUnit * 9
-                                model: ["Not set", "Allowed", "Blocked"]
-                                currentIndex: card.perm
-                                onActivated: index => page.model.appFlatpak(card.appId, ["reset", "allow", "deny"][index])
-                                Accessible.name: "Flatpak notification permission for " + card.name
-                            }
-                        }
-
-                        QQC2.Button {
-                            Layout.alignment: Qt.AlignLeft
-                            flat: true
-                            icon.name: card.lookOpen ? "go-up" : "go-down"
-                            text: card.lookOpen ? "Hide look and behavior" : "Change how its popups look and behave…"
-                            onClicked: card.lookOpen = !card.lookOpen
-                            Accessible.name: "Look and behavior of " + card.name
-                        }
-                        StyleFields {
-                            visible: card.lookOpen
-                            Layout.fillWidth: true
-                            showGroup: true
-                            inheritFrom: "its zone and the theme"
-                            values: card.appStyle
-                            onEdited: (key, text) => page.model.appSet(card.matchField, card.matchValue, card.name, key, text)
-                        }
-
-                        QQC2.Button {
-                            Layout.alignment: Qt.AlignLeft
-                            flat: true
-                            icon.name: card.kindsOpen ? "go-up" : "go-down"
-                            text: card.kindsOpen ? "Hide notification types" : "Treat its notification types separately (" + card.kindCount + ")…"
-                            onClicked: card.kindsOpen = !card.kindsOpen
-                            Accessible.name: "Notification types of " + card.name
-                        }
-                        QQC2.Label {
-                            visible: card.kindsOpen
-                            Layout.fillWidth: true
-                            wrapMode: Text.Wrap
-                            opacity: 0.7
-                            text: card.kindCount > 0
-                                ? "Each type can go to its own zone, be muted, be grouped, or look different from the app's other notifications."
-                                : "None yet. A kind (for example email.arrived or a web page's notification) is listed as soon as the app sends one."
-                        }
-                        Repeater {
-                            model: card.kindsOpen ? card.kindCount : 0
-                            delegate: Kirigami.AbstractCard {
-                                id: kindCard
-                                required property int index
-                                readonly property var kind: card.kinds[index] !== undefined ? card.kinds[index] : ({ routing: { muted: false, zone: "", style: {} }, caps: [], category: "", channel: "app", count: 0, matches: [], key: "" })
-                                property bool lookOpen: page.openAll
-                                Layout.fillWidth: true
-                                contentItem: ColumnLayout {
-                                    spacing: Kirigami.Units.smallSpacing
-                                    RowLayout {
-                                        QQC2.Label {
-                                            Layout.fillWidth: true
-                                            font.bold: true
-                                            textFormat: Text.PlainText
-                                            elide: Text.ElideRight
-                                            text: (kindCard.kind.category !== "" ? kindCard.kind.category : "General notifications") + "  ·  " + page.channelName(kindCard.kind.channel)
-                                        }
-                                        QQC2.Switch {
-                                            text: "Mute"
-                                            checked: kindCard.kind.routing.muted
-                                            onToggled: {
-                                                page.model.appSetKind(JSON.stringify(kindCard.kind.matches), card.name + ": " + (kindCard.kind.category || "general") + " " + kindCard.kind.channel, "muted", checked ? "true" : "false")
-                                                checked = Qt.binding(() => kindCard.kind.routing.muted)
-                                            }
-                                            Accessible.name: "Mute this kind"
-                                        }
-                                    }
-                                    QQC2.Label {
-                                        Layout.fillWidth: true
-                                        wrapMode: Text.Wrap
-                                        opacity: 0.7
-                                        textFormat: Text.PlainText
-                                        text: "Sent " + kindCard.kind.count + "×. Can do: " + (kindCard.kind.caps.length ? kindCard.kind.caps.join(", ") : "plain text only")
-                                    }
-                                    RowLayout {
-                                        QQC2.Label { text: "Show in:" }
-                                        QQC2.ComboBox {
-                                            Layout.preferredWidth: Kirigami.Units.gridUnit * 9
-                                            model: page.zoneChoices
-                                            currentIndex: kindCard.kind.routing.zone === "" ? 0 : Math.max(0, page.zoneChoices.indexOf(kindCard.kind.routing.zone))
-                                            onActivated: i => page.model.appSetKind(JSON.stringify(kindCard.kind.matches), card.name + ": " + (kindCard.kind.category || "general") + " " + kindCard.kind.channel, "zone", i === 0 ? "" : page.zoneChoices[i])
-                                            Accessible.name: "Zone for this kind"
-                                        }
-                                        Item { Layout.fillWidth: true }
-                                        QQC2.Button {
-                                            icon.name: kindCard.lookOpen ? "go-up" : "go-down"
-                                            text: kindCard.lookOpen ? "Hide look" : "Look, group…"
-                                            onClicked: kindCard.lookOpen = !kindCard.lookOpen
-                                        }
-                                    }
-                                    StyleFields {
-                                        visible: kindCard.lookOpen
-                                        Layout.fillWidth: true
-                                        showGroup: true
-                                        inheritFrom: "the app's settings"
-                                        values: kindCard.kind.routing.style
-                                        onEdited: (key, text) => page.model.appSetKind(JSON.stringify(kindCard.kind.matches), card.name + ": " + (kindCard.kind.category || "general") + " " + kindCard.kind.channel, key, text)
-                                    }
+                    Component {
+                        id: rowComp
+                        Kirigami.AbstractCard {
+                            id: card
+                            readonly property var m: ld.model
+                            property bool detailsOpen: page.openAll
+                            readonly property var asApp: page.asApp(m)
+                        topPadding: page.view === "compact" ? 2 : Kirigami.Units.largeSpacing
+                        bottomPadding: topPadding
+                            x: Kirigami.Units.smallSpacing
+                            width: ld.width - Kirigami.Units.smallSpacing * 2
+                            contentItem: ColumnLayout {
+                                spacing: Kirigami.Units.smallSpacing
+                                AppHeader {
+                                    Layout.fillWidth: true
+                                    host: page
+                                    app: card.asApp
+                                    compact: page.view === "compact"
+                                    detailsOpen: card.detailsOpen
+                                    onToggleDetails: card.detailsOpen = !card.detailsOpen
+                                }
+                                AppDetails {
+                                    visible: card.detailsOpen
+                                    Layout.fillWidth: true
+                                    host: page
+                                    app: card.asApp
                                 }
                             }
                         }
                     }
                 }
             }
+
+            ListView {
+                id: gridList
+                anchors.fill: parent
+                visible: page.view === "grid"
+                clip: true
+                model: page.view === "grid" ? page.groups : []
+                spacing: Kirigami.Units.smallSpacing
+                delegate: ColumnLayout {
+                    id: grp
+                    required property var modelData
+                    width: ListView.view.width
+                    spacing: Kirigami.Units.smallSpacing
+                    GroupHeader { group: grp.modelData }
+                    Flow {
+                        visible: grp.modelData.open
+                        Layout.fillWidth: true
+                        Layout.leftMargin: Kirigami.Units.smallSpacing
+                        Layout.rightMargin: Kirigami.Units.smallSpacing
+                        spacing: Kirigami.Units.smallSpacing
+                        Repeater {
+                            model: grp.modelData.open ? grp.modelData.apps : []
+                            delegate: AppTile { host: page; app: modelData; onOpened: page.selectedApp = modelData.appId }
+                        }
+                    }
+                }
+            }
+
             Kirigami.PlaceholderMessage {
                 anchors.centerIn: parent
                 width: parent.width - Kirigami.Units.gridUnit * 4
@@ -392,6 +330,47 @@ Kirigami.Page {
                 icon.name: page.online ? "edit-find" : "network-disconnect"
                 text: !page.online ? "notifd is not running" : page.model && page.model.appsScanning ? "Looking for apps…" : "No apps found"
                 explanation: page.online ? "Apps appear here once they send a notification, or when they are installed and able to." : ""
+            }
+        }
+    }
+
+    // a category heading that opens and closes its apps
+    component GroupHeader: QQC2.ItemDelegate {
+        id: gh
+        property var group
+        width: parent ? parent.width : implicitWidth
+        onClicked: page.toggleGroup(gh.group.name)
+        contentItem: RowLayout {
+            Kirigami.Icon { source: gh.group.open ? "arrow-down" : "arrow-right"; Layout.preferredWidth: Kirigami.Units.iconSizes.small; Layout.preferredHeight: Layout.preferredWidth }
+            QQC2.Label { font.bold: true; text: gh.group.name }
+            QQC2.Label { opacity: 0.7; text: gh.group.count + (gh.group.count === 1 ? " app" : " apps") + (gh.group.sending > 0 ? " · " + gh.group.sending + " sending" : "") }
+            Item { Layout.fillWidth: true }
+        }
+        Accessible.name: (gh.group.open ? "Collapse " : "Expand ") + gh.group.name
+    }
+
+    // grid mode: the details of the chosen app in a window of their own
+    QQC2.Dialog {
+        id: details
+        parent: QQC2.Overlay.overlay
+        anchors.centerIn: parent
+        modal: true
+        width: Math.min(parent.width - Kirigami.Units.gridUnit * 2, Kirigami.Units.gridUnit * 34)
+        height: Math.min(parent.height - Kirigami.Units.gridUnit * 2, Kirigami.Units.gridUnit * 38)
+        visible: page.selectedApp !== "" && page.view === "grid"
+        onClosed: page.selectedApp = ""
+        standardButtons: QQC2.Dialog.Close
+        readonly property var app: page.appById(page.selectedApp)
+        contentItem: Loader {
+            active: details.visible && details.app !== null
+            sourceComponent: QQC2.ScrollView {
+                contentWidth: availableWidth
+                ColumnLayout {
+                    width: parent.width
+                    spacing: Kirigami.Units.largeSpacing
+                    AppHeader { Layout.fillWidth: true; host: page; app: details.app; showArrow: false }
+                    AppDetails { Layout.fillWidth: true; host: page; app: details.app }
+                }
             }
         }
     }

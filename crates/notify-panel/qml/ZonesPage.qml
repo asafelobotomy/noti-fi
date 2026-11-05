@@ -34,15 +34,11 @@ Kirigami.Page {
     }
     function snapSelected() {
         const z = page.selectedZone
-        if (z === null || z.anchor !== "free") return
-        const fx = Number(z.x), fy = Number(z.y)
-        page.model.zoneSet(z.id, "anchor", page.cellAt(fx, fy))
+        if (z !== null && z.anchor === "free") page.model.zoneSet(z.id, "anchor", page.cellAt(Number(z.x), Number(z.y)))
     }
     function freeSelected() {
-        const z = page.selectedZone
-        if (z === null || z.anchor === "free") return
-        const i = Math.max(0, page.cornerIds.indexOf(z.anchor))
-        page.model.zonePlace(z.id, (i % 3) / 2, [0.03, 0.45, 0.97][Math.floor(i / 3)])
+        const z = page.selectedZone, i = z ? Math.max(0, page.cornerIds.indexOf(z.anchor)) : 0
+        if (z !== null && z.anchor !== "free") page.model.zonePlace(z.id, (i % 3) / 2, [0.03, 0.45, 0.97][Math.floor(i / 3)])
     }
     function zonesAt(anchor) { return page.zones.filter(z => z.anchor === anchor) }
     function screenNames() {
@@ -85,10 +81,6 @@ Kirigami.Page {
             text: "Preview on screen"; icon.name: "preview"
             enabled: page.online && page.model.draftValid
             onTriggered: page.model.rulesPreview()
-        },
-        Kirigami.Action {
-            text: "Add zone"; icon.name: "list-add"
-            onTriggered: page.selectedId = page.model.zoneAdd()
         }
     ]
 
@@ -101,9 +93,16 @@ Kirigami.Page {
             Layout.fillWidth: true
             Layout.fillHeight: true
             contentWidth: availableWidth
-            ColumnLayout {
+            GridLayout {
                 width: parent.width
-                spacing: Kirigami.Units.largeSpacing
+                columns: page.width > Kirigami.Units.gridUnit * 46 ? 2 : 1
+                columnSpacing: Kirigami.Units.largeSpacing
+                rowSpacing: Kirigami.Units.largeSpacing
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignTop
+                    Layout.preferredWidth: 1
+                    spacing: Kirigami.Units.largeSpacing
 
                 // ---- pick the zone to edit (the map and the card below follow it)
                 Flow {
@@ -271,6 +270,12 @@ Kirigami.Page {
                     }
                 }
 
+                }
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignTop
+                    Layout.preferredWidth: 1
+                    spacing: Kirigami.Units.largeSpacing
                 // ---- the selected zone
                 Repeater {
                     model: page.selectedZone ? [page.selectedZone] : []
@@ -293,13 +298,6 @@ Kirigami.Page {
                                     onTextEdited: page.model.zoneSet(card.modelData.id, "label", text)
                                     onActiveFocusChanged: if (activeFocus) page.selectedId = card.modelData.id
                                     Accessible.name: "Zone name " + card.modelData.id
-                                }
-                                QQC2.ComboBox {
-                                    Kirigami.FormData.label: "Place:"
-                                    model: page.cornerIds.map(a => page.anchorNames[a])
-                                    currentIndex: page.cornerIds.indexOf(card.modelData.anchor)
-                                    onActivated: index => page.model.zoneSet(card.modelData.id, "anchor", page.cornerIds[index])
-                                    Accessible.name: "Place of " + card.modelData.id
                                 }
                                 QQC2.Label {
                                     visible: card.modelData.anchor === "free"
@@ -393,6 +391,7 @@ Kirigami.Page {
                             QQC2.Label { visible: numRow.modelData.note !== ""; opacity: 0.7; text: numRow.modelData.note }
                         }
                     }
+                }
                 }
             }
         }

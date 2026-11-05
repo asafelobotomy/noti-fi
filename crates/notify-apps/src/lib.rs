@@ -13,6 +13,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+mod group;
+
 use notify_protocol::{SeenApp, SeenType};
 use serde::Serialize;
 
@@ -68,6 +70,8 @@ pub enum Reason {
 pub struct AppEntry {
     /// Stable id: the desktop entry (without `.desktop`), lower-cased; or the app name when nothing better is known.
     pub id: String,
+    /// The system category it is listed under (from its launcher; "System" for KDE/Plasma notifiers; otherwise "Other").
+    pub group: String,
     pub name: String,
     pub desktop_entry: String,
     pub icon: String,
@@ -96,6 +100,7 @@ struct Launcher {
     icon: String,
     declared: bool,
     category: bool,
+    categories: String,
     flatpak: bool,
 }
 
@@ -110,6 +115,7 @@ fn parse_desktop(path: &Path, flatpak_export: bool) -> Option<Launcher> {
     let mut inside = false;
     let (mut name, mut icon, mut kind) = (String::new(), String::new(), String::new());
     let (mut hidden, mut declared, mut category) = (false, false, false);
+    let mut categories = String::new();
     for l in text.lines() {
         let l = l.trim();
         if l.starts_with('[') {
@@ -127,6 +133,7 @@ fn parse_desktop(path: &Path, flatpak_export: bool) -> Option<Launcher> {
             "NoDisplay" | "Hidden" => hidden |= v.trim() == "true",
             "X-GNOME-UsesNotifications" => declared = v.trim() == "true",
             "Categories" => {
+                categories = v.trim().to_string();
                 category = v.split(';').any(|c| ["InstantMessaging", "Chat", "Email", "IRCClient", "News", "Feed", "VideoConference"].contains(&c.trim()));
             }
             _ => {}
@@ -136,7 +143,7 @@ fn parse_desktop(path: &Path, flatpak_export: bool) -> Option<Launcher> {
         return None;
     }
     let id = norm(path.file_name()?.to_str()?.strip_suffix(".desktop")?);
-    Some(Launcher { id, name, icon, declared, category, flatpak: flatpak_export })
+    Some(Launcher { id, name, icon, declared, category, categories, flatpak: flatpak_export })
 }
 
 /// The `[Global]` name, icon and desktop entry of a KDE `.notifyrc`.
@@ -242,6 +249,7 @@ pub fn merge(seen: &[SeenApp], disc: &Discovery) -> Vec<AppEntry> {
     let mut apps: BTreeMap<String, AppEntry> = BTreeMap::new();
     let blank = |id: &str, name: &str| AppEntry {
         id: id.to_string(),
+        group: String::new(),
         name: if name.is_empty() { id.to_string() } else { name.to_string() },
         desktop_entry: String::new(),
         icon: String::new(),
@@ -269,6 +277,7 @@ pub fn merge(seen: &[SeenApp], disc: &Discovery) -> Vec<AppEntry> {
         e.desktop_entry = l.id.clone();
         e.icon = l.icon.clone();
         e.flatpak = flatpak;
+        e.group = group::group_of(&l.categories).to_string();
         if l.declared {
             add_reason(&mut e, Reason::Declared);
         }
@@ -358,6 +367,11 @@ pub fn merge(seen: &[SeenApp], disc: &Discovery) -> Vec<AppEntry> {
     }
 
     let mut out: Vec<AppEntry> = apps.into_values().filter(|e| e.sent || e.capable).collect();
+    for e in &mut out {
+        if e.group.is_empty() {
+            e.group = if e.reasons.iter().any(|r| matches!(r, Reason::Kde | Reason::Plasma)) { "System" } else { "Other" }.to_string();
+        }
+    }
     out.sort_by(|a, b| b.sent.cmp(&a.sent).then(b.last.cmp(&a.last)).then(a.name.to_lowercase().cmp(&b.name.to_lowercase())));
     out
 }

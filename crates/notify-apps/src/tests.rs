@@ -90,3 +90,14 @@ fn flatpak_ids_are_validated() {
     assert!(set_flatpak_permission("--help", None).is_err(), "an id must not look like an option");
     assert!(set_flatpak_permission("../x; rm", None).is_err());
 }
+
+#[test]
+fn apps_are_grouped_by_their_launcher_category() {
+    use crate::group::group_of;
+    assert_eq!(group_of("Network;InstantMessaging;Qt;"), "Messaging and email");
+    assert_eq!(group_of("Network;WebBrowser;"), "Internet");
+    assert_eq!(group_of("Development;IDE;"), "Development");
+    assert_eq!(group_of("System;Monitor;"), "System");
+    assert_eq!(group_of("Utility;"), "Utilities");
+    assert_eq!(group_of(""), "Other");
+}

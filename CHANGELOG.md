@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Routing side panel:** Apps, Zones and Rules are chosen from a side panel on the left (icons only in a narrow window) instead of tabs along the top.
+- **Apps:** view as Grid, List or List (compact), and every app is filed under its system category (Messaging and email, Internet, Office, Development, Media, Graphics, Games, Education, System, Utilities, Other). Categories that hold an app that has sent something open by themselves; click a heading to open or close it. In the grid, click a tile for its settings.
+- **Zones and Rules use a wide window:** Zones puts the map and the zone's settings side by side; Rules puts the list and the editor side by side (they used to stack even in a wide window). Rule fields have their label above them so nothing is cut off.
+- **Less duplication:** one "Add rule" menu (blank or a template) with the move, duplicate and delete buttons beside it; one Add zone button next to the zone buttons; the Place drop-down on a zone is gone (the map and the Snap/Freeform switch do that).
+
 - **Routing tabs tidied:** Zones shows one zone at a time (pick it from the row of zone buttons, on the map, or add a new one), with the screen, default zone and size/spacing settings under "All zones". Apps keeps one line per app; the look and the per-type settings open separately under the arrow. Rules hides the look section and the sample-notification tester until asked for.
 
 ## 0.11.0

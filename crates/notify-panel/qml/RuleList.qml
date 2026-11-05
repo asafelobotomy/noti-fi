@@ -16,23 +16,19 @@ ColumnLayout {
     Layout.preferredHeight: root.columns === 1 ? Kirigami.Units.gridUnit * 16 : -1
     spacing: 0
 
-    QQC2.Label {
-        Layout.margins: Kirigami.Units.smallSpacing
-        Layout.fillWidth: true
-        wrapMode: Text.Wrap
-        opacity: 0.7
-        text: "Checked top to bottom. For the zone, timeout and silent setting, the first matching rule that sets it wins."
-    }
+    // one row: add a rule (blank or from a template), and the buttons that act on the selected one
     RowLayout {
         Layout.margins: Kirigami.Units.smallSpacing
-        Layout.topMargin: 0
+        spacing: Kirigami.Units.smallSpacing
         QQC2.Button {
-            text: "New from template"
-            icon.name: "document-new-from-template"
-            onClicked: templateMenu.popup()
-            Accessible.name: "New rule from a template"
+            text: "Add rule"
+            icon.name: "list-add"
+            onClicked: addMenu.popup()
+            Accessible.name: "Add a rule"
             QQC2.Menu {
-                id: templateMenu
+                id: addMenu
+                QQC2.MenuItem { text: "Blank rule"; icon.name: "document-new"; onTriggered: page.selected = page.model.ruleAdd() }
+                QQC2.MenuSeparator {}
                 Repeater {
                     model: root.page.templates
                     delegate: QQC2.MenuItem {
@@ -44,6 +40,37 @@ ColumnLayout {
             }
         }
         Item { Layout.fillWidth: true }
+        Repeater {
+            model: [
+                { icon: "go-up", tip: "Move up (checked earlier)", act: "up" }, { icon: "go-down", tip: "Move down (checked later)", act: "down" },
+                { icon: "edit-copy", tip: "Duplicate", act: "dup" }, { icon: "edit-delete", tip: "Delete", act: "del" }
+            ]
+            delegate: QQC2.ToolButton {
+                required property var modelData
+                icon.name: modelData.icon
+                display: QQC2.AbstractButton.IconOnly
+                enabled: page.selected >= 0 && (modelData.act !== "up" || page.selected > 0) && (modelData.act !== "down" || page.selected < root.rules.count - 1)
+                onClicked: {
+                    if (modelData.act === "up") page.selected = page.model.ruleMove(page.selected, -1)
+                    else if (modelData.act === "down") page.selected = page.model.ruleMove(page.selected, 1)
+                    else if (modelData.act === "dup") page.selected = page.model.ruleDuplicate(page.selected)
+                    else page.model.ruleDelete(page.selected)
+                }
+                QQC2.ToolTip.visible: hovered
+                QQC2.ToolTip.text: modelData.tip
+                Accessible.name: modelData.tip
+            }
+        }
+    }
+    QQC2.Label {
+        Layout.leftMargin: Kirigami.Units.smallSpacing
+        Layout.rightMargin: Kirigami.Units.smallSpacing
+        Layout.bottomMargin: Kirigami.Units.smallSpacing
+        Layout.fillWidth: true
+        wrapMode: Text.Wrap
+        opacity: 0.7
+        font: Kirigami.Theme.smallFont
+        text: "Checked from the top; the first matching rule that sets the zone, timeout or silent wins."
     }
     Kirigami.Separator { Layout.fillWidth: true }
 
@@ -104,15 +131,5 @@ ColumnLayout {
             text: page.online ? "No rules yet" : "notifd is not running"
             explanation: page.online ? "Without rules, every notification goes to the default zone." : ""
         }
-    }
-
-    Kirigami.Separator { Layout.fillWidth: true }
-    RowLayout {
-        Layout.margins: Kirigami.Units.smallSpacing
-        QQC2.ToolButton { icon.name: "go-up"; text: "Up"; enabled: page.selected > 0; onClicked: page.selected = page.model.ruleMove(page.selected, -1) }
-        QQC2.ToolButton { icon.name: "go-down"; text: "Down"; enabled: page.selected >= 0 && page.selected < root.rules.count - 1; onClicked: page.selected = page.model.ruleMove(page.selected, 1) }
-        QQC2.ToolButton { icon.name: "edit-copy"; text: "Duplicate"; enabled: page.selected >= 0; onClicked: page.selected = page.model.ruleDuplicate(page.selected) }
-        Item { Layout.fillWidth: true }
-        QQC2.ToolButton { icon.name: "edit-delete"; text: "Delete"; enabled: page.selected >= 0; onClicked: page.model.ruleDelete(page.selected) }
     }
 }

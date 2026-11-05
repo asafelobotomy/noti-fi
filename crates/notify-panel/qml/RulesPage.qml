@@ -121,11 +121,6 @@ Kirigami.Page {
             icon.name: "preview"
             enabled: page.online && page.model.draftValid
             onTriggered: page.model.rulesPreview()
-        },
-        Kirigami.Action {
-            text: "Add rule"
-            icon.name: "list-add"
-            onTriggered: page.selected = page.model.ruleAdd()
         }
     ]
 
@@ -180,7 +175,7 @@ Kirigami.Page {
         GridLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            columns: width > Kirigami.Units.gridUnit * 44 ? 2 : 1
+            columns: page.width > Kirigami.Units.gridUnit * 40 ? 3 : 1   // wide: list | divider | editor; narrow: stacked
             columnSpacing: 0
             rowSpacing: 0
 
@@ -188,9 +183,9 @@ Kirigami.Page {
             RuleList {
                 page: page
                 rules: rules
-                columns: parent.columns
+                columns: parent.columns === 3 ? 2 : 1
             }
-            Kirigami.Separator { Layout.fillHeight: true; visible: parent.columns === 2 }
+            Kirigami.Separator { Layout.fillHeight: true; visible: parent.columns === 3 }
 
             // ================= right: the editor and the simulator =================
             QQC2.ScrollView {
@@ -204,26 +199,25 @@ Kirigami.Page {
                     spacing: Kirigami.Units.largeSpacing
 
                     // ---- the selected rule
-                    Kirigami.FormLayout {
+                    // the selected rule: every field has its label above it, so the editor fits any pane width
+                    ColumnLayout {
                         Layout.fillWidth: true
+                        Layout.preferredWidth: 1
                         Layout.margins: Kirigami.Units.largeSpacing
                         enabled: page.current !== null
+                        spacing: Kirigami.Units.smallSpacing
 
-                        Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
-
-                        Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Rule" }
+                        QQC2.Label { text: "Name"; font.bold: true }
                         QQC2.TextField {
                             id: nameField
-                            Kirigami.FormData.label: "Name:"
                             Layout.fillWidth: true
                             placeholderText: "(unnamed rule)"
                             Binding on text { when: !nameField.activeFocus; value: page.current ? page.current.name : "" }
                             onTextEdited: page.model.ruleSetName(page.selected, text)
+                            Accessible.name: "Rule name"
                         }
 
-                        Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
-
-                        Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "When a notification matches" }
+                        Kirigami.Heading { Layout.topMargin: Kirigami.Units.largeSpacing; level: 3; text: "When a notification matches" }
                         QQC2.Label {
                             Layout.fillWidth: true
                             wrapMode: Text.Wrap
@@ -232,25 +226,28 @@ Kirigami.Page {
                             text: "Every condition must match; any one tag within a condition is enough. Pick from what you have received or type your own and press Enter."
                         }
                         Repeater {
-                            id: fieldRepeater
                             model: data.matchFields
-                            delegate: MatchTags {
-                                id: matchField
+                            delegate: ColumnLayout {
+                                id: cond
                                 required property var modelData
-                                readonly property bool shown: value !== "" || page.opened[modelData.field] === true
+                                readonly property bool shown: field.value !== "" || page.opened[modelData.field] === true
                                 visible: shown
-                                Kirigami.FormData.label: modelData.label
                                 Layout.fillWidth: true
-                                label: modelData.label
-                                kind: modelData.kind
-                                placeholder: modelData.hint
-                                suggestions: page.suggest[modelData.field] || []
-                                value: page.current ? page.current[modelData.role] : ""
-                                onEdited: text => page.model.ruleSetMatch(page.selected, modelData.field, text)
+                                spacing: 2
+                                QQC2.Label { text: cond.modelData.label.replace(":", ""); font.bold: true }
+                                MatchTags {
+                                    id: field
+                                    Layout.fillWidth: true
+                                    label: cond.modelData.label
+                                    kind: cond.modelData.kind
+                                    placeholder: cond.modelData.hint
+                                    suggestions: page.suggest[cond.modelData.field] || []
+                                    value: page.current ? page.current[cond.modelData.role] : ""
+                                    onEdited: text => page.model.ruleSetMatch(page.selected, cond.modelData.field, text)
+                                }
                             }
                         }
                         QQC2.Button {
-                            Kirigami.FormData.label: page.hiddenFields.length === data.matchFields.length ? "Match:" : ""
                             visible: page.hiddenFields.length > 0
                             text: page.hiddenFields.length === data.matchFields.length ? "Add a condition…" : "Add another condition…"
                             icon.name: "list-add"
@@ -275,20 +272,21 @@ Kirigami.Page {
                             font: Kirigami.Theme.smallFont
                             text: "With no conditions the rule matches every notification."
                         }
-                        Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
 
-                        Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Then" }
+                        Kirigami.Heading { Layout.topMargin: Kirigami.Units.largeSpacing; level: 3; text: "Then" }
+                        QQC2.Label { text: "Show in zone"; font.bold: true }
                         QQC2.ComboBox {
                             id: zoneBox
-                            Kirigami.FormData.label: "Show in zone:"
+                            Layout.fillWidth: true
                             model: page.zoneChoices
                             currentIndex: page.current && page.current.zone !== "" ? Math.max(0, page.zoneChoices.indexOf(page.current.zone)) : 0
                             onActivated: index => page.model.ruleSetZone(page.selected, index === 0 ? "" : page.zoneChoices[index])
                             Accessible.name: "Show in zone"
                         }
+                        QQC2.Label { Layout.topMargin: Kirigami.Units.smallSpacing; text: "Timeout (ms)"; font.bold: true }
                         QQC2.TextField {
                             id: timeoutField
-                            Kirigami.FormData.label: "Timeout (ms):"
+                            Layout.fillWidth: true
                             placeholderText: "the app's own, or the default"
                             inputMethodHints: Qt.ImhDigitsOnly
                             validator: IntValidator { bottom: 0 }
@@ -304,8 +302,8 @@ Kirigami.Page {
                             text: "0 keeps the popup until you dismiss it."
                         }
                         QQC2.CheckBox {
-                            Kirigami.FormData.label: "Never show:"
-                            text: "keep it in history only"
+                            Layout.topMargin: Kirigami.Units.smallSpacing
+                            text: "Never show it, keep it in history only"
                             checked: page.current ? page.current.silent : false
                             onToggled: {
                                 page.model.ruleSetSilent(page.selected, checked)
