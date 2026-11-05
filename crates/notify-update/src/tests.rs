@@ -21,6 +21,10 @@ fn archive(version: &str, marker: &str, with_panel: bool) -> Vec<u8> {
 }
 
 fn archive_for_qt(version: &str, marker: &str, with_panel: bool, qt: Option<&str>) -> Vec<u8> {
+    archive_full(version, marker, with_panel, qt, false)
+}
+
+fn archive_full(version: &str, marker: &str, with_panel: bool, qt: Option<&str>, portable: bool) -> Vec<u8> {
     let w = tmp("arch");
     let root = w.join(format!("noti-fi-{version}-x86_64-linux"));
     fs::create_dir_all(root.join("bin")).unwrap();
@@ -32,6 +36,9 @@ fn archive_for_qt(version: &str, marker: &str, with_panel: bool, qt: Option<&str
     fs::write(root.join("share/applications/org.notify.Panel.desktop"), "[Desktop Entry]\n").unwrap();
     if let Some(q) = qt {
         fs::write(root.join("qt-version"), format!("{q}\n")).unwrap();
+    }
+    if portable {
+        fs::write(root.join("portable-qml"), "portable\n").unwrap();
     }
     let out = w.join("a.tar.gz");
     assert!(Command::new("tar").arg("czf").arg(&out).arg("-C").arg(&w).arg(root.file_name().unwrap()).status().unwrap().success());
@@ -180,4 +187,19 @@ fn a_panel_built_for_another_qt_is_left_alone_but_the_cli_is_updated() {
     assert!(r.panel_skipped.is_some() && fs::read_to_string(prefix.join("bin/notify-panel")).unwrap() == "OLD-PANEL");
     let r = install_archive(&archive_for_qt("0.9.0", "NEWEST", true, Some("6.11.2")), "0.9.0", &prefix, &tmp("work7"), None).unwrap();
     assert!(r.panel_skipped.as_deref().unwrap().contains("could not be determined"));
+}
+
+#[test]
+fn a_portable_panel_runs_on_any_qt_6() {
+    assert!(portable_compatible("6.12.0", "6.11.2"));
+    assert!(portable_compatible("6.11.2", "6.12.0"));
+    assert!(!portable_compatible("6.11.2", "5.15.0"));
+    let prefix = tmp("prefix4");
+    fs::create_dir_all(prefix.join("bin")).unwrap();
+    fs::write(prefix.join("bin/notify-panel"), "OLD-PANEL").unwrap();
+    let r = install_archive(&archive_full("0.9.0", "NEW", true, Some("6.12.0"), true), "0.9.0", &prefix, &tmp("work8"), Some("6.11.2")).unwrap();
+    assert!(r.panel_skipped.is_none(), "{r:?}");
+    assert_eq!(fs::read_to_string(prefix.join("bin/notify-panel")).unwrap(), "NEW", "a portable panel built for Qt 6.12 is installed on Qt 6.11");
+    let r = install_archive(&archive_full("0.9.0", "NEWER", true, Some("6.12.0"), false), "0.9.0", &tmp("prefix5"), &tmp("work9"), Some("6.11.2")).unwrap();
+    assert!(r.panel_skipped.is_some(), "without the portable marker the strict rule still applies");
 }

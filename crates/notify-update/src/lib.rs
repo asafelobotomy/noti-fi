@@ -168,6 +168,12 @@ pub fn qt_compatible(built: &str, host: &str) -> bool {
     b.len() >= 2 && h.len() >= 2 && b[0] == h[0] && b[1] == h[1] && h.get(2).copied().unwrap_or(0) >= b.get(2).copied().unwrap_or(0)
 }
 
+/// Can a panel built with portable QML (no ahead-of-time compilation, so no private Qt interfaces) run on Qt `host`? Any Qt 6 will do.
+pub fn portable_compatible(built: &str, host: &str) -> bool {
+    let major = |v: &str| v.trim().split('.').next().and_then(|m| m.parse::<u64>().ok());
+    major(built).is_some() && major(built) == major(host)
+}
+
 /// What an installation did.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Installed {
@@ -199,8 +205,11 @@ pub fn install_archive(archive: &[u8], version: &str, prefix: &Path, work: &Path
         }
     }
     let built_qt = fs::read_to_string(root.join("qt-version")).ok().map(|t| t.trim().to_string()).filter(|t| !t.is_empty());
+    // a panel built without ahead-of-time QML runs on any Qt 6; an older one only on the Qt it was built with
+    let portable = root.join("portable-qml").is_file();
+    let fits = |b: &str, h: &str| if portable { portable_compatible(b, h) } else { qt_compatible(b, h) };
     let panel_skipped = match (built_qt.as_deref(), host_qt) {
-        (Some(b), Some(h)) if qt_compatible(b, h) => None,
+        (Some(b), Some(h)) if fits(b, h) => None,
         (Some(b), Some(h)) => Some(format!("it was built for Qt {b} but this machine has Qt {h}, and a panel only runs on the Qt it was built for")),
         (Some(b), None) => Some(format!("it was built for Qt {b} and this machine's Qt version could not be determined")),
         (None, _) => Some("the archive does not say which Qt it was built for".to_string()),

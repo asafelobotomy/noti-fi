@@ -211,3 +211,10 @@ New keys, usable on a **rule**, on a **zone** and (opacity, fontFamily, fontSize
   with `undefined symbol: ...QQmlPrivate::AOTLookupValidation...`. The command-line tool has no Qt dependency and is unaffected.
 - The release archive therefore contains `qt-version`; `install.sh` and `notify upgrade --apply` replace the panel only when that is the same major.minor as the installed Qt and the installed patch is not older, otherwise they update everything else and print why.
   `packaging/PKGBUILD` is the supported way to get a panel that matches your machine; rebuild it after a Qt upgrade.
+
+## Addendum: a panel that does not depend on the Qt minor version
+
+- `crates/notify-panel/build.rs` sets `QMAKE` to a wrapper that reports a stand-in `qmlcachegen` (every other Qt tool is symlinked from the real libexec folder). The stand-in writes the output file it is asked for, empty, plus the one function the module's plugin code refers to
+  (`qInitResources_qmlcache_org_notify_panel`). The QML is then loaded from the binary's resources and compiled at start-up instead of being compiled ahead of time, which removes every `Qt_6_PRIVATE_API` symbol from the binary (check: `nm -D --undefined-only notify-panel | grep -c PRIVATE_API` is 0).
+- `packaging/build-tarball.sh` writes `portable-qml` into the archive only when that check passes; the updater and `install.sh` then accept the panel on any Qt 6 and fall back to the strict same-minor rule when the marker is absent.
+- `NOTIFI_QML_AOT=1` builds the old way. Still unverified: that a panel built on a newer Qt runs on an older one (the release workflow builds on Arch's newest Qt; the first release built this way is the test on a Qt 6.11 machine).

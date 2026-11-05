@@ -15,14 +15,16 @@ if [ "${1:-}" = "--uninstall" ]; then
     exit 0
 fi
 
-# The panel only runs on the Qt it was built against (same major.minor, installed patch not older); the command-line tool does not use Qt.
+# A panel built the old way only runs on the Qt it was built against (same major.minor, installed patch not older); one marked portable runs on any Qt 6. The command-line tool does not use Qt.
 host_qt=$(pkg-config --modversion Qt6Core 2>/dev/null || qmake6 -query QT_VERSION 2>/dev/null || true)
 built_qt=$(cat "$here/qt-version" 2>/dev/null || true)
 qt_ok() {
     [ -n "$host_qt" ] && [ -n "$built_qt" ] || return 1
     h1=${host_qt%%.*}; r=${host_qt#*.}; h2=${r%%.*}; h3=${r#*.}; h3=${h3%%.*}
     b1=${built_qt%%.*}; r=${built_qt#*.}; b2=${r%%.*}; b3=${r#*.}; b3=${b3%%.*}
-    [ "$h1" = "$b1" ] && [ "$h2" = "$b2" ] && [ "${h3:-0}" -ge "${b3:-0}" ]
+    [ "$h1" = "$b1" ] || return 1
+    [ -f "$here/portable-qml" ] && return 0     # built without ahead-of-time QML: any Qt 6 will do
+    [ "$h2" = "$b2" ] && [ "${h3:-0}" -ge "${b3:-0}" ]
 }
 
 install -d "$prefix/bin" "$prefix/share/applications" "$prefix/share/doc/noti-fi"

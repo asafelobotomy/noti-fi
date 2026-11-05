@@ -21,10 +21,10 @@ notify takeover --dry-run    # see exactly what it will change
 notify takeover --now        # make notifd your notification service (undo any time: notify restore)
 ```
 
-The panel (`notify-panel`) only runs on the Qt version it was built with. The archive records that version, and the installer leaves the panel out when it does not match your Qt. On Arch and Manjaro the reliable way to get the panel is to build it for your machine:
+Since 0.8.2 the panel runs on any Qt 6 (earlier releases only ran on the Qt they were built with, and the installer leaves such a panel out when it does not match your Qt). You can always build the panel for your machine instead:
 
 ```sh
-cd packaging && makepkg -si     # builds noti-fi against your installed Qt (about 8 minutes); run it again after a Qt upgrade breaks the panel
+cd packaging && makepkg -si     # builds noti-fi against your installed Qt (about 8 minutes)
 ```
 
 Needs at run time: `quickshell`, `qt6-declarative`, `kirigami`, `qqc2-desktop-style` (`qt6-multimedia` is optional, for audio/video players).

@@ -27,6 +27,8 @@ install -m 755 "$root/packaging/install.sh" "$stage/install.sh"
 qt=$(pkg-config --modversion Qt6Core 2>/dev/null || qmake6 -query QT_VERSION 2>/dev/null || true)
 [ -n "$qt" ] || { echo "cannot tell which Qt version this was built with (need pkg-config or qmake6)" >&2; exit 1; }
 echo "$qt" > "$stage/qt-version"
+# A panel with no ahead-of-time compiled QML uses none of Qt's private interfaces and runs on any Qt 6 (see crates/notify-panel/build.rs); say so only if that is true.
+if ! nm -D --undefined-only "$target/release/notify-panel" | grep -q PRIVATE_API; then echo portable > "$stage/portable-qml"; fi
 install -m 644 "$root/README.md" "$root/LICENSE" "$stage/"
 
 # a reproducible archive: sorted names, fixed owner and times

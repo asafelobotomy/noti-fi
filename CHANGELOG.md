@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.2
+
+- **The panel now runs on any Qt 6, not just the one it was built with.** Qt compiles QML ahead of time into code that uses its private interfaces, which is what made 0.7.0 and 0.8.0 fail to start on a machine with a different Qt. The panel's build now skips that step (the QML is compiled when the panel starts, which is a little slower to open) and so uses no private interfaces. Release archives mark such a panel `portable-qml`, and `install.sh` and `notify upgrade --apply` install it on any Qt 6; the Qt-version guard from 0.8.1 still protects older, non-portable archives. Set `NOTIFI_QML_AOT=1` when building to keep Qt's ahead-of-time compilation.
+
 ## 0.8.1
 
 - **Fix: the prebuilt panel could not start on a machine whose Qt differs from the one it was built with** (the first releases were built against Qt 6.12 and failed on Qt 6.11 with an undefined-symbol error). The panel's compiled QML only runs on the Qt it was built against, so now:
