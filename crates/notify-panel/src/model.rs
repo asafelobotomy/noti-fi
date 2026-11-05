@@ -15,11 +15,11 @@ use std::sync::mpsc::{self, Sender};
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::QString;
 use notify_apps::AppEntry;
-use notify_panel_core::draft::{self, Draft, SaveOutcome, SimInput};
+use notify_panel_core::draft::{self, Draft, SimInput};
 use notify_panel_core::shell;
 use notify_panel_core::view::{self, Conn};
 use notify_panel_core::worker::{self, Cmd, Msg, Snapshot};
-use notify_protocol::{DecidedIdx, HistoryEntry, SimResult};
+use notify_protocol::{DecidedIdx, HistoryEntry};
 use serde_json::{Value, json};
 
 /// The socket this panel listens on for "show yourself"; set by `main` after it has claimed the instance.
@@ -73,6 +73,10 @@ pub mod qobject {
         #[qproperty(QString, settings_json)]
         // start at login (the autostart entry exists)
         #[qproperty(bool, autostart)]
+        #[qproperty(QString, update_state)]   // idle | checking | current | available | installing | installed | error
+        #[qproperty(QString, update_latest)]
+        #[qproperty(QString, update_message)]
+        #[qproperty(QString, update_page)]
         // the system tray icon exists (the desktop has a tray)
         #[qproperty(bool, tray_available)]
         // test guards: `NOTIFY_PANEL_TEST=1` (test mode) and `NOTIFD_RULES` set; the --selftest hooks refuse to act without them
@@ -186,6 +190,13 @@ pub mod qobject {
         #[qinvokable]
         fn set_autostart_enabled(self: Pin<&mut PanelModel>, on: bool);
 
+        /// Look for a newer release (contacts github.com; only when asked), install it, and restart this program afterwards.
+        #[qinvokable]
+        fn check_for_updates(self: Pin<&mut PanelModel>);
+        #[qinvokable]
+        fn install_update(self: Pin<&mut PanelModel>);
+        #[qinvokable]
+        fn restart_app(self: Pin<&mut PanelModel>);
         /// The window is shown or hidden: a hidden panel (only the tray icon) fetches just a few history entries on each refresh.
         #[qinvokable]
         fn set_window_visible(self: Pin<&mut PanelModel>, visible: bool);
@@ -246,6 +257,10 @@ pub struct PanelModelRust {
     sim_json: QString,
     settings_json: QString,
     autostart: bool,
+    update_state: QString,
+    update_latest: QString,
+    update_message: QString,
+    update_page: QString,
     tray_available: bool,
     test_mode: bool,
     rules_overridden: bool,
@@ -309,6 +324,10 @@ impl Default for PanelModelRust {
             sim_json: QString::from("{}"),
             settings_json: QString::from("{}"),
             autostart: shell::autostart_enabled(&shell::config_home()),
+            update_state: QString::from("idle"),
+            update_latest: QString::from(""),
+            update_message: QString::from(""),
+            update_page: QString::from(""),
             tray_available: false,
             test_mode: std::env::var_os("NOTIFY_PANEL_TEST").is_some_and(|v| v == "1"),
             rules_overridden: std::env::var_os("NOTIFD_RULES").is_some_and(|v| !v.is_empty()),
@@ -339,6 +358,8 @@ impl Default for PanelModelRust {
 
 mod edit;
 mod glue;
+mod handlers;
+mod update;
 
 impl qobject::PanelModel {
     fn refresh_history_view(mut self: Pin<&mut Self>) {
@@ -472,75 +493,6 @@ impl qobject::PanelModel {
             json!(list).to_string()
         };
         self.as_mut().set_apps_json(QString::from(&json));
-    }
-
-    fn on_apps(mut self: Pin<&mut Self>, token: u64, result: Result<Vec<AppEntry>, String>) {
-        if token != self.as_ref().rust().apps_token {
-            return;
-        }
-        self.as_mut().set_apps_scanning(false);
-        match result {
-            Ok(list) => {
-                self.as_mut().rust_mut().apps = list;
-                self.refresh_apps_view();
-            }
-            Err(why) => self.as_mut().command_failed(&QString::from(&why)),
-        }
-    }
-
-    fn on_validated(mut self: Pin<&mut Self>, token: u64, ok: bool, error: String) {
-        if token != self.as_ref().rust().validate_token {
-            return; // an answer for an older draft
-        }
-        let idx = self.as_ref().rust().draft.error_index(&error);
-        self.as_mut().rust_mut().error_idx = idx;
-        self.as_mut().set_draft_valid(ok);
-        self.as_mut().set_draft_error(QString::from(&error));
-        self.as_mut().set_checking(false);
-        self.refresh_rules_view();
-    }
-
-    fn on_simulated(mut self: Pin<&mut Self>, token: u64, result: Result<Box<SimResult>, String>) {
-        if token != self.as_ref().rust().sim_token {
-            return;
-        }
-        match result {
-            Ok(r) => {
-                let v = view::sim_view(&r);
-                let mut me = self.as_mut().rust_mut();
-                me.sim_matched = r.matched_idx.clone();
-                me.sim_decided = r.decided_idx.clone();
-                self.as_mut().set_sim_json(QString::from(&v.to_string()));
-            }
-            Err(e) => {
-                let mut me = self.as_mut().rust_mut();
-                me.sim_matched.clear();
-                me.sim_decided = DecidedIdx::default();
-                self.as_mut().set_sim_json(QString::from(&json!({"ok": false, "error": e}).to_string()));
-            }
-        }
-        self.refresh_rules_view();
-    }
-
-    fn on_saved(mut self: Pin<&mut Self>, outcome: SaveOutcome, text: String) {
-        match outcome {
-            SaveOutcome::Saved => {
-                self.as_mut().rust_mut().draft.mark_saved(&text);
-                self.as_mut().set_conflict(false);
-                self.as_mut().set_external_changed(false);
-                self.as_mut().set_save_message(QString::from("Saved. notifd has reloaded the rules."));
-                self.refresh_rules_view();
-            }
-            SaveOutcome::Conflict { disk } => {
-                self.as_mut().rust_mut().conflict_disk = disk;
-                self.as_mut().set_conflict(true);
-                self.as_mut().set_save_message(QString::from("rules.json was changed on disk since you started editing; nothing was saved."));
-            }
-            SaveOutcome::Failed(why) => {
-                self.as_mut().set_save_message(QString::from(&why));
-                self.as_mut().command_failed(&QString::from(&why));
-            }
-        }
     }
 
     fn on_state(mut self: Pin<&mut Self>, c: Conn) {

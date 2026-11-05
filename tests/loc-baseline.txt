@@ -4,7 +4,7 @@ notifd/shell.qml 1442
 crates/notify-panel-core/src/draft.rs 1247
 tests/test_notifd.py 917
 crates/notify-protocol/src/lib.rs 784
-crates/notify-panel/src/model.rs 620
+crates/notify-panel/src/model.rs 572
 crates/notify-cli/src/install.rs 520
 notifd/Popup.qml 496
 crates/notify-apps/src/lib.rs 474

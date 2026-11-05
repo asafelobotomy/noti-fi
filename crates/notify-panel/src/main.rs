@@ -21,6 +21,7 @@ fn main() {
     if let Some(mut app) = app.as_mut() {
         app.as_mut().set_application_name(&QString::from("notify"));
         app.as_mut().set_organization_name(&QString::from("notify"));
+        app.as_mut().set_application_version(&QString::from(env!("CARGO_PKG_VERSION")));
     }
     QGuiApplication::set_desktop_file_name(&QString::from("org.notify.Panel"));
     // follow the Plasma theme (Breeze, your accent colour and fonts)

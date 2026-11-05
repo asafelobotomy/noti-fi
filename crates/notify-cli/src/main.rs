@@ -14,6 +14,7 @@ mod payload;
 mod status;
 mod sys;
 mod units;
+mod upgrade;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -143,6 +144,12 @@ enum Cmd {
         /// Do not install the full-screen KWin script
         #[arg(long)]
         no_autodnd: bool,
+    },
+    /// Look for a newer noti-fi release; with --apply, download, verify and install it (nothing is contacted unless you run this)
+    Upgrade {
+        /// Actually install it (without this, only report what is available)
+        #[arg(long)]
+        apply: bool,
     },
     /// Install changed daemon files; smoke-tests first and rolls back if notifd will not start
     Update,
@@ -287,6 +294,7 @@ fn run(cli: Cli) -> Result<bool> {
         Cmd::Preview { config, seconds, end } => controls::preview(&ctx, config, seconds, end)?,
         Cmd::Takeover { dry_run, now, no_portal, no_autodnd } => install::takeover(&ctx, now, dry_run, no_portal, no_autodnd)?,
         Cmd::Update => install::update(&ctx)?,
+        Cmd::Upgrade { apply } => upgrade::upgrade(&ctx, apply)?,
         Cmd::Restore { dry_run, purge, auto } => install::restore(&ctx, dry_run, purge, auto)?,
         Cmd::Portal { remove, dry_run } => install::portal(&ctx, remove, dry_run)?,
         Cmd::Adapt { apply, background, autostart } => integrations::adapt(&ctx, integrations::AdaptArgs { apply, background, autostart })?,

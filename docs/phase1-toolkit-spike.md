@@ -197,3 +197,10 @@ New keys, usable on a **rule**, on a **zone** and (opacity, fontFamily, fontSize
 - **Performance**: a panel with only its tray icon showing unloads its pages and refreshes just 8 history entries instead of 200; the daemon updates its seen-apps registry in place and writes it 5 s after the last change, forgets the state
   of stacks that no longer exist, and shares one empty sample list instead of making one per popup on every sample.
 - `Validate.qml` now holds the daemon's configuration checks (it was in `shell.qml`); like `Media.qml` it must be in the payload list.
+
+## Addendum: updates
+
+- `notify-update` (Qt-free, tested with a fake download source) finds the latest release through GitHub's API, accepts only HTTPS addresses under this project's release path, checks the archive against the `.sha256` file published with it
+  (this catches a damaged download, not a compromised account), unpacks it and replaces each file by writing a new one and renaming it over the old. It checks that both programs are in the archive before replacing anything.
+- `notify upgrade` reports, `notify upgrade --apply` installs (it refuses early, before any network use, when the running copy is not in a writable `bin` folder, for example a build in `target/`), then runs the new `notify update` to refresh the daemon.
+- The panel runs the same `notify upgrade --apply`; after it, **Restart noti-fi** starts a fresh copy a second later and quits (Linux reports a replaced running program as "(deleted)", which is stripped). The daily check is an opt-in setting and defaults to off.

@@ -62,6 +62,9 @@ fn the_notify_binary_end_to_end() {
     let (c, out, _) = cli.run(&["dnd", "toggle"]);
     k.check("dnd toggle flips it", c == 0 && out.contains("ON"), || out.clone());
     cli.run(&["dnd", "toggle"]);
+    // upgrade: a build in target/ is not an installed copy, so replacing it is refused before any network use
+    let (c, _, err) = cli.run(&["upgrade", "--apply"]);
+    k.check("upgrade --apply refuses to replace a build that is not installed", c != 0 && err.contains("not in a `bin` folder"), || err.clone());
     // focus mode
     let (c, out, _) = cli.run(&["focus", "list"]);
     k.check("focus list shows the default 'urgent' mode", c == 0 && out.contains("urgent") && out.contains("Urgent only"), || out.clone());

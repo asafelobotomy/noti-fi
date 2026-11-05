@@ -19,6 +19,7 @@ notify-apps = { path = "../notify-apps" }
 notify-client = { path = "../notify-client" }
 notify-panel-core = { path = "../notify-panel-core" }
 notify-protocol = { path = "../notify-protocol" }
+notify-update = { path = "../notify-update" }
 serde_json.workspace = true
 
 [build-dependencies]

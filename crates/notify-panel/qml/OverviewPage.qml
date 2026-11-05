@@ -9,6 +9,7 @@ Kirigami.ScrollablePage {
     property var model
     readonly property bool online: model !== undefined && model !== null && model.connected === true
     property var ui
+    signal openPage(string name)
 
     // what the user actually sees (read by the headless tests)
     readonly property var uiState: ({
@@ -38,6 +39,15 @@ Kirigami.ScrollablePage {
             type: page.model && page.model.state === "lost" ? Kirigami.MessageType.Warning : Kirigami.MessageType.Error
             text: page.model ? page.model.stateMessage : ""
             showCloseButton: false
+        }
+
+        Kirigami.InlineMessage {
+            Layout.fillWidth: true
+            visible: page.model !== undefined && page.model !== null && page.model.updateState === "available"
+            type: Kirigami.MessageType.Information
+            text: page.model ? page.model.updateMessage : ""
+            showCloseButton: true
+            actions: [ Kirigami.Action { text: "Update…"; onTriggered: page.openPage("general") } ]
         }
 
         Kirigami.AbstractCard {

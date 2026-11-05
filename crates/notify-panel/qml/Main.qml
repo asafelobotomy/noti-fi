@@ -29,6 +29,7 @@ Kirigami.ApplicationWindow {
         property alias height: root.height
         property bool showText: false
         property bool missedOnly: false
+        property bool autoCheckUpdates: false     // off by default: nothing is contacted unless asked
         property bool closeToTray: true
         property bool minimizeToTray: true
     }
@@ -70,6 +71,12 @@ Kirigami.ApplicationWindow {
             root.hide()
         }
     }
+    // The opt-in daily update check: shortly after start, then every 24 hours (only when the box on the General page is ticked).
+    Timer {
+        running: uiSettings.autoCheckUpdates
+        interval: 30000
+        onTriggered: { panelModel.checkForUpdates(); interval = 86400000; restart() }
+    }
     // While only the tray icon is showing, the pages are unloaded and the panel fetches almost no history; both come back when the window does.
     property string lastPage: "overview"
     onVisibleChanged: {
@@ -95,7 +102,7 @@ Kirigami.ApplicationWindow {
     }
 
     // pages are declared as components, so Kirigami places them in the scene itself
-    Component { id: overviewPage; OverviewPage { model: panelModel; ui: uiSettings } }
+    Component { id: overviewPage; OverviewPage { model: panelModel; ui: uiSettings; onOpenPage: name => root.go(name) } }
     Component { id: historyPage; HistoryPage { model: panelModel; ui: uiSettings } }
     Component { id: zonesPage; ZonesPage { model: panelModel; ui: uiSettings } }
     Component { id: appearancePage; AppearancePage { model: panelModel; ui: uiSettings } }

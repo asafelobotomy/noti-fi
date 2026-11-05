@@ -70,6 +70,8 @@ fn start_at_login_can_be_turned_on_and_off_and_the_background_flag_is_accepted()
     let r = run_panel(&d.sock, &["--page=general", "--quit-after=3", "--report"]);
     let ui = r.ui();
     assert_eq!((ui["page"].as_str(), ui["trayAvailable"].as_bool(), ui["closeToTray"].as_bool()), (Some("general"), Some(false), Some(true)), "without a tray the options are shown as unavailable: {ui}");
+    assert_eq!(ui["version"], env!("CARGO_PKG_VERSION"), "the page shows the installed version: {ui}");
+    assert_eq!((ui["updateState"].as_str(), ui["autoCheck"].as_bool()), (Some("idle"), Some(false)), "nothing is checked, and the daily check is off, until the user asks: {ui}");
 }
 
 

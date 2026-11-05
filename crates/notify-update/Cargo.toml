@@ -1,0 +1,11 @@
+[package]
+name = "notify-update"
+description = "Finds, downloads, verifies and installs a newer noti-fi release"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+serde_json.workspace = true
+sha2 = "0.10"
