@@ -11,6 +11,7 @@ Kirigami.Page {
     padding: 0
     property var model
     property var ui
+    signal openTab(string name)
     readonly property bool online: model !== undefined && model !== null && model.connected === true
 
     // ---- the list: a ListModel updated in place, so typing in the editor never loses focus or scroll position
@@ -42,7 +43,17 @@ Kirigami.Page {
         if (selected < 0 && rules.count > 0) selected = 0
     }
     Connections { target: page.model; function onRulesJsonChanged() { page.sync() } }
-    Component.onCompleted: sync()
+    Component.onCompleted: { sync(); refreshSuggestions() }
+
+    function addFromTemplate(t) {
+        const i = page.model.ruleAdd()
+        page.selected = i
+        page.model.ruleSetName(i, t.name)
+        for (const f in t.match) page.model.ruleSetMatch(i, f, t.match[f])
+        if (t.zone) page.model.ruleSetZone(i, t.zone === "$first" ? (page.zones[0] || "") : t.zone)
+        if (t.timeout !== undefined) page.model.ruleSetTimeout(i, t.timeout)
+        if (t.silent) page.model.ruleSetSilent(i, true)
+    }
 
     readonly property var zones: {
         try { return JSON.parse(page.model ? page.model.draftZonesJson : "[]") } catch (e) { return [] }
@@ -52,6 +63,21 @@ Kirigami.Page {
         if (page.current && page.current.zone !== "" && z.indexOf(page.current.zone) < 0) z.push(page.current.zone)
         return z
     }
+    RuleData { id: data }
+    readonly property var templates: data.templates
+    // the look section opens by itself when the rule already changes something
+    property bool lookOpen: false
+    function hasLook(r) { return !!r && [r.sOpacity, r.sClickThrough, r.sNoFocus, r.sWidth, r.sFontFamily, r.sFontSize, r.sGroup, r.sPriority, r.sMedia, r.sStack, r.sTimer].some(v => v !== undefined && v !== null && v !== "") }
+    onCurrentChanged: lookOpen = hasLook(current)
+    property var opened: ({})                // conditions added by hand for the selected rule
+    onSelectedChanged: opened = ({})
+    readonly property var hiddenFields: data.matchFields.filter(f => !(page.current && page.current[f.role] !== "") && page.opened[f.field] !== true)
+
+    // values seen in history and the app list, offered as tags in the match fields
+    property var suggest: ({})
+    function refreshSuggestions() { try { page.suggest = JSON.parse(page.model.ruleSuggestions()) } catch (e) { page.suggest = ({}) } }
+    Connections { target: page.model; function onAppsJsonChanged() { page.refreshSuggestions() } function onHistoryTotalChanged() { page.refreshSuggestions() } }
+
     readonly property var sim: {
         try { return JSON.parse(page.model ? page.model.simJson : "{}") } catch (e) { return {} }
     }
@@ -158,93 +184,11 @@ Kirigami.Page {
             rowSpacing: 0
 
             // ================= left: the ordered list of rules =================
-            ColumnLayout {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                Layout.preferredWidth: 1
-                Layout.minimumHeight: Kirigami.Units.gridUnit * 10
-                Layout.preferredHeight: parent.columns === 1 ? Kirigami.Units.gridUnit * 16 : -1
-                spacing: 0
-
-                QQC2.Label {
-                    Layout.margins: Kirigami.Units.smallSpacing
-                    Layout.fillWidth: true
-                    wrapMode: Text.Wrap
-                    opacity: 0.7
-                    text: "Checked top to bottom. For the zone, timeout and silent setting, the first matching rule that sets it wins."
-                }
-                Kirigami.Separator { Layout.fillWidth: true }
-
-                ListView {
-                    id: list
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    clip: true
-                    model: rules
-                    currentIndex: page.selected
-                    delegate: QQC2.ItemDelegate {
-                        id: row
-                        required property int index
-                        required property string title
-                        required property string summary
-                        required property bool matched
-                        required property bool decidesZone
-                        required property bool decidesTimeout
-                        required property bool decidesSilent
-                        required property bool hasError
-                        width: ListView.view.width
-                        highlighted: ListView.isCurrentItem
-                        onClicked: page.selected = index
-                        contentItem: RowLayout {
-                            spacing: Kirigami.Units.smallSpacing
-                            QQC2.Label { text: (row.index + 1) + "."; opacity: 0.6; Layout.alignment: Qt.AlignTop }
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: 0
-                                QQC2.Label { Layout.fillWidth: true; elide: Text.ElideRight; font.bold: true; text: row.title; textFormat: Text.PlainText }
-                                QQC2.Label { Layout.fillWidth: true; elide: Text.ElideRight; opacity: 0.7; text: row.summary; textFormat: Text.PlainText }
-                            }
-                            Kirigami.Icon {
-                                visible: row.hasError
-                                source: "dialog-error"
-                                Layout.preferredWidth: Kirigami.Units.iconSizes.small
-                                Layout.preferredHeight: Kirigami.Units.iconSizes.small
-                            }
-                            QQC2.Label {
-                                visible: row.matched
-                                color: Kirigami.Theme.positiveTextColor
-                                font: Kirigami.Theme.smallFont
-                                text: {
-                                    const d = []
-                                    if (row.decidesZone) d.push("zone")
-                                    if (row.decidesTimeout) d.push("timeout")
-                                    if (row.decidesSilent) d.push("silent")
-                                    return d.length ? "matches · sets " + d.join(", ") : "matches"
-                                }
-                            }
-                        }
-                    }
-                    Kirigami.PlaceholderMessage {
-                        anchors.centerIn: parent
-                        width: parent.width - Kirigami.Units.gridUnit * 4
-                        visible: rules.count === 0
-                        icon.name: "view-list-details"
-                        text: page.online ? "No rules yet" : "notifd is not running"
-                        explanation: page.online ? "Without rules, every notification goes to the default zone." : ""
-                    }
-                }
-
-                Kirigami.Separator { Layout.fillWidth: true }
-                RowLayout {
-                    Layout.margins: Kirigami.Units.smallSpacing
-                    QQC2.ToolButton { icon.name: "go-up"; text: "Up"; enabled: page.selected > 0; onClicked: page.selected = page.model.ruleMove(page.selected, -1) }
-                    QQC2.ToolButton { icon.name: "go-down"; text: "Down"; enabled: page.selected >= 0 && page.selected < rules.count - 1; onClicked: page.selected = page.model.ruleMove(page.selected, 1) }
-                    QQC2.ToolButton { icon.name: "edit-copy"; text: "Duplicate"; enabled: page.selected >= 0; onClicked: page.selected = page.model.ruleDuplicate(page.selected) }
-                    Item { Layout.fillWidth: true }
-                    QQC2.ToolButton { icon.name: "edit-delete"; text: "Delete"; enabled: page.selected >= 0; onClicked: page.model.ruleDelete(page.selected) }
-                }
+            RuleList {
+                page: page
+                rules: rules
+                columns: parent.columns
             }
-
             Kirigami.Separator { Layout.fillHeight: true; visible: parent.columns === 2 }
 
             // ================= right: the editor and the simulator =================
@@ -284,32 +228,52 @@ Kirigami.Page {
                             wrapMode: Text.Wrap
                             opacity: 0.7
                             font: Kirigami.Theme.smallFont
-                            text: "Regular expressions, case-insensitive. Leave a field empty to ignore it."
+                            text: "Every condition must match; any one tag within a condition is enough. Pick from what you have received or type your own and press Enter."
                         }
                         Repeater {
-                            model: [
-                                { field: "appName", label: "App name:", role: "mAppName", hint: "^steam$" },
-                                { field: "desktopEntry", label: "Desktop entry:", role: "mDesktopEntry", hint: "^org\\.kde\\." },
-                                { field: "origin", label: "Site (from a browser):", role: "mOrigin", hint: "example-shop|example-chat" },
-                                { field: "summary", label: "Title contains:", role: "mSummary", hint: "message" },
-                                { field: "body", label: "Text contains:", role: "mBody", hint: "" },
-                                { field: "urgency", label: "Urgency:", role: "mUrgency", hint: "critical" },
-                                { field: "category", label: "Kind (category):", role: "mCategory", hint: "^email" },
-                                { field: "channel", label: "Arrives as:", role: "mChannel", hint: "web" }
-                            ]
-                            delegate: QQC2.TextField {
+                            id: fieldRepeater
+                            model: data.matchFields
+                            delegate: MatchTags {
                                 id: matchField
                                 required property var modelData
+                                readonly property bool shown: value !== "" || page.opened[modelData.field] === true
+                                visible: shown
                                 Kirigami.FormData.label: modelData.label
                                 Layout.fillWidth: true
-                                placeholderText: modelData.hint !== "" ? "e.g. " + modelData.hint : ""
-                                font.family: "monospace"
-                                Binding on text { when: !matchField.activeFocus; value: page.current ? page.current[matchField.modelData.role] : "" }
-                                onTextEdited: page.model.ruleSetMatch(page.selected, matchField.modelData.field, text)
-                                Accessible.name: "Match " + modelData.label
+                                label: modelData.label
+                                kind: modelData.kind
+                                placeholder: modelData.hint
+                                suggestions: page.suggest[modelData.field] || []
+                                value: page.current ? page.current[modelData.role] : ""
+                                onEdited: text => page.model.ruleSetMatch(page.selected, modelData.field, text)
                             }
                         }
-
+                        QQC2.Button {
+                            Kirigami.FormData.label: page.hiddenFields.length === data.matchFields.length ? "Match:" : ""
+                            visible: page.hiddenFields.length > 0
+                            text: page.hiddenFields.length === data.matchFields.length ? "Add a condition…" : "Add another condition…"
+                            icon.name: "list-add"
+                            onClicked: fieldMenu.popup()
+                            QQC2.Menu {
+                                id: fieldMenu
+                                Repeater {
+                                    model: page.hiddenFields
+                                    delegate: QQC2.MenuItem {
+                                        required property var modelData
+                                        text: modelData.menu
+                                        onTriggered: { const o = Object.assign({}, page.opened); o[modelData.field] = true; page.opened = o }
+                                    }
+                                }
+                            }
+                        }
+                        QQC2.Label {
+                            Layout.fillWidth: true
+                            visible: page.hiddenFields.length === data.matchFields.length
+                            wrapMode: Text.Wrap
+                            opacity: 0.7
+                            font: Kirigami.Theme.smallFont
+                            text: "With no conditions the rule matches every notification."
+                        }
                         Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
 
                         Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Then" }
@@ -350,8 +314,15 @@ Kirigami.Page {
                         }
                     }
 
-                    Kirigami.Heading { Layout.leftMargin: Kirigami.Units.largeSpacing; level: 3; text: "Look and behavior" }
+                    QQC2.Button {
+                        Layout.leftMargin: Kirigami.Units.largeSpacing
+                        icon.name: page.lookOpen ? "go-up" : "go-down"
+                        text: page.lookOpen ? "Hide look and behavior" : "Change how it looks and behaves…"
+                        onClicked: page.lookOpen = !page.lookOpen
+                        Accessible.name: "Look and behavior of this rule"
+                    }
                     StyleFields {
+                        visible: page.lookOpen
                         Layout.fillWidth: true
                         Layout.leftMargin: Kirigami.Units.largeSpacing
                         Layout.rightMargin: Kirigami.Units.largeSpacing

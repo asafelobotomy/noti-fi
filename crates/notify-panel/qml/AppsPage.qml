@@ -10,6 +10,7 @@ Kirigami.Page {
     title: "Apps"
     property var model
     property var ui
+    signal openTab(string name)
     readonly property bool online: model !== undefined && model !== null && model.connected === true
 
     property bool showWays: false
@@ -138,7 +139,7 @@ Kirigami.Page {
             Layout.rightMargin: Kirigami.Units.largeSpacing
             wrapMode: Text.Wrap
             opacity: 0.7
-            text: "Muting, the zone and the timeout are rules saved in rules.json (they appear at the top of the Rules page as “App: …”). Flatpak permissions change the app's own setting at once."
+            text: "Pick where each app's popups go, or mute it. Open an app for its timeout, look and the kinds of notification it sends. These are saved as rules (“App: …” on the Rules tab); Flatpak permissions apply at once."
         }
 
         Kirigami.AbstractCard {
@@ -222,9 +223,17 @@ Kirigami.Page {
                                 opacity: 0.7
                                 textFormat: Text.PlainText
                                 text: card.sent
-                                    ? "Sent " + card.count + (card.count === 1 ? " notification" : " notifications") + " · last " + page.ago(card.last)
-                                    : "Hasn't sent a notification yet" + (card.reasons !== "" ? " · " + card.reasons : "")
+                                    ? card.count + (card.count === 1 ? " notification" : " notifications") + " · " + page.ago(card.last)
+                                    : "Never sent" + (card.reasons !== "" ? " · " + card.reasons : "")
                             }
+                        }
+                        QQC2.ComboBox {
+                            Layout.preferredWidth: Kirigami.Units.gridUnit * 8
+                            model: page.zoneChoices
+                            displayText: card.zone === "" ? "Zone: by rules" : "Zone: " + card.zone
+                            currentIndex: card.zone === "" ? 0 : Math.max(0, page.zoneChoices.indexOf(card.zone))
+                            onActivated: index => page.model.appSet(card.matchField, card.matchValue, card.name, "zone", index === 0 ? "" : page.zoneChoices[index])
+                            Accessible.name: "Zone for " + card.name
                         }
                         QQC2.Switch {
                             text: "Mute"
@@ -235,51 +244,53 @@ Kirigami.Page {
                             }
                             Accessible.name: "Mute " + card.name
                         }
-                    }
-                    GridLayout {
-                        columns: 4
-                        columnSpacing: Kirigami.Units.largeSpacing
-                        rowSpacing: Kirigami.Units.smallSpacing
-                        QQC2.Label { text: "Show in:" }
-                        QQC2.ComboBox {
-                            Layout.preferredWidth: Kirigami.Units.gridUnit * 9
-                            model: page.zoneChoices
-                            currentIndex: card.zone === "" ? 0 : Math.max(0, page.zoneChoices.indexOf(card.zone))
-                            onActivated: index => page.model.appSet(card.matchField, card.matchValue, card.name, "zone", index === 0 ? "" : page.zoneChoices[index])
-                            Accessible.name: "Zone for " + card.name
+                        QQC2.ToolButton {
+                            icon.name: card.detailsOpen ? "go-up" : "go-down"
+                            display: QQC2.AbstractButton.IconOnly
+                            onClicked: card.detailsOpen = !card.detailsOpen
+                            QQC2.ToolTip.visible: hovered
+                            QQC2.ToolTip.text: card.detailsOpen ? "Hide details" : "Timeout, look and notification types (" + card.kindCount + ")"
+                            Accessible.name: "Details for " + card.name
                         }
-                        QQC2.Label { text: "Stays (ms):" }
-                        QQC2.TextField {
-                            id: timeoutField
-                            Layout.preferredWidth: Kirigami.Units.gridUnit * 6
-                            placeholderText: "default"
-                            inputMethodHints: Qt.ImhDigitsOnly
-                            validator: IntValidator { bottom: 0 }
-                            Binding on text { when: !timeoutField.activeFocus; value: card.timeout }
-                            onTextEdited: page.model.appSet(card.matchField, card.matchValue, card.name, "timeout", text)
-                            Accessible.name: "Timeout for " + card.name
-                        }
-                        QQC2.Label { visible: card.flatpak; text: "Flatpak permission:" }
-                        QQC2.ComboBox {
-                            visible: card.flatpak
-                            Layout.preferredWidth: Kirigami.Units.gridUnit * 9
-                            model: ["Not set", "Allowed", "Blocked"]
-                            currentIndex: card.perm
-                            onActivated: index => page.model.appFlatpak(card.appId, ["reset", "allow", "deny"][index])
-                            Accessible.name: "Flatpak notification permission for " + card.name
-                        }
-                    }
-                    QQC2.Button {
-                        Layout.alignment: Qt.AlignLeft
-                        icon.name: card.detailsOpen ? "go-up" : "go-down"
-                        text: card.detailsOpen ? "Hide look and notification types" : "Look and notification types (" + card.kindCount + ")…"
-                        onClicked: card.detailsOpen = !card.detailsOpen
-                        Accessible.name: "Details for " + card.name
                     }
                     ColumnLayout {
                         visible: card.detailsOpen
                         Layout.fillWidth: true
                         spacing: Kirigami.Units.largeSpacing
+
+                    GridLayout {
+                            columns: 4
+                            columnSpacing: Kirigami.Units.largeSpacing
+                            rowSpacing: Kirigami.Units.smallSpacing
+                            QQC2.Label { text: "Stays (ms):" }
+                            QQC2.TextField {
+                                id: timeoutField
+                                Layout.preferredWidth: Kirigami.Units.gridUnit * 6
+                                placeholderText: "default"
+                                inputMethodHints: Qt.ImhDigitsOnly
+                                validator: IntValidator { bottom: 0 }
+                                Binding on text { when: !timeoutField.activeFocus; value: card.timeout }
+                                onTextEdited: page.model.appSet(card.matchField, card.matchValue, card.name, "timeout", text)
+                                Accessible.name: "Timeout for " + card.name
+                            }
+                            QQC2.Label { visible: card.flatpak; text: "Flatpak permission:" }
+                            QQC2.ComboBox {
+                                visible: card.flatpak
+                                Layout.preferredWidth: Kirigami.Units.gridUnit * 9
+                                model: ["Not set", "Allowed", "Blocked"]
+                                currentIndex: card.perm
+                                onActivated: index => page.model.appFlatpak(card.appId, ["reset", "allow", "deny"][index])
+                                Accessible.name: "Flatpak notification permission for " + card.name
+                            }
+                        }
+
+                        QQC2.Button {
+                            flat: true
+                            icon.name: "view-filter"
+                            text: "Write a custom rule for this app…"
+                            onClicked: page.openTab("rules")
+                            Accessible.name: "Open the Rules tab"
+                        }
 
                         Kirigami.Heading { level: 4; text: "How every notification from " + card.name + " looks and behaves" }
                         StyleFields {

@@ -113,6 +113,9 @@ pub mod qobject {
         fn rule_duplicate(self: Pin<&mut PanelModel>, index: i32) -> i32;
         #[qinvokable]
         fn rule_set_name(self: Pin<&mut PanelModel>, index: i32, name: &QString);
+        /// Values seen in history and in the app list, per match field, most used first: what the rule editor offers as suggestions.
+        #[qinvokable]
+        fn rule_suggestions(self: Pin<&mut PanelModel>) -> QString;
         /// An empty pattern removes the test for that field.
         #[qinvokable]
         fn rule_set_match(self: Pin<&mut PanelModel>, index: i32, field: &QString, pattern: &QString);

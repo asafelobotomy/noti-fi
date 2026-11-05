@@ -9,6 +9,7 @@ Kirigami.Page {
     title: "Zones & layout"
     property var model
     property var ui
+    signal openTab(string name)
     readonly property bool online: model !== undefined && model !== null && model.connected === true
 
     readonly property var settings: { try { return JSON.parse(page.model ? page.model.settingsJson : "{}") } catch (e) { return {} } }
@@ -23,6 +24,25 @@ Kirigami.Page {
     readonly property var anchorNames: ({ "top-left": "Top left", "top-center": "Top middle", "top-right": "Top right", "middle-left": "Middle left", "center": "Middle",
                                           "middle-right": "Middle right", "bottom-left": "Bottom left", "bottom-center": "Bottom middle", "bottom-right": "Bottom right",
                                           "free": "Free (drag it)" })
+    readonly property bool selectedFree: page.selectedZone !== null && page.selectedZone.anchor === "free"
+    // snap: the nearest of the nine places to a point on the mini screen (fractions 0..1); free: where a place sits (x, y as the zone stores them)
+    function cellAt(fx, fy) {
+        const c = fx < 1 / 3 ? 0 : fx > 2 / 3 ? 2 : 1
+        const r = fy < 1 / 3 ? 0 : fy > 2 / 3 ? 2 : 1
+        return page.cornerIds[r * 3 + c]
+    }
+    function snapSelected() {
+        const z = page.selectedZone
+        if (z === null || z.anchor !== "free") return
+        const fx = Number(z.x), fy = Number(z.y)
+        page.model.zoneSet(z.id, "anchor", page.cellAt(fx, fy))
+    }
+    function freeSelected() {
+        const z = page.selectedZone
+        if (z === null || z.anchor === "free") return
+        const i = Math.max(0, page.cornerIds.indexOf(z.anchor))
+        page.model.zonePlace(z.id, (i % 3) / 2, [0.03, 0.45, 0.97][Math.floor(i / 3)])
+    }
     function zonesAt(anchor) { return page.zones.filter(z => z.anchor === anchor) }
     function screenNames() {
         const n = ["(first screen)"]
@@ -91,7 +111,26 @@ Kirigami.Page {
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
                     opacity: 0.7
-                    text: "Pick a zone below, then click a place on the screen to move it there. Or drag a zone anywhere you like (free placement)."
+                    text: page.selectedZone === null ? "Add a zone to place it on the screen."
+                        : page.selectedFree ? "Freeform: drag “" + (page.selectedZone.label || page.selectedZone.id) + "” anywhere on the screen."
+                        : "Snap to grid: click a square, or drag “" + (page.selectedZone.label || page.selectedZone.id) + "”, and it lands on the nearest of nine places."
+                }
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 0
+                    enabled: page.selectedZone !== null
+                    QQC2.Button {
+                        text: "Snap to grid"; icon.name: "view-grid"
+                        checkable: true; autoExclusive: true; checked: !page.selectedFree
+                        onClicked: page.snapSelected()
+                        Accessible.name: "Snap the selected zone to the grid"
+                    }
+                    QQC2.Button {
+                        text: "Freeform"; icon.name: "transform-move"
+                        checkable: true; autoExclusive: true; checked: page.selectedFree
+                        onClicked: page.freeSelected()
+                        Accessible.name: "Place the selected zone freely"
+                    }
                 }
                 Rectangle {
                     id: screenBox
@@ -120,16 +159,16 @@ Kirigami.Page {
                                 anchors.fill: parent
                                 anchors.margins: 3
                                 radius: 4
-                                color: cellArea.containsMouse ? Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.18) : "transparent"
+                                color: cellArea.containsMouse && !page.selectedFree ? Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.18) : "transparent"
                                 border.width: 1
-                                border.color: Qt.rgba(1, 1, 1, 0.12)
+                                border.color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, page.selectedFree ? 0.07 : 0.22)
                             }
                             MouseArea {
                                 id: cellArea
                                 anchors.fill: parent
                                 hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: if (page.selectedId !== "") page.model.zoneSet(page.selectedId, "anchor", cell.modelData)
+                                cursorShape: page.selectedFree ? Qt.ArrowCursor : Qt.PointingHandCursor
+                                onClicked: if (page.selectedId !== "" && !page.selectedFree) page.model.zoneSet(page.selectedId, "anchor", cell.modelData)
                                 Accessible.role: Accessible.Button
                                 Accessible.name: "Move the selected zone to " + page.anchorNames[cell.modelData]
                             }
@@ -185,7 +224,10 @@ Kirigami.Page {
                                 drag.maximumY: screenBox.height - chip.height
                                 onPressed: page.selectedId = chip.modelData.id
                                 onReleased: {
-                                    if (drag.active) {
+                                    if (drag.active && !chip.isFree) {
+                                        // snapping: the zone lands on the place under the middle of the chip
+                                        page.model.zoneSet(chip.modelData.id, "anchor", page.cellAt((chip.x + chip.width / 2) / screenBox.width, (chip.y + chip.height / 2) / screenBox.height))
+                                    } else if (drag.active) {
                                         const span = Math.max(1, screenBox.width - chip.width)
                                         const x = chip.x / span
                                         // upper half: the zone's top edge; lower half: its bottom edge (popups stack upward from there)

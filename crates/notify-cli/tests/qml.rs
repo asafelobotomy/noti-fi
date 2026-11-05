@@ -6,6 +6,15 @@ use std::process::Command;
 
 #[test]
 fn popup_interactions() {
+    run_qml("tst_popup.qml");
+}
+
+#[test]
+fn rule_match_tags() {
+    run_qml("tst_matchtags.qml");
+}
+
+fn run_qml(file: &str) {
     let runner = ["/usr/lib/qt6/bin/qmltestrunner", "/usr/lib64/qt6/bin/qmltestrunner"].into_iter().find(|p| Path::new(p).exists());
     let Some(runner) = runner else {
         eprintln!("skipped: Qt 6 qmltestrunner not found");
@@ -15,9 +24,9 @@ fn popup_interactions() {
     let out = Command::new(runner)
         .env("QT_QPA_PLATFORM", "offscreen")
         .arg("-input")
-        .arg(root.join("tests/qml/tst_popup.qml"))
+        .arg(root.join("tests/qml").join(file))
         .output()
         .unwrap();
     let text = String::from_utf8_lossy(&out.stdout);
-    assert!(out.status.success() && text.contains(" 0 failed"), "popup tests failed:\n{text}\n{}", String::from_utf8_lossy(&out.stderr));
+    assert!(out.status.success() && text.contains(" 0 failed"), "{file} failed:\n{text}\n{}", String::from_utf8_lossy(&out.stderr));
 }

@@ -145,3 +145,34 @@ impl qobject::PanelModel {
         self.as_mut().set_apps_json(QString::from(&json));
     }
 }
+
+/// Count `values`, drop empties, and keep the `cap` most frequent (ties alphabetical).
+fn top(values: impl Iterator<Item = String>, cap: usize) -> Vec<String> {
+    let mut counts: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
+    for v in values.map(|v| v.trim().to_string()).filter(|v| !v.is_empty() && v.chars().count() <= 60) {
+        *counts.entry(v).or_default() += 1;
+    }
+    let mut all: Vec<(String, usize)> = counts.into_iter().collect();
+    all.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    all.into_iter().take(cap).map(|(v, _)| v).collect()
+}
+
+impl qobject::PanelModel {
+    pub fn rule_suggestions(self: Pin<&mut Self>) -> QString {
+        let me = self.as_ref();
+        let r = me.rust();
+        let h = &r.history_all;
+        let app_names = top(h.iter().map(|e| e.app.clone()).chain(r.apps.iter().map(|a| a.name.clone())), 60);
+        let desktop = top(r.apps.iter().map(|a| a.desktop_entry.clone()), 60);
+        let origins = top(h.iter().map(|e| e.origin.clone()), 40);
+        let titles = top(h.iter().map(|e| e.summary.clone()), 30);
+        let categories = top(r.apps.iter().flat_map(|a| a.types.iter().map(|t| t.category.clone())), 40);
+        QString::from(
+            &json!({
+                "appName": app_names, "desktopEntry": desktop, "origin": origins, "summary": titles, "body": [],
+                "urgency": ["low", "normal", "critical"], "category": categories, "channel": ["app", "web", "portal"]
+            })
+            .to_string(),
+        )
+    }
+}

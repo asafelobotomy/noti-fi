@@ -104,21 +104,26 @@ Kirigami.ApplicationWindow {
     // pages are declared as components, so Kirigami places them in the scene itself
     Component { id: overviewPage; OverviewPage { model: panelModel; ui: uiSettings; onOpenPage: name => root.go(name) } }
     Component { id: historyPage; HistoryPage { model: panelModel; ui: uiSettings } }
-    Component { id: zonesPage; ZonesPage { model: panelModel; ui: uiSettings } }
     Component { id: appearancePage; AppearancePage { model: panelModel; ui: uiSettings } }
     Component { id: generalPage; GeneralPage { model: panelModel; ui: uiSettings; trayAvailable: panelModel.trayAvailable; onHideRequested: root.hide() } }
     Component { id: focusPage; FocusPage { model: panelModel; ui: uiSettings } }
     Component { id: systemPage; SystemPage { model: panelModel; ui: uiSettings } }
-    Component { id: appsPage; AppsPage { model: panelModel; ui: uiSettings } }
-    Component { id: rulesPage; RulesPage { model: panelModel; ui: uiSettings } }
+    Component { id: routingPage; RoutingPage { model: panelModel; ui: uiSettings; tab: root.routingTab; onTabSelected: name => { root.routingTab = name; root.lastPage = name } } }
 
     property string currentPage: ""
+    property string routingTab: "apps"
+    // Apps, Zones and Rules are the three tabs of one Routing page
     function go(page) {
         lastPage = page
+        if (["apps", "zones", "rules"].indexOf(page) >= 0) {
+            routingTab = page
+            if (currentPage === "routing") { pageStack.currentItem.open(page); return }
+            page = "routing"
+        }
         if (currentPage === page) return
         currentPage = page
         pageStack.clear()
-        pageStack.push(page === "history" ? historyPage : page === "rules" ? rulesPage : page === "general" ? generalPage : page === "system" ? systemPage : page === "focus" ? focusPage : page === "apps" ? appsPage : page === "zones" ? zonesPage : page === "appearance" ? appearancePage : overviewPage)
+        pageStack.push(page === "history" ? historyPage : page === "routing" ? routingPage : page === "general" ? generalPage : page === "system" ? systemPage : page === "focus" ? focusPage : page === "appearance" ? appearancePage : overviewPage)
     }
 
     Timer {
@@ -196,22 +201,10 @@ Kirigami.ApplicationWindow {
                 onTriggered: root.go("focus")
             },
             Kirigami.Action {
-                text: "Apps"
-                icon.name: "preferences-desktop-notification-bell"
-                checked: root.currentPage === "apps"
-                onTriggered: root.go("apps")
-            },
-            Kirigami.Action {
-                text: "Rules"
+                text: "Routing"
                 icon.name: "view-filter"
-                checked: root.currentPage === "rules"
-                onTriggered: root.go("rules")
-            },
-            Kirigami.Action {
-                text: "Zones & layout"
-                icon.name: "view-grid"
-                checked: root.currentPage === "zones"
-                onTriggered: root.go("zones")
+                checked: root.currentPage === "routing"
+                onTriggered: root.go(root.routingTab)
             },
             Kirigami.Action {
                 text: "Appearance"
