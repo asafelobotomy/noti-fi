@@ -106,8 +106,9 @@ Kirigami.ApplicationWindow {
     Component { id: historyPage; HistoryPage { model: panelModel; ui: uiSettings } }
     Component { id: zonesPage; ZonesPage { model: panelModel; ui: uiSettings } }
     Component { id: appearancePage; AppearancePage { model: panelModel; ui: uiSettings } }
-    Component { id: generalPage; GeneralPage { model: panelModel; ui: uiSettings; trayAvailable: panelModel.trayAvailable } }
+    Component { id: generalPage; GeneralPage { model: panelModel; ui: uiSettings; trayAvailable: panelModel.trayAvailable; onHideRequested: root.hide() } }
     Component { id: focusPage; FocusPage { model: panelModel; ui: uiSettings } }
+    Component { id: systemPage; SystemPage { model: panelModel; ui: uiSettings } }
     Component { id: appsPage; AppsPage { model: panelModel; ui: uiSettings } }
     Component { id: rulesPage; RulesPage { model: panelModel; ui: uiSettings } }
 
@@ -117,7 +118,7 @@ Kirigami.ApplicationWindow {
         if (currentPage === page) return
         currentPage = page
         pageStack.clear()
-        pageStack.push(page === "history" ? historyPage : page === "rules" ? rulesPage : page === "general" ? generalPage : page === "focus" ? focusPage : page === "apps" ? appsPage : page === "zones" ? zonesPage : page === "appearance" ? appearancePage : overviewPage)
+        pageStack.push(page === "history" ? historyPage : page === "rules" ? rulesPage : page === "general" ? generalPage : page === "system" ? systemPage : page === "focus" ? focusPage : page === "apps" ? appsPage : page === "zones" ? zonesPage : page === "appearance" ? appearancePage : overviewPage)
     }
 
     Timer {
@@ -181,6 +182,12 @@ Kirigami.ApplicationWindow {
                 icon.name: "configure"
                 checked: root.currentPage === "general"
                 onTriggered: root.go("general")
+            },
+            Kirigami.Action {
+                text: "System"
+                icon.name: "system-run"
+                checked: root.currentPage === "system"
+                onTriggered: root.go("system")
             },
             Kirigami.Action {
                 text: "Focus modes"

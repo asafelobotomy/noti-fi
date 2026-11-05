@@ -63,7 +63,8 @@ fn selftest_drives_every_command_through_the_real_ui() {
     // watch what the daemon is told while the panel runs
     let mut watcher = d.client();
     watcher.subscribe().unwrap();
-    let states: Arc<Mutex<Vec<(bool, Vec<String>)>>> = Arc::new(Mutex::new(Vec::new()));
+    type Seen = Vec<(bool, Vec<String>)>;
+    let states: Arc<Mutex<Seen>> = Arc::new(Mutex::new(Vec::new()));
     let (s2, stop) = (states.clone(), Arc::new(std::sync::atomic::AtomicBool::new(false)));
     let st2 = stop.clone();
     let th = thread::spawn(move || {

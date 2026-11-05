@@ -17,9 +17,11 @@ for bin in notify notify-panel; do
 done
 
 rm -rf "$stage"
-mkdir -p "$stage/bin" "$stage/share/applications" "$stage/share/doc/noti-fi"
+mkdir -p "$stage/bin" "$stage/share/applications" "$stage/share/metainfo" "$stage/share/icons/hicolor/scalable/apps" "$stage/share/doc/noti-fi"
 install -m 755 "$target/release/notify" "$target/release/notify-panel" "$stage/bin/"
 install -m 644 "$root/packaging/org.notify.Panel.desktop" "$stage/share/applications/"
+install -m 644 "$root/packaging/org.notify.Panel.metainfo.xml" "$stage/share/metainfo/"
+install -m 644 "$root/packaging/org.notify.Panel.svg" "$stage/share/icons/hicolor/scalable/apps/"
 install -m 644 "$root/README.md" "$root/LICENSE" "$stage/share/doc/noti-fi/"
 cp -r "$root/docs" "$stage/share/doc/noti-fi/docs"
 install -m 755 "$root/packaging/install.sh" "$stage/install.sh"

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.notify.Panel</id>
+  <name>noti-fi</name>
+  <summary>Notification fidelity: control panel for the notifd notification daemon</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <url type="homepage">https://github.com/asafelobotomy/noti-fi</url>
+  <url type="bugtracker">https://github.com/asafelobotomy/noti-fi/issues</url>
+  <description>
+    <p>noti-fi routes desktop and browser notifications into zones with their own rules, looks, focus modes and history on KDE Plasma (Wayland).
+    This panel edits the rules, zones and appearance, shows the history, and checks the installation.</p>
+  </description>
+  <launchable type="desktop-id">org.notify.Panel.desktop</launchable>
+  <icon type="stock">org.notify.Panel</icon>
+  <categories><category>Settings</category></categories>
+  <content_rating type="oars-1.1"/>
+  <provides><binary>notify-panel</binary></provides>
+</component>

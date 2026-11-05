@@ -118,7 +118,7 @@ fn fake_launchers() -> std::path::PathBuf {
     root
 }
 
-fn isolated_apps<'a>(launchers: &'a std::path::Path) -> Vec<(&'static str, &'a std::path::Path)> {
+fn isolated_apps(launchers: &std::path::Path) -> Vec<(&'static str, &std::path::Path)> {
     vec![("XDG_DATA_DIRS", launchers), ("NOTIFY_APPS_ISOLATED", std::path::Path::new("1"))]
 }
 

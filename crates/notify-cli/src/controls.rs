@@ -187,7 +187,8 @@ pub fn send(ctx: &Ctx, a: SendArgs) -> Result<()> {
     notify_send(ctx, &a)
 }
 
-const SAMPLES: [(&str, &str, &str, &str, Option<&str>, Option<&str>); 6] = [
+type Sample = (&'static str, &'static str, &'static str, &'static str, Option<&'static str>, Option<&'static str>);
+const SAMPLES: [Sample; 6] = [
     ("Brave Origin", "normal", "New message", "A customer sent you a message", Some("example-shop.com"), Some("brave-origin")),
     ("Brave Origin", "normal", "Review requested", "A pull request needs you", Some("github.com"), Some("brave-origin")),
     ("Steam", "normal", "Friend online", "someone started playing a game", None, None),

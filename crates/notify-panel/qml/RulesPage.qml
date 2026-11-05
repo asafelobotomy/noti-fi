@@ -360,76 +360,11 @@ Kirigami.Page {
                     Kirigami.Separator { Layout.fillWidth: true }
 
                     // ---- the simulator
-                    Kirigami.FormLayout {
+                    RulesSimulator {
                         Layout.fillWidth: true
                         Layout.margins: Kirigami.Units.largeSpacing
-
-                        Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Simulator: what would happen to a notification like this?" }
-                        Repeater {
-                            model: [
-                                { field: "appName", label: "App name:", hint: "Brave Origin" },
-                                { field: "origin", label: "Site:", hint: "example-shop.com" },
-                                { field: "category", label: "Kind (category):", hint: "email.arrived" },
-                                { field: "desktopEntry", label: "Desktop entry:", hint: "" },
-                                { field: "summary", label: "Title:", hint: "New message" },
-                                { field: "body", label: "Text:", hint: "" }
-                            ]
-                            delegate: QQC2.TextField {
-                                id: simField
-                                required property var modelData
-                                Kirigami.FormData.label: modelData.label
-                                Layout.fillWidth: true
-                                placeholderText: modelData.hint
-                                onTextEdited: page.model.simSet(simField.modelData.field, text)
-                                Accessible.name: "Simulate " + modelData.label
-                            }
-                        }
-                        QQC2.ComboBox {
-                            Kirigami.FormData.label: "Urgency:"
-                            model: ["normal", "low", "critical"]
-                            onActivated: index => page.model.simSet("urgency", model[index])
-                            Accessible.name: "Simulated urgency"
-                        }
-                        QQC2.CheckBox {
-                            Kirigami.FormData.label: "Timeout:"
-                            text: "the app asked for no timeout"
-                            onToggled: page.model.simSet("timeout", checked ? "never" : "default")
-                        }
-                        QQC2.CheckBox {
-                            Kirigami.FormData.label: "Do Not Disturb:"
-                            text: "ignore it, mutes and full screen right now"
-                            checked: true
-                            onToggled: page.model.simSet("ignoreState", checked ? "true" : "false")
-                        }
-
-                        Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Result" }
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: Kirigami.Units.smallSpacing
-                            QQC2.Label {
-                                Layout.fillWidth: true
-                                wrapMode: Text.Wrap
-                                visible: page.sim.error !== undefined
-                                color: Kirigami.Theme.negativeTextColor
-                                text: page.sim.error !== undefined ? "Cannot simulate: " + page.sim.error : ""
-                            }
-                            QQC2.Label { visible: page.sim.zone !== undefined; text: "Zone: " + page.sim.zone + "   (" + page.sim.zoneBy + ")"; font.bold: true }
-                            QQC2.Label { visible: page.sim.timeout !== undefined; text: "Timeout: " + page.sim.timeout + "   (" + page.sim.timeoutBy + ")" }
-                            QQC2.Label { visible: page.sim.outcome !== undefined; text: "Outcome: " + page.sim.outcome }
-                            QQC2.Label {
-                                visible: page.sim.look !== undefined && page.sim.look.length > 0
-                                Layout.fillWidth: true
-                                wrapMode: Text.Wrap
-                                text: page.sim.look ? "Look: " + page.sim.look.join(", ") : ""
-                            }
-                            QQC2.Label {
-                                visible: page.sim.matched !== undefined
-                                Layout.fillWidth: true
-                                wrapMode: Text.Wrap
-                                opacity: 0.7
-                                text: page.sim.matched && page.sim.matched.length ? "Matching rules: " + page.sim.matched.join(", ") : "No rule matches; the defaults apply."
-                            }
-                        }
+                        model: page.model
+                        result: page.sim
                     }
                 }
             }

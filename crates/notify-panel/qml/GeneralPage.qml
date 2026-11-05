@@ -10,6 +10,7 @@ Kirigami.Page {
     property var model
     property var ui
     property bool trayAvailable: false
+    signal hideRequested()
 
     readonly property var uiState: ({
         page: "general",
@@ -48,6 +49,14 @@ Kirigami.Page {
             checked: page.ui ? page.ui.minimizeToTray : true
             onToggled: page.ui.minimizeToTray = checked
             Accessible.name: "Minimise to tray"
+        }
+        QQC2.Button {
+            Kirigami.FormData.label: "Now:"
+            text: "Hide to tray"
+            icon.name: "go-down"
+            enabled: page.trayAvailable
+            onClicked: page.hideRequested()
+            Accessible.name: "Hide to tray"
         }
         QQC2.Label {
             Layout.fillWidth: true

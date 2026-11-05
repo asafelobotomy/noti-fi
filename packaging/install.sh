@@ -9,7 +9,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 prefix=${PREFIX:-$HOME/.local}
 
 if [ "${1:-}" = "--uninstall" ]; then
-    rm -f "$prefix/bin/notify" "$prefix/bin/notify-panel" "$prefix/share/applications/org.notify.Panel.desktop"
+    rm -f "$prefix/bin/notify" "$prefix/bin/notify-panel" "$prefix/share/applications/org.notify.Panel.desktop" "$prefix/share/metainfo/org.notify.Panel.metainfo.xml" "$prefix/share/icons/hicolor/scalable/apps/org.notify.Panel.svg"
     rm -rf "$prefix/share/doc/noti-fi"
     echo "removed noti-fi from $prefix (notifd itself is removed with: notify restore)"
     exit 0
@@ -27,7 +27,7 @@ qt_ok() {
     [ "$h2" = "$b2" ] && [ "${h3:-0}" -ge "${b3:-0}" ]
 }
 
-install -d "$prefix/bin" "$prefix/share/applications" "$prefix/share/doc/noti-fi"
+install -d "$prefix/bin" "$prefix/share/applications" "$prefix/share/metainfo" "$prefix/share/icons/hicolor/scalable/apps" "$prefix/share/doc/noti-fi"
 install -m 755 "$here/bin/notify" "$prefix/bin/"
 if qt_ok; then
     install -m 755 "$here/bin/notify-panel" "$prefix/bin/"
@@ -36,6 +36,9 @@ else
     panel_note="notify-panel was NOT installed: it was built for Qt ${built_qt:-?} and this machine has Qt ${host_qt:-?}. Build it for this machine instead: makepkg -si (packaging/PKGBUILD) or cargo build --release -p notify-panel."
 fi
 install -m 644 "$here/share/applications/org.notify.Panel.desktop" "$prefix/share/applications/"
+install -m 644 "$here/share/metainfo/org.notify.Panel.metainfo.xml" "$prefix/share/metainfo/"
+install -m 644 "$here/share/icons/hicolor/scalable/apps/org.notify.Panel.svg" "$prefix/share/icons/hicolor/scalable/apps/"
+gtk-update-icon-cache -q "$prefix/share/icons/hicolor" 2>/dev/null || true
 cp -r "$here/share/doc/noti-fi/." "$prefix/share/doc/noti-fi/"
 
 echo "installed to $prefix"

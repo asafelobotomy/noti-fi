@@ -212,10 +212,10 @@ def test_timeouts(d):
 
 
 def test_replace_refreshes_timer(d):
-    nid = d.send("Download 10%", t=2200, print_id=True)
+    nid = d.send("Download 10%", t=3000, print_id=True)
     time.sleep(1.5)
-    d.send("Download 90%", t=2200, replace=nid)
-    time.sleep(1.6)    # 3.1s after the first, 1.6s after the replace: old timer would have fired at 2.2s
+    d.send("Download 90%", t=3000, replace=nid)
+    time.sleep(1.8)    # 3.3s after the first, 1.8s after the replace: the old timer would have fired at 3.0s, the new one at 4.5s (1.2s of margin each side, for a loaded machine)
     check("replacing a notification refreshes its timer", d.active() == 1, f"active={d.active()}")
     check("it still expires eventually", d.wait_for(lambda: d.active() == 0, 5))
     h = d.ipc("history", 5) or []

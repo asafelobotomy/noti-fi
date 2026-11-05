@@ -114,3 +114,15 @@ fn a_background_start_shows_the_window_when_no_tray_appears() {
     assert!(r.qml_errors().is_empty(), "{:?}", r.qml_errors());
     assert_eq!(r.ui()["page"], "overview", "the window and its first page must have been shown: {}", r.ui());
 }
+
+#[test]
+fn the_system_page_runs_the_health_checks_and_gates_every_action_behind_a_plan() {
+    let d = TestDaemon::start(test_config());
+    let r = run_panel(&d.sock, &["--page=system", "--quit-after=6", "--report"]);
+    assert!(r.qml_errors().is_empty(), "{:?}", r.qml_errors());
+    let ui = r.ui();
+    assert_eq!(ui["page"], "system", "{ui}");
+    assert!(ui["checks"].as_u64().unwrap_or(0) > 0, "the health checks are listed: {ui}");
+    assert_eq!(ui["busy"], "", "nothing is still running at the end: {ui}");
+    assert_eq!(ui["planned"], "", "no action is armed until its plan was shown: {ui}");
+}

@@ -9,7 +9,7 @@ use notify_update::{CURRENT, Curl, Release, is_newer};
 use super::qobject;
 
 /// The `notify` command-line program that sits beside this one (or on the PATH).
-fn notify_binary() -> std::path::PathBuf {
+pub(super) fn notify_binary() -> std::path::PathBuf {
     let beside = std::env::current_exe().ok().and_then(|e| e.parent().map(|d| d.join("notify")));
     beside.filter(|p| p.exists()).unwrap_or_else(|| "notify".into())
 }

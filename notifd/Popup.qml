@@ -87,7 +87,7 @@ Rectangle {
         const t = (text || "").trim()
         if (t === "" || !notif) return
         notif.sendInlineReply(t)
-        replyInput.text = ""
+        replyBox.clear()
         if (!resident) dismissed()
     }
 
@@ -102,9 +102,12 @@ Rectangle {
     Component.onCompleted: slideIn.start()
     NumberAnimation { id: slideIn; target: slide; property: "x"; to: 0; duration: 220; easing.type: Easing.OutCubic }
 
+    Accessible.role: Accessible.AlertMessage      // read out by screen readers
+    Accessible.name: notif ? ((notif.appName || notif.desktopEntry || "Notification") + ": " + notif.summary) : "Notification"
+    Accessible.description: notif ? card.safeBody(notif.body).replace(/<[^>]*>/g, "") : ""
     HoverHandler { id: hover }
     TapHandler { enabled: card.active && !card.clickThrough; onTapped: {
-        if (replyHover.hovered || pinHover.hovered || mediaHover.hovered || graphHover.hovered || gripArea.containsMouse || gripArea.pressed) return
+        if (replyBox.hovered || pinHover.hovered || mediaHover.hovered || graphBox.hovered || gripArea.containsMouse || gripArea.pressed) return
         // a collapsed stack opens when clicked; anything else is dismissed
         if (card.stackCount > 1 && !card.stackExpanded) card.stackToggled(); else card.dismissed()
     } }
@@ -126,7 +129,7 @@ Rectangle {
         property real last: 0
         interval: 40
         repeat: true
-        running: card.active && !card.pinned && !card.mediaPlaying && !card.graphOpen && card.timeoutMs > 0 && !hover.hovered && !replyInput.activeFocus && card.notif !== null
+        running: card.active && !card.pinned && !card.mediaPlaying && !card.graphOpen && card.timeoutMs > 0 && !hover.hovered && !replyBox.focused && card.notif !== null
         onRunningChanged: last = Date.now()
         onTriggered: { const n = Date.now(); card.elapsed += n - last; last = n; if (card.elapsed >= card.timeoutMs) card.expired() }
     }
@@ -266,8 +269,7 @@ Rectangle {
             Layout.fillWidth: true
         }
 
-        // a large picture (web push images, screenshots, covers); small images stay as the icon
-        Image {
+        Image {      // a large picture (web push images, screenshots, covers); small images stay as the icon
             id: bigImage
             source: card.media && card.notif ? card.iconSource(card.notif.image) : ""
             visible: status === Image.Ready && implicitWidth >= 200
@@ -286,14 +288,8 @@ Rectangle {
             Layout.preferredHeight: visible && item ? item.implicitHeight : 0
             source: "Media.qml"
             onLoaded: {
-                item.source = Qt.binding(() => card.mediaFile ? card.mediaFile.url : "")
-                item.kind = Qt.binding(() => card.mediaFile ? card.mediaFile.kind : "audio")
-                item.fg = Qt.binding(() => card.cText)
-                item.sub = Qt.binding(() => card.cSub)
-                item.track = Qt.binding(() => card.cButton)
-                item.accent = Qt.binding(() => card.accent)
-                item.fontFamily = Qt.binding(() => card.fontFamily)
-                item.fontSize = Qt.binding(() => card.fontSize)
+                const m = { source: () => card.mediaFile ? card.mediaFile.url : "", kind: () => card.mediaFile ? card.mediaFile.kind : "audio", fg: () => card.cText, sub: () => card.cSub, track: () => card.cButton, accent: () => card.accent, fontFamily: () => card.fontFamily, fontSize: () => card.fontSize }
+                for (const k in m) item[k] = Qt.binding(m[k])
                 card.mediaPlaying = Qt.binding(() => item ? item.playing : false)
             }
             HoverHandler { id: mediaHover }
@@ -316,118 +312,26 @@ Rectangle {
         }
 
         // a download or transfer: expandable graph of its rate over time
-        ColumnLayout {
+        PopupGraph {
             id: graphBox
             visible: card.samples.length >= 2
             Layout.fillWidth: true
-            spacing: 4
-            HoverHandler { id: graphHover }
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 6
-                Text {
-                    text: "Transfer rate"
-                    color: card.cSub
-                    font.pixelSize: Math.max(6, card.fontSize - 1)
-                    font.family: card.fontFamily
-                    Layout.fillWidth: true
-                }
-                Repeater {
-                    model: card.graphOpen ? ["bars", "line", "heatmap"] : []
-                    delegate: Rectangle {
-                        id: modePill
-                        required property string modelData
-                        readonly property bool on: (card.chartMode !== "" ? card.chartMode : card.chartDefault) === modelData
-                        implicitWidth: modeText.implicitWidth + 12
-                        implicitHeight: modeText.implicitHeight + 4
-                        radius: 8
-                        color: on ? card.accent : card.cButton
-                        Text {
-                            id: modeText
-                            anchors.centerIn: parent
-                            text: modePill.modelData === "bars" ? "Bars" : modePill.modelData === "line" ? "Graph" : "Heatmap"
-                            color: modePill.on ? card.cCard : card.cText
-                            font.pixelSize: Math.max(6, card.fontSize - 2)
-                            font.family: card.fontFamily
-                        }
-                        TapHandler { onTapped: card.chartMode = modePill.modelData }
-                        Accessible.name: "Show as " + modelData
-                    }
-                }
-                Rectangle {
-                    implicitWidth: toggleText.implicitWidth + 12
-                    implicitHeight: toggleText.implicitHeight + 4
-                    radius: 8
-                    color: card.cButton
-                    Text {
-                        id: toggleText
-                        anchors.centerIn: parent
-                        text: card.graphOpen ? "Hide graph" : "Show graph"
-                        color: card.cText
-                        font.pixelSize: Math.max(6, card.fontSize - 2)
-                        font.family: card.fontFamily
-                    }
-                    TapHandler { onTapped: card.graphOpen = !card.graphOpen }
-                    Accessible.name: card.graphOpen ? "Hide the graph" : "Show the graph"
-                }
-            }
-            TransferChart {
-                visible: card.graphOpen
-                Layout.fillWidth: true
-                Layout.preferredHeight: visible ? 118 : 0
-                samples: card.samples
-                mode: card.chartMode !== "" ? card.chartMode : card.chartDefault
-                accent: card.accent
-                text: card.cSub
-                grid: card.cBorder
-                fontFamily: card.fontFamily
-                fontSize: Math.max(6, card.fontSize - 1)
-            }
+            samples: card.samples; open: card.graphOpen; mode: card.chartMode; defaultMode: card.chartDefault
+            accent: card.accent; cardColor: card.cCard; cText: card.cText; cSub: card.cSub; cButton: card.cButton; cBorder: card.cBorder
+            fontFamily: card.fontFamily; fontSize: card.fontSize
+            onModeChosen: m => card.chartMode = m
+            onToggled: card.graphOpen = !card.graphOpen
         }
 
         // inline reply (chat apps): type and press Enter, Escape dismisses
-        Rectangle {
+        PopupReply {
             id: replyBox
             visible: card.notif !== null && card.notif.hasInlineReply === true && !card.noFocus
             Layout.fillWidth: true
-            Layout.preferredHeight: 32
-            radius: 6
-            color: card.cButton
-            border.width: replyInput.activeFocus ? 1 : 0
-            border.color: card.accent
-            HoverHandler { id: replyHover }
-
-            TextInput {
-                id: replyInput
-                anchors { left: parent.left; right: sendLabel.left; verticalCenter: parent.verticalCenter; leftMargin: 10; rightMargin: 8 }
-                color: card.cText
-                font.pixelSize: card.fontSize
-                font.family: card.fontFamily
-                clip: true
-                selectByMouse: true
-                enabled: card.active
-                onAccepted: card.sendReply(text)
-                Keys.onEscapePressed: card.dismissed()
-                Text {
-                    visible: replyInput.text === "" && !replyInput.activeFocus
-                    text: card.notif && card.notif.inlineReplyPlaceholder ? card.notif.inlineReplyPlaceholder : "Reply…"
-                    textFormat: Text.PlainText
-                    color: card.cSub
-                    font.pixelSize: card.fontSize
-                    font.family: card.fontFamily
-                }
-            }
-            Text {
-                id: sendLabel
-                anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
-                text: "Send"
-                color: replyInput.text.trim() !== "" ? card.accent : card.cSub
-                font.pixelSize: card.fontSize
-                font.family: card.fontFamily
-                font.weight: Font.DemiBold
-                TapHandler { enabled: card.active; onTapped: card.sendReply(replyInput.text) }
-            }
+            active: card.active; placeholder: card.notif && card.notif.inlineReplyPlaceholder ? card.notif.inlineReplyPlaceholder : "Reply…"
+            cText: card.cText; cSub: card.cSub; cButton: card.cButton; accent: card.accent; fontFamily: card.fontFamily; fontSize: card.fontSize
+            onSubmitted: text => card.sendReply(text)
+            onCancelled: card.dismissed()
         }
 
         Flow {
