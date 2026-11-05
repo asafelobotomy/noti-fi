@@ -12,6 +12,8 @@ Kirigami.FormLayout {
         Layout.fillWidth: true
         Layout.margins: Kirigami.Units.largeSpacing
 
+        Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
+
         Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Simulator: what would happen to a notification like this?" }
         Repeater {
             model: [
@@ -49,6 +51,8 @@ Kirigami.FormLayout {
             checked: true
             onToggled: sim.model.simSet("ignoreState", checked ? "true" : "false")
         }
+
+        Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
 
         Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Result" }
         ColumnLayout {

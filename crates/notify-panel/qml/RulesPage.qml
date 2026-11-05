@@ -213,7 +213,7 @@ Kirigami.Page {
                             QQC2.Label {
                                 visible: row.matched
                                 color: Kirigami.Theme.positiveTextColor
-                                font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                                font: Kirigami.Theme.smallFont
                                 text: {
                                     const d = []
                                     if (row.decidesZone) d.push("zone")
@@ -264,6 +264,8 @@ Kirigami.Page {
                         Layout.margins: Kirigami.Units.largeSpacing
                         enabled: page.current !== null
 
+                        Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
+
                         Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Rule" }
                         QQC2.TextField {
                             id: nameField
@@ -274,12 +276,14 @@ Kirigami.Page {
                             onTextEdited: page.model.ruleSetName(page.selected, text)
                         }
 
+                        Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
+
                         Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Matches when…" }
                         QQC2.Label {
                             Layout.fillWidth: true
                             wrapMode: Text.Wrap
                             opacity: 0.7
-                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                            font: Kirigami.Theme.smallFont
                             text: "Regular expressions, case-insensitive. Leave a field empty to ignore it."
                         }
                         Repeater {
@@ -306,6 +310,8 @@ Kirigami.Page {
                             }
                         }
 
+                        Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
+
                         Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Then" }
                         QQC2.ComboBox {
                             id: zoneBox
@@ -329,7 +335,7 @@ Kirigami.Page {
                             Layout.fillWidth: true
                             wrapMode: Text.Wrap
                             opacity: 0.7
-                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                            font: Kirigami.Theme.smallFont
                             text: "0 keeps the popup until you dismiss it."
                         }
                         QQC2.CheckBox {

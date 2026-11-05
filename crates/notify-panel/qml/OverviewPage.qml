@@ -124,7 +124,7 @@ Kirigami.ScrollablePage {
             }
         }
 
-        Kirigami.Heading { level: 3; text: "Zones" }
+        Kirigami.Heading { Layout.topMargin: Kirigami.Units.largeSpacing; level: 3; text: "Zones" }
 
         Repeater {
             id: zoneRepeater

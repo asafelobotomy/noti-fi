@@ -281,6 +281,7 @@ Kirigami.Page {
                 Kirigami.FormLayout {
                     Layout.fillWidth: true
                     Layout.margins: Kirigami.Units.largeSpacing
+                    Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
                     Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Layout" }
                     QQC2.ComboBox {
                         Kirigami.FormData.label: "Show popups on:"

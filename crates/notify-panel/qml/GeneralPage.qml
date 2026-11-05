@@ -4,7 +4,7 @@ import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 
 // How the panel itself behaves: the system tray icon and starting at login.
-Kirigami.Page {
+Kirigami.ScrollablePage {
     id: page
     title: "General"
     property var model
@@ -24,19 +24,20 @@ Kirigami.Page {
     })
 
     Kirigami.FormLayout {
-        anchors.fill: parent
 
-        Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "System tray" }
+        Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
+
+        Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Window and tray" }
         QQC2.Label {
             Layout.fillWidth: true
             wrapMode: Text.Wrap
             visible: !page.trayAvailable
             color: Kirigami.Theme.neutralTextColor
-            text: "This desktop session has no system tray, so the options below cannot take effect: closing the window quits the panel."
+            text: "No system tray on this desktop, so closing the window quits the panel."
         }
         QQC2.CheckBox {
             Kirigami.FormData.label: "Close:"
-            text: "keep running in the system tray when the window is closed"
+            text: "keep running in the tray when the window is closed"
             enabled: page.trayAvailable
             checked: page.ui ? page.ui.closeToTray : true
             onToggled: page.ui.closeToTray = checked
@@ -44,14 +45,14 @@ Kirigami.Page {
         }
         QQC2.CheckBox {
             Kirigami.FormData.label: "Minimise:"
-            text: "move to the system tray when the window is minimised"
+            text: "move to the tray when the window is minimised (not on Wayland)"
             enabled: page.trayAvailable
             checked: page.ui ? page.ui.minimizeToTray : true
             onToggled: page.ui.minimizeToTray = checked
             Accessible.name: "Minimise to tray"
         }
         QQC2.Button {
-            Kirigami.FormData.label: "Now:"
+            Kirigami.FormData.label: ""
             text: "Hide to tray"
             icon.name: "go-down"
             enabled: page.trayAvailable
@@ -62,10 +63,31 @@ Kirigami.Page {
             Layout.fillWidth: true
             wrapMode: Text.Wrap
             opacity: 0.7
-            font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-            text: "On Plasma with Wayland the window manager does not tell a window when it is minimised, so “minimise to tray” only takes effect on desktops that do (for example X11). “Close to tray” works everywhere. Use Quit in the tray menu to really exit."
+            font: Kirigami.Theme.smallFont
+            text: "Plasma on Wayland never tells a window it was minimised, so use Hide to tray instead. Quit from the tray menu to exit for good."
         }
 
+        Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
+
+        Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Start at login" }
+        QQC2.CheckBox {
+            Kirigami.FormData.label: "Launch:"
+            text: "start noti-fi when I log in (hidden in the tray)"
+            checked: page.model ? page.model.autostart : false
+            onToggled: {
+                page.model.setAutostartEnabled(checked)
+                checked = Qt.binding(() => page.model ? page.model.autostart : false)   // follow what was actually written
+            }
+            Accessible.name: "Start at login"
+        }
+        QQC2.Label {
+            Layout.fillWidth: true
+            wrapMode: Text.Wrap
+            opacity: 0.7
+            font: Kirigami.Theme.smallFont
+            text: "Adds an autostart entry in ~/.config/autostart that points at this program. The daemon already starts at login by itself."
+        }
+        Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
         Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Updates" }
         QQC2.Label { Kirigami.FormData.label: "Installed:"; text: "noti-fi " + Qt.application.version }
         RowLayout {
@@ -126,27 +148,9 @@ Kirigami.Page {
             Layout.fillWidth: true
             wrapMode: Text.Wrap
             opacity: 0.7
-            font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-            text: "Updates come from this project's releases on GitHub. The download is checked against its published checksum before anything is replaced, then the daemon is refreshed (notifications pause for about a second). This works for a copy installed in a bin folder you can write to; a system-wide install is updated with your package tool."
+            font: Kirigami.Theme.smallFont
+            text: "Updates come from this project's GitHub releases and are checked against their published checksum before anything is replaced. Notifications pause for about a second while the daemon restarts. System-wide installs are updated with your package tool."
         }
 
-        Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Start at login" }
-        QQC2.CheckBox {
-            Kirigami.FormData.label: "Launch:"
-            text: "start noti-fi when I log in (hidden in the system tray)"
-            checked: page.model ? page.model.autostart : false
-            onToggled: {
-                page.model.setAutostartEnabled(checked)
-                checked = Qt.binding(() => page.model ? page.model.autostart : false)   // follow what was actually written
-            }
-            Accessible.name: "Start at login"
-        }
-        QQC2.Label {
-            Layout.fillWidth: true
-            wrapMode: Text.Wrap
-            opacity: 0.7
-            font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-            text: "This adds a standard autostart entry for your user (~/.config/autostart) that points at this program, so move or reinstall the program before turning it on if its location will change. The daemon itself already starts at login on its own."
-        }
     }
 }

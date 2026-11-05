@@ -107,12 +107,14 @@ Kirigami.ScrollablePage {
                 QQC2.Button {
                     visible: row.modelData.id !== "update"
                     text: "Show plan"
+                    Layout.preferredWidth: Kirigami.Units.gridUnit * 6
                     enabled: page.busy === ""
                     onClicked: { page.planned = row.modelData.id; page.model.systemRun(row.modelData.id, false) }
                     Accessible.name: "Show plan: " + row.modelData.label
                 }
                 QQC2.Button {
                     text: row.modelData.apply
+                    Layout.preferredWidth: Kirigami.Units.gridUnit * 8
                     highlighted: true
                     // the daemon update has no separate plan; every other action must have had its plan shown first
                     enabled: page.busy === "" && (row.modelData.id === "update" || page.planned === row.modelData.id)

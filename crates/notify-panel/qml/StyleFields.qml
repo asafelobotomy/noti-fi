@@ -84,7 +84,7 @@ Kirigami.FormLayout {
             onTextEdited: root.edited("width", text)
             Accessible.name: "Width in pixels"
         }
-        QQC2.Label { text: "120 to 4000; you can also drag a popup's inner edge"; opacity: 0.7; font.pixelSize: Kirigami.Theme.smallFont.pixelSize }
+        QQC2.Label { text: "120 to 4000; you can also drag a popup's inner edge"; opacity: 0.7; font: Kirigami.Theme.smallFont }
     }
     RowLayout {
         Kirigami.FormData.label: "Font:"

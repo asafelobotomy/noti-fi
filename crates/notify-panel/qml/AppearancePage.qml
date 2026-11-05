@@ -71,6 +71,15 @@ Kirigami.Page {
                 width: parent.width
                 spacing: Kirigami.Units.largeSpacing
 
+                QQC2.Label {
+                    Layout.margins: Kirigami.Units.largeSpacing
+                    Layout.bottomMargin: 0
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    opacity: 0.7
+                    text: "The default look and behaviour of every popup. Zones, apps and rules can override any of it."
+                }
+
                 // a sample card drawn with the draft colours, so changes are visible before anything is saved
                 Rectangle {
                     Layout.margins: Kirigami.Units.largeSpacing
@@ -102,6 +111,7 @@ Kirigami.Page {
                 Kirigami.FormLayout {
                     Layout.fillWidth: true
                     Layout.margins: Kirigami.Units.largeSpacing
+                    Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
                     Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Colours" }
                     Repeater {
                         model: [
@@ -121,7 +131,9 @@ Kirigami.Page {
                         }
                     }
 
-                    Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Transparency and text (for every popup; zones, apps and rules can override)" }
+                    Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
+
+                    Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Text and transparency" }
                     RowLayout {
                         Kirigami.FormData.label: "Background opacity:"
                         QQC2.Slider {
@@ -165,6 +177,8 @@ Kirigami.Page {
                         QQC2.Label { text: "px (titles are 2 larger)"; opacity: 0.7 }
                     }
 
+                    Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
+
                     Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Downloads and transfers" }
                     QQC2.ComboBox {
                         Kirigami.FormData.label: "Graph shown as:"
@@ -181,6 +195,8 @@ Kirigami.Page {
                         text: "A popup with a progress value (or a speed such as 3.2 MB/s in its text) can be expanded to show its rate over time. Each popup can switch between line, bars and heatmap."
                     }
 
+                    Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
+
                     Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Sound" }
                     Toggle { Kirigami.FormData.label: "Play a sound:"; text: "when a popup appears"; path: "sound.enabled" }
                     QQC2.TextField {
@@ -192,10 +208,14 @@ Kirigami.Page {
                         Accessible.name: "Sound name"
                     }
 
+                    Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
+
                     Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Do Not Disturb" }
                     Toggle { Kirigami.FormData.label: "Critical:"; text: "still show critical notifications"; path: "dnd.allowCritical" }
                     Toggle { Kirigami.FormData.label: "Hold popups:"; text: "while a window is full screen"; path: "autoDnd.fullscreen" }
                     Toggle { text: "while the screen is being shared"; path: "autoDnd.screenShare" }
+
+                    Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
 
                     Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "History" }
                     Toggle { Kirigami.FormData.label: "Keep:"; text: "history across restarts"; path: "history.persist" }

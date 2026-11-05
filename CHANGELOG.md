@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Panel layout pass:** the General page now scrolls and is grouped as Window and tray, Start at login, Updates, with shorter help text. Help text on General, Rules, Focus and Appearance is the small font it was meant to be (it rendered large). Focus mode cards stack their fields so nothing runs past the card. Section headings have breathing room, the Appearance heading no longer clips, and the System page buttons line up.
+
 ## 0.10.0
 
 - **System page in the panel:** the health checks (`notify doctor`) and the install actions (take over, restore, make Brave deliver, update the daemon). Every action shows its plan first and only runs after a second click and a confirmation.

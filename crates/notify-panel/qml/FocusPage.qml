@@ -72,26 +72,28 @@ Kirigami.Page {
                         Layout.fillWidth: true
                         Layout.leftMargin: Kirigami.Units.largeSpacing
                         Layout.rightMargin: Kirigami.Units.largeSpacing
-                        contentItem: Kirigami.FormLayout {
+                        contentItem: ColumnLayout {
+                            spacing: Kirigami.Units.smallSpacing
+                            QQC2.Label { text: "Name"; font.bold: true }
                             QQC2.TextField {
                                 id: labelField
-                                Kirigami.FormData.label: "Name:"
                                 Layout.fillWidth: true
                                 placeholderText: card.modelData.name
                                 Binding on text { when: !labelField.activeFocus; value: card.modelData.label }
                                 onTextEdited: page.model.focusSet(card.modelData.name, "label", text)
                                 Accessible.name: "Focus mode name"
                             }
+                            QQC2.Label { Layout.topMargin: Kirigami.Units.smallSpacing; text: "Let through"; font.bold: true }
                             QQC2.ComboBox {
-                                Kirigami.FormData.label: "Let through:"
+                                Layout.fillWidth: true
                                 model: page.levelNames
                                 currentIndex: Math.max(0, page.levels.indexOf(card.modelData.minPriority))
                                 onActivated: index => page.model.focusSet(card.modelData.name, "minPriority", page.levels[index])
                                 Accessible.name: "Minimum priority"
                             }
+                            QQC2.Label { Layout.topMargin: Kirigami.Units.smallSpacing; text: "Always allow"; font.bold: true }
                             QQC2.TextArea {
                                 id: allowField
-                                Kirigami.FormData.label: "Always allow:"
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: Kirigami.Units.gridUnit * 5
                                 placeholderText: "one per line, e.g.\n^Signal$\norigin:calendar and category:^email"
@@ -104,10 +106,11 @@ Kirigami.Page {
                                 Layout.fillWidth: true
                                 wrapMode: Text.Wrap
                                 opacity: 0.7
-                                font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                                font: Kirigami.Theme.smallFont
                                 text: "Each line is a pattern for the app name, or field:pattern pairs joined with “ and ” (fields: appName, desktopEntry, origin, summary, body, urgency, category, channel)."
                             }
                             QQC2.Button {
+                                Layout.topMargin: Kirigami.Units.smallSpacing
                                 icon.name: "edit-delete"; text: "Delete mode"
                                 onClicked: page.model.focusDelete(card.modelData.name)
                                 Accessible.name: "Delete focus mode"

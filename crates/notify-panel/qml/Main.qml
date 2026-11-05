@@ -10,7 +10,7 @@ Kirigami.ApplicationWindow {
     // started with --background (start at login): stay in the system tray until asked
     visible: !root.startHidden
     width: Kirigami.Units.gridUnit * 38
-    height: Kirigami.Units.gridUnit * 34
+    height: Kirigami.Units.gridUnit * (args.indexOf("--tall") >= 0 ? 80 : 34)   // --tall: a screenshot hook that shows a whole page
     minimumWidth: Kirigami.Units.gridUnit * 22
     minimumHeight: Kirigami.Units.gridUnit * 18
 
