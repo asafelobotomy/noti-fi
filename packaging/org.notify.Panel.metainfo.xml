@@ -15,5 +15,8 @@
   <icon type="stock">org.notify.Panel</icon>
   <categories><category>Settings</category></categories>
   <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.10.0" date="2026-11-05"/>
+  </releases>
   <provides><binary>notify-panel</binary></provides>
 </component>

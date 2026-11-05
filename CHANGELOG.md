@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.10.0
 
 - **System page in the panel:** the health checks (`notify doctor`) and the install actions (take over, restore, make Brave deliver, update the daemon). Every action shows its plan first and only runs after a second click and a confirmation.
 - **First run:** when notifd was never installed, the panel and `notify` now say so and show the two commands to run, instead of "notifd is not running".
