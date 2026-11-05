@@ -4,6 +4,7 @@ description = "Typed messages for the notifd control socket and the rules.json c
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 
 [dependencies]
 serde.workspace = true

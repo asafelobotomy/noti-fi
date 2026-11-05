@@ -286,7 +286,7 @@ Kirigami.Page {
                             model: [
                                 { field: "appName", label: "App name:", role: "mAppName", hint: "^steam$" },
                                 { field: "desktopEntry", label: "Desktop entry:", role: "mDesktopEntry", hint: "^org\\.kde\\." },
-                                { field: "origin", label: "Site (from a browser):", role: "mOrigin", hint: "onlyfans|fansly" },
+                                { field: "origin", label: "Site (from a browser):", role: "mOrigin", hint: "example-shop|example-chat" },
                                 { field: "summary", label: "Title contains:", role: "mSummary", hint: "message" },
                                 { field: "body", label: "Text contains:", role: "mBody", hint: "" },
                                 { field: "urgency", label: "Urgency:", role: "mUrgency", hint: "critical" },
@@ -368,7 +368,7 @@ Kirigami.Page {
                         Repeater {
                             model: [
                                 { field: "appName", label: "App name:", hint: "Brave Origin" },
-                                { field: "origin", label: "Site:", hint: "onlyfans.com" },
+                                { field: "origin", label: "Site:", hint: "example-shop.com" },
                                 { field: "category", label: "Kind (category):", hint: "email.arrived" },
                                 { field: "desktopEntry", label: "Desktop entry:", hint: "" },
                                 { field: "summary", label: "Title:", hint: "New message" },

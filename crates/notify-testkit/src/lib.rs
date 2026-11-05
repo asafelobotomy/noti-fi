@@ -162,7 +162,7 @@ pub fn test_config() -> Config {
         auto_dnd: AutoDndSettings { fullscreen: true, screen_share: true, watch: Some(false) },
         zones,
         rules: vec![
-            rule("business sites", "origin", "onlyfans|fansly", Some("business"), None, None),
+            rule("business sites", "origin", "example-shop|example-chat", Some("business"), None, None),
             rule("system", "appName", "^kernel$", Some("system"), None, None),
             rule("quiet app", "appName", "^quietapp$", None, None, Some(true)),
         ],

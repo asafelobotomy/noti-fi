@@ -86,7 +86,7 @@ Check a file before saving with `notify rules --file PATH`.
 ## Checking and previewing rules (the daemon decides)
 
 ```
-notify simulate "New message" --app "Brave Origin" --origin onlyfans.com   # what would happen, and which rule decided it
+notify simulate "New message" --app "Brave Origin" --origin example-shop.com   # what would happen, and which rule decided it
 notify simulate x --app Steam --config draft.json                          # ... against a draft, without applying it
 notify rules --file draft.json                                             # static lint + the daemon's own verdict
 notify preview --config draft.json --seconds 8                             # show REAL sample popups with the draft theme/zones
@@ -145,3 +145,7 @@ notify update --payload notifd   # deploy the checkout's daemon files instead of
 ## Planned
 
 A Rust + Kirigami control panel; see [docs/control-panel-plan.md](docs/control-panel-plan.md). Phases 0-4 (daemon/CLI groundwork, toolkit spike, the shell with Overview and History, the Rules editor with simulator, Zones and Appearance) are done; see `docs/phase1-toolkit-spike.md`.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).

@@ -24,7 +24,7 @@ BASE_CONFIG = {
         "system": {"anchor": "bottom-right", "accent": "#fbbf24", "label": "System"},
     },
     "rules": [
-        {"name": "business sites", "match": {"origin": "onlyfans|fansly"}, "zone": "business"},
+        {"name": "business sites", "match": {"origin": "example-shop|example-chat"}, "zone": "business"},
         {"name": "system", "match": {"appName": "^kernel$"}, "zone": "system"},
         {"name": "quiet app", "match": {"appName": "^quietapp$"}, "silent": True},
         {"name": "long lived", "match": {"appName": "^longlived$"}, "timeout": 0},
@@ -161,12 +161,12 @@ def check(name, ok, detail=""):
 
 # ------------------------------------------------------------------ tests
 def test_routing(d):
-    d.send("hi", app="Brave Origin", hints=["string:x-kde-origin-name:onlyfans.com", "string:desktop-entry:brave-origin"], t=500)
+    d.send("hi", app="Brave Origin", hints=["string:x-kde-origin-name:example-shop.com", "string:desktop-entry:brave-origin"], t=500)
     d.send("hi", app="Brave Origin", hints=["string:x-kde-origin-name:github.com"], t=500)
     d.send("disk", app="kernel", t=500)
     h = d.wait_for(lambda: (x := d.ipc("history", 10)) and len(x) >= 3 and x) or []
     zones = {i["summary"] + "/" + i["origin"]: i["zone"] for i in h}
-    check("site rule routes onlyfans.com to business", zones.get("hi/onlyfans.com") == "business", str(zones))
+    check("site rule routes example-shop.com to business", zones.get("hi/example-shop.com") == "business", str(zones))
     check("other sites fall through to the default zone", zones.get("hi/github.com") == "personal", str(zones))
     check("app rule routes kernel to system", zones.get("disk/") == "system", str(zones))
 
@@ -181,7 +181,7 @@ def test_dnd_and_mute(d):
     check("critical notifications pass DND", by.get("critical passes", {}).get("shown") is True)
     d.ipc("dnd", "off")
     d.ipc("mute", "business", "true")
-    d.send("muted", app="Brave Origin", hints=["string:x-kde-origin-name:fansly.com"], t=500)
+    d.send("muted", app="Brave Origin", hints=["string:x-kde-origin-name:example-chat.com"], t=500)
     h = d.wait_for(lambda: (x := d.ipc("history", 1)) and x[0]["summary"] == "muted" and x) or [{}]
     check("a muted zone hides its notifications", h[0].get("why") == "muted business", str(h[0]))
     d.ipc("mute", "business", "false")
@@ -400,13 +400,13 @@ def test_validate_does_not_apply(d):
 def test_simulate_agrees_with_reality(d):
     """For each case: ask the simulator, then send the real notification and compare what actually happened."""
     cases = [
-        ("site rule", dict(appName="Brave Origin", origin="onlyfans.com", summary="sim-1"), {}, []),
+        ("site rule", dict(appName="Brave Origin", origin="example-shop.com", summary="sim-1"), {}, []),
         ("system app", dict(appName="kernel", summary="sim-2"), {}, []),
         ("silent rule", dict(appName="quietapp", summary="sim-3"), {}, []),
         ("default zone", dict(appName="Steam", summary="sim-4"), {}, []),
         ("dnd holds normal", dict(appName="Steam", summary="sim-5"), {"dnd": True}, []),
         ("dnd passes critical", dict(appName="kernel", summary="sim-6", urgency="critical"), {"dnd": True}, ["-u", "critical"]),
-        ("muted zone", dict(appName="Brave Origin", origin="fansly.com", summary="sim-7"), {"mute": "business"}, []),
+        ("muted zone", dict(appName="Brave Origin", origin="example-chat.com", summary="sim-7"), {"mute": "business"}, []),
         ("fullscreen holds", dict(appName="Steam", summary="sim-8"), {"fullscreen": True}, []),
     ]
     for label, n, state, extra in cases:
@@ -677,9 +677,9 @@ def test_socket_events(d):
     check("a state event is pushed when Do Not Disturb changes", ev is not None)
     c.call("dnd", {"mode": "off"})
     d.wait_for(lambda: d.active() == 0, 4)
-    d.send("event test", app="Brave Origin", t=900, hints=["string:x-kde-origin-name:onlyfans.com"])
+    d.send("event test", app="Brave Origin", t=900, hints=["string:x-kde-origin-name:example-shop.com"])
     ev = c.wait_event("notification", lambda e: e.get("summary") == "event test")
-    check("a notification event carries zone, site and outcome", ev and ev["zone"] == "business" and ev["origin"] == "onlyfans.com" and ev["shown"] is True, str(ev))
+    check("a notification event carries zone, site and outcome", ev and ev["zone"] == "business" and ev["origin"] == "example-shop.com" and ev["shown"] is True, str(ev))
     nid = ev["id"] if ev else -1
     ev2 = c.wait_event("closed", lambda e: e.get("id") == nid, timeout=6)
     check("a closed event follows when the popup goes away", ev2 is not None)

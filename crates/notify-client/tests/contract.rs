@@ -117,9 +117,9 @@ fn contract_against_a_real_daemon() {
     c.dnd("off").unwrap();
     wait_until(SHORT, || c.status().map(|s| s.active == 0).unwrap_or(false));
 
-    let id: i64 = d.send("event test", "Brave Origin", 900, &["string:x-kde-origin-name:onlyfans.com"], "normal").parse().unwrap();
+    let id: i64 = d.send("event test", "Brave Origin", 900, &["string:x-kde-origin-name:example-shop.com"], "normal").parse().unwrap();
     let e = ev.wait_event(SHORT, |e| matches!(e, Event::Notification(n) if n.summary == "event test")).unwrap();
-    k.check("a typed notification event carries zone, origin and outcome", matches!(&e, Some(EventEnvelope { event: Event::Notification(n), .. }) if n.zone == "business" && n.origin == "onlyfans.com" && n.shown && n.urgency == Urgency::Normal && n.id == id), || format!("{e:?}"));
+    k.check("a typed notification event carries zone, origin and outcome", matches!(&e, Some(EventEnvelope { event: Event::Notification(n), .. }) if n.zone == "business" && n.origin == "example-shop.com" && n.shown && n.urgency == Urgency::Normal && n.id == id), || format!("{e:?}"));
     let e = ev.wait_event(Duration::from_secs(6), |e| matches!(e, Event::Closed(c) if c.id == id)).unwrap();
     k.check("a closed event follows", e.is_some(), || "no closed event".into());
 

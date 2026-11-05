@@ -4,6 +4,7 @@ description = "noti-fi command line (`notify`): install, run and control the not
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 
 [[bin]]
 name = "notify"

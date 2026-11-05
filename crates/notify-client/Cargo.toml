@@ -4,6 +4,7 @@ description = "Blocking client for the notifd control socket"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 
 [dependencies]
 notify-protocol = { path = "../notify-protocol" }

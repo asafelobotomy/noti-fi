@@ -95,7 +95,7 @@ pub struct RuleView {
     /// The name, or "(unnamed rule)".
     pub title: String,
     pub name: String,
-    /// "origin ~ onlyfans|fansly  →  business"
+    /// "origin ~ example-shop|example-chat  →  business"
     pub summary: String,
     /// Pattern per match field (empty string when the rule does not test that field).
     #[serde(rename = "match")]
@@ -920,7 +920,7 @@ mod tests {
   "futureSetting": { "keep": "me" },
   "zones": { "business": {"anchor": "top-left"}, "personal": {"anchor": "top-right"} },
   "rules": [
-    { "name": "Business sites", "match": { "origin": "onlyfans|fansly" }, "zone": "business", "extra": 1 },
+    { "name": "Business sites", "match": { "origin": "example-shop|example-chat" }, "zone": "business", "extra": 1 },
     { "name": "Critical", "match": { "urgency": "critical" }, "timeout": 0 },
     { "match": { "appName": "^kernel$" }, "silent": true }
   ]
@@ -1095,8 +1095,8 @@ mod tests {
         let v = d.rules();
         assert_eq!(v.len(), 3);
         assert_eq!(v[0].title, "Business sites");
-        assert_eq!(v[0].summary, "origin ~ onlyfans|fansly  →  business");
-        assert_eq!(v[0].matches["origin"], "onlyfans|fansly");
+        assert_eq!(v[0].summary, "origin ~ example-shop|example-chat  →  business");
+        assert_eq!(v[0].matches["origin"], "example-shop|example-chat");
         assert_eq!(v[0].matches["appName"], "");
         assert_eq!(v[1].timeout, "0");
         assert!(v[1].summary.contains("stays until dismissed"));
@@ -1224,7 +1224,7 @@ mod tests {
     #[test]
     fn the_simulator_input_builds_the_daemons_request() {
         let mut i = SimInput::default();
-        assert!(i.set("appName", "Brave Origin") && i.set("origin", "onlyfans.com") && i.set("urgency", "critical"));
+        assert!(i.set("appName", "Brave Origin") && i.set("origin", "example-shop.com") && i.set("urgency", "critical"));
         assert!(i.set("timeout", "never") && i.set("ignoreState", "false"));
         assert!(!i.set("urgency", "loud") && !i.set("nonsense", "x") && !i.set("timeout", "soon"), "bad fields and values are refused");
         let draft = json!({"rules": []});

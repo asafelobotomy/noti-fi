@@ -67,7 +67,7 @@ Item {
             step++
             const m = model
             if (step === 1) call("simSet", "appName", "Brave Origin")
-            else if (step === 2) call("simSet", "origin", "onlyfans.com")
+            else if (step === 2) call("simSet", "origin", "example-shop.com")
             else if (step === 3) call("ruleAdd")
             else if (step === 4) call("ruleSetName", m.rulesCount - 1, "Selftest rule")
             else if (step === 5) call("ruleSetMatch", m.rulesCount - 1, "appName", "^selftest$")

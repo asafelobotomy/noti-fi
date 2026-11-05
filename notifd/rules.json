@@ -62,14 +62,14 @@
     {
       "name": "Business sites",
       "match": {
-        "origin": "\\b(onlyfans|fansly)\\b"
+        "origin": "\\b(example-shop|example-chat)\\b"
       },
       "zone": "business"
     },
     {
       "name": "Business sites (by text)",
       "match": {
-        "summary": "\\b(onlyfans|fansly)\\b"
+        "summary": "\\b(example-shop|example-chat)\\b"
       },
       "zone": "business"
     },

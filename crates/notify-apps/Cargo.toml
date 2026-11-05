@@ -4,6 +4,7 @@ description = "Finds the apps on this system that send, or could send, notificat
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 
 [dependencies]
 notify-protocol = { path = "../notify-protocol" }

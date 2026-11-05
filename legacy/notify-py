@@ -1233,7 +1233,7 @@ def cmd_send(a):
 
 
 SAMPLES = [
-    ("Brave Origin", "normal", "New message", "A subscriber sent you a message", "onlyfans.com", "brave-origin"),
+    ("Brave Origin", "normal", "New message", "A customer sent you a message", "example-shop.com", "brave-origin"),
     ("Brave Origin", "normal", "Review requested", "A pull request needs you", "github.com", "brave-origin"),
     ("Steam", "normal", "Friend online", "someone started playing a game", None, None),
     ("Claude", "normal", "Task finished", "Your workspace review is ready", None, None),

@@ -4,6 +4,7 @@ description = "noti-fi: a native Plasma control panel for notifd (Rust + cxx-qt 
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 build = "build.rs"
 
 [[bin]]
