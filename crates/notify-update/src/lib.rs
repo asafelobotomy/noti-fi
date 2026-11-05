@@ -154,8 +154,31 @@ fn replace_file(from: &Path, to: &Path, mode: u32) -> Result<(), String> {
     })
 }
 
+/// The Qt 6 version installed here (`major.minor.patch`), if it can be told.
+pub fn host_qt_version() -> Option<String> {
+    let run = |cmd: &str, args: &[&str]| Command::new(cmd).args(args).output().ok().filter(|o| o.status.success()).map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string()).filter(|s| !s.is_empty());
+    run("pkg-config", &["--modversion", "Qt6Core"]).or_else(|| run("qmake6", &["-query", "QT_VERSION"]))
+}
+
+/// Can a panel built against Qt `built` run on Qt `host`? The panel's compiled QML uses Qt's private interfaces, which a newer minor version can lack
+/// (and an older one may not have yet), so the major.minor must match and the installed patch must not be older than the one it was built with.
+pub fn qt_compatible(built: &str, host: &str) -> bool {
+    let nums = |v: &str| -> Vec<u64> { v.trim().split('.').map(|p| p.parse().unwrap_or(0)).collect() };
+    let (b, h) = (nums(built), nums(host));
+    b.len() >= 2 && h.len() >= 2 && b[0] == h[0] && b[1] == h[1] && h.get(2).copied().unwrap_or(0) >= b.get(2).copied().unwrap_or(0)
+}
+
+/// What an installation did.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Installed {
+    pub files: Vec<PathBuf>,
+    /// Why `notify-panel` was left as it was (it was built for a different Qt than the one installed), or `None` when it was replaced.
+    pub panel_skipped: Option<String>,
+}
+
 /// Unpack a verified archive and put its programs, launcher and docs under `prefix`. `work` is an empty scratch folder.
-pub fn install_archive(archive: &[u8], version: &str, prefix: &Path, work: &Path) -> Result<Vec<PathBuf>, String> {
+/// `host_qt` is the Qt installed here: the panel is replaced only when the archive says it was built for a compatible Qt.
+pub fn install_archive(archive: &[u8], version: &str, prefix: &Path, work: &Path, host_qt: Option<&str>) -> Result<Installed, String> {
     let tgz = work.join("release.tar.gz");
     fs::write(&tgz, archive).map_err(|e| e.to_string())?;
     let unpacked = work.join("unpacked");
@@ -175,17 +198,27 @@ pub fn install_archive(archive: &[u8], version: &str, prefix: &Path, work: &Path
             return Err(format!("the archive is missing bin/{bin}"));
         }
     }
-    let mut done = Vec::new();
+    let built_qt = fs::read_to_string(root.join("qt-version")).ok().map(|t| t.trim().to_string()).filter(|t| !t.is_empty());
+    let panel_skipped = match (built_qt.as_deref(), host_qt) {
+        (Some(b), Some(h)) if qt_compatible(b, h) => None,
+        (Some(b), Some(h)) => Some(format!("it was built for Qt {b} but this machine has Qt {h}, and a panel only runs on the Qt it was built for")),
+        (Some(b), None) => Some(format!("it was built for Qt {b} and this machine's Qt version could not be determined")),
+        (None, _) => Some("the archive does not say which Qt it was built for".to_string()),
+    };
+    let mut done = Installed { panel_skipped, ..Default::default() };
     for bin in ["notify", "notify-panel"] {
+        if bin == "notify-panel" && done.panel_skipped.is_some() {
+            continue;
+        }
         let to = prefix.join("bin").join(bin);
         replace_file(&root.join("bin").join(bin), &to, 0o755)?;
-        done.push(to);
+        done.files.push(to);
     }
     let desktop = root.join("share/applications/org.notify.Panel.desktop");
     if desktop.is_file() {
         let to = prefix.join("share/applications/org.notify.Panel.desktop");
         replace_file(&desktop, &to, 0o644)?;
-        done.push(to);
+        done.files.push(to);
     }
     Ok(done)
 }

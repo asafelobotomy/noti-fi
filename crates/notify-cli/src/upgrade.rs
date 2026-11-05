@@ -58,6 +58,8 @@ pub fn upgrade(ctx: &Ctx, apply: bool) -> Result<()> {
 
     let prefix = prefix.expect("checked above");
     let bytes = slot(Vec::<u8>::new());
+    let skipped = slot(None::<String>);
+    let skipped2 = skipped.clone();
     let (b1, b2) = (bytes.clone(), bytes.clone());
     let (rel1, rel2) = (rel.clone(), rel.clone());
     let new_notify = prefix.join("bin/notify");
@@ -73,9 +75,10 @@ pub fn upgrade(ctx: &Ctx, apply: bool) -> Result<()> {
             move || {
                 let work = std::env::temp_dir().join(format!("notify-upgrade-{}", std::process::id()));
                 fs::create_dir_all(&work)?;
-                let r = notify_update::install_archive(&b2.borrow(), &rel2.version, &prefix, &work).map_err(|e| anyhow!(e));
+                let r = notify_update::install_archive(&b2.borrow(), &rel2.version, &prefix, &work, notify_update::host_qt_version().as_deref()).map_err(|e| anyhow!(e));
                 let _ = fs::remove_dir_all(&work);
-                r.map(|_| ())
+                *skipped2.borrow_mut() = r?.panel_skipped;
+                Ok(())
             }
         }),
     ];
@@ -94,6 +97,9 @@ pub fn upgrade(ctx: &Ctx, apply: bool) -> Result<()> {
     }
     out.line(INFO, &describe(&rel), None);
     run_plan(&out, "upgrade", steps, false)?;
-    out.result(true, &format!("updated to noti-fi {}. Restart the panel (noti-fi) to use it.", rel.version));
+    match skipped.borrow().as_deref() {
+        None => out.result(true, &format!("updated to noti-fi {}. Restart the panel (noti-fi) to use it.", rel.version)),
+        Some(why) => out.result(true, &format!("updated notify to {}, but notify-panel was NOT replaced: {why}. Build the panel for this machine with `makepkg -si` (packaging/PKGBUILD) or `cargo build --release -p notify-panel`.", rel.version)),
+    }
     Ok(())
 }

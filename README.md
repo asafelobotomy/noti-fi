@@ -10,6 +10,39 @@ and the Rust command-line tool and control panel that install and run it.
 - **notify** installs it as a user service, switches Plasma over and back, and gives daily controls
   (Do Not Disturb, mute a zone, history, a global hotkey).
 
+## Install from a release
+
+Download the archive from the [releases page](https://github.com/asafelobotomy/noti-fi/releases), check it against the `.sha256` file, then:
+
+```sh
+tar xzf noti-fi-*-linux.tar.gz && cd noti-fi-*-linux
+./install.sh                 # into ~/.local (PREFIX=/usr ./install.sh for system-wide, run with run0)
+notify takeover --dry-run    # see exactly what it will change
+notify takeover --now        # make notifd your notification service (undo any time: notify restore)
+```
+
+The panel (`notify-panel`) only runs on the Qt version it was built with. The archive records that version, and the installer leaves the panel out when it does not match your Qt. On Arch and Manjaro the reliable way to get the panel is to build it for your machine:
+
+```sh
+cd packaging && makepkg -si     # builds noti-fi against your installed Qt (about 8 minutes); run it again after a Qt upgrade breaks the panel
+```
+
+Needs at run time: `quickshell`, `qt6-declarative`, `kirigami`, `qqc2-desktop-style` (`qt6-multimedia` is optional, for audio/video players).
+
+## Updating
+
+```sh
+notify upgrade           # look for a newer release (contacts github.com, only when you run it)
+notify upgrade --apply   # download it, verify its checksum, replace notify (and the panel when its Qt matches), refresh the daemon
+```
+
+The panel's General page does the same, and can check once a day if you tick the box (off by default). It works for a copy installed in a folder you can write to (such as `~/.local`); a system-wide install is updated with your package tool.
+
+## Releasing
+
+Bump the version in `Cargo.toml` and `daemonVersion` in `notifd/shell.qml` (a test checks they agree), update `CHANGELOG.md`, commit, then push a tag such as `v0.8.1`.
+The `release` workflow builds on Arch, packages the archive with `packaging/build-tarball.sh`, and publishes it with its checksum. The `ci` workflow builds and tests every push and pull request.
+
 ## Layout
 
 | Path | What it is |

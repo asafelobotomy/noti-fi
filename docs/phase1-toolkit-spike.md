@@ -204,3 +204,10 @@ New keys, usable on a **rule**, on a **zone** and (opacity, fontFamily, fontSize
   (this catches a damaged download, not a compromised account), unpacks it and replaces each file by writing a new one and renaming it over the old. It checks that both programs are in the archive before replacing anything.
 - `notify upgrade` reports, `notify upgrade --apply` installs (it refuses early, before any network use, when the running copy is not in a writable `bin` folder, for example a build in `target/`), then runs the new `notify update` to refresh the daemon.
 - The panel runs the same `notify upgrade --apply`; after it, **Restart noti-fi** starts a fresh copy a second later and quits (Linux reports a replaced running program as "(deleted)", which is stripped). The daily check is an opt-in setting and defaults to off.
+
+## Addendum: the panel is tied to the Qt it was built with
+
+- `qmlcachegen` (always on in `cxx-qt-build` 0.10) compiles the QML into the binary using Qt's *private* interfaces, which differ between Qt minor versions. The first releases were built on Arch (Qt 6.12.0) and the panel failed to start on Manjaro (Qt 6.11.2)
+  with `undefined symbol: ...QQmlPrivate::AOTLookupValidation...`. The command-line tool has no Qt dependency and is unaffected.
+- The release archive therefore contains `qt-version`; `install.sh` and `notify upgrade --apply` replace the panel only when that is the same major.minor as the installed Qt and the installed patch is not older, otherwise they update everything else and print why.
+  `packaging/PKGBUILD` is the supported way to get a panel that matches your machine; rebuild it after a Qt upgrade.

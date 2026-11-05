@@ -23,6 +23,10 @@ install -m 644 "$root/packaging/org.notify.Panel.desktop" "$stage/share/applicat
 install -m 644 "$root/README.md" "$root/LICENSE" "$stage/share/doc/noti-fi/"
 cp -r "$root/docs" "$stage/share/doc/noti-fi/docs"
 install -m 755 "$root/packaging/install.sh" "$stage/install.sh"
+# The panel's compiled QML only runs on the Qt it was built against, so the archive says which one that was.
+qt=$(pkg-config --modversion Qt6Core 2>/dev/null || qmake6 -query QT_VERSION 2>/dev/null || true)
+[ -n "$qt" ] || { echo "cannot tell which Qt version this was built with (need pkg-config or qmake6)" >&2; exit 1; }
+echo "$qt" > "$stage/qt-version"
 install -m 644 "$root/README.md" "$root/LICENSE" "$stage/"
 
 # a reproducible archive: sorted names, fixed owner and times

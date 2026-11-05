@@ -17,6 +17,10 @@ fn tmp(label: &str) -> PathBuf {
 
 /// A release archive the way `packaging/build-tarball.sh` lays it out, with `marker` as the content of both programs.
 fn archive(version: &str, marker: &str, with_panel: bool) -> Vec<u8> {
+    archive_for_qt(version, marker, with_panel, Some("6.11.2"))
+}
+
+fn archive_for_qt(version: &str, marker: &str, with_panel: bool, qt: Option<&str>) -> Vec<u8> {
     let w = tmp("arch");
     let root = w.join(format!("noti-fi-{version}-x86_64-linux"));
     fs::create_dir_all(root.join("bin")).unwrap();
@@ -26,6 +30,9 @@ fn archive(version: &str, marker: &str, with_panel: bool) -> Vec<u8> {
         fs::write(root.join("bin/notify-panel"), marker).unwrap();
     }
     fs::write(root.join("share/applications/org.notify.Panel.desktop"), "[Desktop Entry]\n").unwrap();
+    if let Some(q) = qt {
+        fs::write(root.join("qt-version"), format!("{q}\n")).unwrap();
+    }
     let out = w.join("a.tar.gz");
     assert!(Command::new("tar").arg("czf").arg(&out).arg("-C").arg(&w).arg(root.file_name().unwrap()).status().unwrap().success());
     fs::read(out).unwrap()
@@ -105,12 +112,13 @@ fn a_newer_release_is_downloaded_verified_and_installed_over_the_old_one() {
     let prefix = tmp("prefix");
     fs::create_dir_all(prefix.join("bin")).unwrap();
     fs::write(prefix.join("bin/notify"), "OLD").unwrap();
-    let done = install_archive(&bytes, &rel.version, &prefix, &tmp("work")).unwrap();
+    let done = install_archive(&bytes, &rel.version, &prefix, &tmp("work"), Some("6.11.2")).unwrap();
     assert_eq!(fs::read_to_string(prefix.join("bin/notify")).unwrap(), "NEW", "the old program is replaced");
     assert_eq!(fs::read_to_string(prefix.join("bin/notify-panel")).unwrap(), "NEW");
     assert_eq!(fs::metadata(prefix.join("bin/notify")).unwrap().permissions().mode() & 0o777, 0o755);
     assert!(prefix.join("share/applications/org.notify.Panel.desktop").exists());
-    assert_eq!(done.len(), 3);
+    assert_eq!(done.files.len(), 3);
+    assert!(done.panel_skipped.is_none());
     assert!(fs::read_dir(prefix.join("bin")).unwrap().flatten().all(|e| !e.file_name().to_string_lossy().ends_with(".new")), "no temporary files are left");
 }
 
@@ -131,12 +139,12 @@ fn an_archive_without_the_programs_is_refused_before_anything_is_replaced() {
     let prefix = tmp("prefix2");
     fs::create_dir_all(prefix.join("bin")).unwrap();
     fs::write(prefix.join("bin/notify"), "OLD").unwrap();
-    let e = install_archive(&archive("0.8.0", "NEW", false), "0.8.0", &prefix, &tmp("work2")).unwrap_err();
+    let e = install_archive(&archive("0.8.0", "NEW", false), "0.8.0", &prefix, &tmp("work2"), Some("6.11.2")).unwrap_err();
     assert!(e.contains("missing bin/notify-panel"), "{e}");
     assert_eq!(fs::read_to_string(prefix.join("bin/notify")).unwrap(), "OLD", "the check happens before any file is replaced");
-    let e = install_archive(&archive("0.8.0", "NEW", true), "0.9.0", &prefix, &tmp("work3")).unwrap_err();
+    let e = install_archive(&archive("0.8.0", "NEW", true), "0.9.0", &prefix, &tmp("work3"), Some("6.11.2")).unwrap_err();
     assert!(e.contains("does not contain"), "an archive of another version is refused: {e}");
-    assert!(install_archive(b"garbage", "0.8.0", &prefix, &tmp("work4")).is_err());
+    assert!(install_archive(b"garbage", "0.8.0", &prefix, &tmp("work4"), Some("6.11.2")).is_err());
 }
 
 #[test]
@@ -144,4 +152,32 @@ fn the_install_prefix_comes_from_where_the_program_lives() {
     assert_eq!(install_prefix(Path::new("/home/me/.local/bin/notify")), Some(PathBuf::from("/home/me/.local")));
     assert_eq!(install_prefix(Path::new("/usr/bin/notify-panel")), Some(PathBuf::from("/usr")));
     assert_eq!(install_prefix(Path::new("/work/target/release/notify")), None, "a build folder is not an installation");
+}
+
+#[test]
+fn qt_versions_must_match_for_the_panel() {
+    assert!(qt_compatible("6.11.2", "6.11.2"));
+    assert!(qt_compatible("6.11.2", "6.11.5"), "a newer patch of the same minor is fine");
+    assert!(!qt_compatible("6.11.2", "6.11.1"), "an older patch may lack what the panel needs");
+    assert!(!qt_compatible("6.12.0", "6.11.2"), "built for a newer minor: this is the case that broke the first releases");
+    assert!(!qt_compatible("6.11.2", "6.12.0"), "a newer minor can have dropped private interfaces");
+    assert!(!qt_compatible("6.11.2", "5.15.0"));
+    assert!(!qt_compatible("", "6.11.2"));
+}
+
+#[test]
+fn a_panel_built_for_another_qt_is_left_alone_but_the_cli_is_updated() {
+    let prefix = tmp("prefix3");
+    fs::create_dir_all(prefix.join("bin")).unwrap();
+    fs::write(prefix.join("bin/notify"), "OLD").unwrap();
+    fs::write(prefix.join("bin/notify-panel"), "OLD-PANEL").unwrap();
+    let r = install_archive(&archive_for_qt("0.9.0", "NEW", true, Some("6.12.0")), "0.9.0", &prefix, &tmp("work5"), Some("6.11.2")).unwrap();
+    assert_eq!(fs::read_to_string(prefix.join("bin/notify")).unwrap(), "NEW", "the command line tool does not depend on Qt and is updated");
+    assert_eq!(fs::read_to_string(prefix.join("bin/notify-panel")).unwrap(), "OLD-PANEL", "a panel that would not start is not installed over one that does");
+    assert!(r.panel_skipped.as_deref().unwrap().contains("built for Qt 6.12.0 but this machine has Qt 6.11.2"), "{r:?}");
+    // no Qt version in the archive, or none detectable here: also left alone
+    let r = install_archive(&archive_for_qt("0.9.0", "NEWER", true, None), "0.9.0", &prefix, &tmp("work6"), Some("6.11.2")).unwrap();
+    assert!(r.panel_skipped.is_some() && fs::read_to_string(prefix.join("bin/notify-panel")).unwrap() == "OLD-PANEL");
+    let r = install_archive(&archive_for_qt("0.9.0", "NEWEST", true, Some("6.11.2")), "0.9.0", &prefix, &tmp("work7"), None).unwrap();
+    assert!(r.panel_skipped.as_deref().unwrap().contains("could not be determined"));
 }
