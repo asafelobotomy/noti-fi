@@ -1,0 +1,128 @@
+"""Input-handling tests: markup, bad config, automatic Do Not Disturb, inline reply. Run through test_notifd.py, which passes in its `check`, BASE_CONFIG and paths."""
+import http.server, json, os, signal, socket, subprocess, sys, threading, time
+
+
+def make_tests(check, BASE_CONFIG, ROOT, SRC):
+    def test_markup_cannot_fetch(d):
+        hits = []
+
+        class H(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                hits.append(self.path); self.send_response(404); self.end_headers()
+            def log_message(self, *a): pass
+        srv = http.server.HTTPServer(("127.0.0.1", 0), H)
+        port = srv.server_address[1]
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        url = lambda n: f"http://127.0.0.1:{port}/{n}"
+        d.send(f'<img src="{url("summary")}"/> title', "plain", t=2500)
+        d.send("body", f'<img src="{url("body")}"/> <b>ok</b> <a href="{url("link")}">link</a>', t=2500)
+        d.send("icon", "x", t=2500, icon=url("icon.png"))
+        d.send("hint icon", "x", t=2500, hints=[f"string:image-path:{url('hint.png')}"])
+        time.sleep(3)
+        srv.shutdown()
+        check("markup in titles, bodies and icons never triggers a network request", not hits, f"requests: {hits}")
+        d.ipc("dismissAll")
+
+
+    def test_bad_config_never_drops_notifications(d):
+        good = json.dumps(BASE_CONFIG)
+        def cfg_ok(want):
+            return d.wait_for(lambda: (c := d.ipc("configStatus")) and c["ok"] is want and c, 6)
+        cases = {
+            "bad regex": {**BASE_CONFIG, "rules": [{"name": "bad", "match": {"appName": "(unclosed"}, "zone": "business"}] + BASE_CONFIG["rules"]},
+            "unknown zone in a rule": {**BASE_CONFIG, "rules": [{"name": "x", "match": {}, "zone": "nowhere"}]},
+            "unknown match field": {**BASE_CONFIG, "rules": [{"name": "x", "match": {"nope": "a"}}]},
+            "bad anchor": {**BASE_CONFIG, "zones": {"personal": {"anchor": "middle", "accent": "#fff"}}},
+            "defaultZone missing": {**BASE_CONFIG, "defaultZone": "ghost"},
+            "negative timeout": {**BASE_CONFIG, "defaultTimeout": -5},
+        }
+        for label, cfg in cases.items():
+            d.write_config(cfg)
+            c = cfg_ok(False)
+            check(f"rejects config: {label}", bool(c) and c["error"] != "", str(c))
+            d.send(f"still works after {label}", t=1000)
+            check(f"  notifications still shown after: {label}", d.wait_for(lambda: d.active() == 1, 3))
+            d.ipc("dismissAll"); d.wait_for(lambda: d.active() == 0, 3)
+        d.write_config("{ this is not json")
+        check("rejects invalid JSON", bool(cfg_ok(False)))
+        d.write_config("[1, 2, 3]")
+        check("rejects a top-level list", bool(cfg_ok(False)))
+        d.write_config(good)
+        check("accepts the good config again", bool(cfg_ok(True)))
+
+
+    def test_auto_dnd(d):
+        d.ipc("setAuto", "fullscreen", "true")
+        st = d.ipc("status")
+        check("full-screen state is reported as the reason popups are held", st["holding"] == "fullscreen" and st["auto"]["fullscreen"], str(st))
+        d.send("held while fullscreen", t=500)
+        d.send("critical still shows", app="kernel", urgency="critical", t=500)
+        h = d.wait_for(lambda: (x := d.ipc("history", 5)) and len(x) >= 2 and x) or []
+        by = {i["summary"]: i for i in h}
+        check("normal notifications are held while a window is full screen", by.get("held while fullscreen", {}).get("why") == "fullscreen", str(by.get("held while fullscreen")))
+        check("critical notifications still show during full screen", by.get("critical still shows", {}).get("shown") is True)
+        d.ipc("dismissAll")
+        d.ipc("setAuto", "fullscreen", "false")
+        d.send("after fullscreen", t=800)
+        h = d.wait_for(lambda: (x := d.ipc("history", 1)) and x[0]["summary"] == "after fullscreen" and x) or [{}]
+        check("popups resume when full screen ends", h[0].get("shown") is True, str(h[0]))
+        d.ipc("setAuto", "share", "true")
+        d.send("held while sharing", t=500)
+        h = d.wait_for(lambda: (x := d.ipc("history", 1)) and x[0]["summary"] == "held while sharing" and x) or [{}]
+        check("popups are held while the screen is being shared", h[0].get("why") == "screen sharing", str(h[0]))
+        d.ipc("setAuto", "share", "false")
+        # the setting turns it off
+        cfg = json.loads(json.dumps(BASE_CONFIG)); cfg["autoDnd"]["fullscreen"] = False
+        d.write_config(cfg)
+        d.wait_for(lambda: (c := d.ipc("configStatus")) and c["ok"] and True, 5); time.sleep(0.5)
+        d.ipc("setAuto", "fullscreen", "true")
+        d.send("fullscreen detection disabled", t=500)
+        h = d.wait_for(lambda: (x := d.ipc("history", 1)) and x[0]["summary"] == "fullscreen detection disabled" and x) or [{}]
+        check("autoDnd.fullscreen=false disables the hold", h[0].get("shown") is True, str(h[0]))
+        d.ipc("setAuto", "fullscreen", "false"); d.write_config(BASE_CONFIG)
+        d.wait_for(lambda: (c := d.ipc("configStatus")) and c["ok"] and True, 5)
+        d.ipc("dismissAll")
+        d.write_config({**BASE_CONFIG, "autoDnd": {"fullscreen": "yes"}})
+        c = d.wait_for(lambda: (c := d.ipc("configStatus")) and (not c["ok"]) and c, 5)
+        check("a non-boolean autoDnd setting is rejected", bool(c), str(c))
+        d.write_config(BASE_CONFIG); d.wait_for(lambda: (c := d.ipc("configStatus")) and c["ok"] and True, 5)
+
+
+    def test_inline_reply(d):
+        mon = subprocess.Popen(["busctl", "--user", "monitor", "--json=short", "--match", "type='signal',member='NotificationReplied'"],
+                               env=d.env, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        time.sleep(1)
+        try:
+            r = subprocess.run(["busctl", "--user", "call", "--", "org.freedesktop.Notifications", "/org/freedesktop/Notifications",
+                                "org.freedesktop.Notifications", "Notify", "susssasa{sv}i", "chatapp", "0", "", "New message from Sam",
+                                "hey, are you free?", "4", "inline-reply", "Reply", "default", "Open", "1",
+                                "x-kde-reply-placeholder-text", "s", "Write a reply...", "0"], env=d.env, capture_output=True, text=True)
+            nid = int(r.stdout.split()[-1]) if r.returncode == 0 else -1
+            check("a notification with a reply box is shown", d.wait_for(lambda: d.active() == 1, 4) and nid > 0, r.stderr)
+            res = d.ipc("reply", nid, "I am free at five")
+            check("reply is accepted for a notification that has a reply box", isinstance(res, dict) and res.get("ok") is True, str(res))
+            got = None
+            end = time.time() + 4
+            import select
+            while time.time() < end and not got:
+                if select.select([mon.stdout], [], [], 0.3)[0]:
+                    try:
+                        m = json.loads(mon.stdout.readline()); got = m["payload"]["data"]
+                    except Exception:
+                        pass
+            check("the app receives NotificationReplied with the typed text", got == [nid, "I am free at five"], str(got))
+            d.ipc("dismissAll"); d.wait_for(lambda: d.active() == 0, 4)
+            d.send("plain notification", t=0)
+            d.wait_for(lambda: d.active() == 1, 3)
+            nid2 = (d.ipc("history", 1) or [{}])[0].get("id")
+            res = d.ipc("reply", nid2, "hello")
+            check("reply is refused for a notification without a reply box", isinstance(res, dict) and "error" in res, str(res))
+            res = d.ipc("reply", 99999, "hello")
+            check("reply to a notification that is not on screen is refused", isinstance(res, dict) and "error" in res, str(res))
+            d.ipc("dismissAll")
+        finally:
+            mon.terminate()
+
+    # ------------------------------------------------------------------ simulate / validate / preview / schema
+
+    return [test_markup_cannot_fetch, test_bad_config_never_drops_notifications, test_auto_dnd, test_inline_reply]

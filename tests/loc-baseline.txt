@@ -1,5 +1,3 @@
 # Source files that were longer than 400 lines when the per-file limit was introduced, with the length they may not exceed.
 # Shrink them (lower the number, or delete the line once a file is within 400); never let them grow. See crates/notify-cli/tests/loc.rs.
 notifd/shell.qml 1394
-crates/notify-panel-core/src/draft.rs 1247
-tests/test_notifd.py 917
