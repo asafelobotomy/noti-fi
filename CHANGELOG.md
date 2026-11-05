@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.12.0
 
 - **Routing side panel:** Apps, Zones and Rules are chosen from a side panel on the left (icons only in a narrow window) instead of tabs along the top.
 - **Apps:** view as Grid, List or List (compact), and every app is filed under its system category (Messaging and email, Internet, Office, Development, Media, Graphics, Games, Education, System, Utilities, Other). Categories that hold an app that has sent something open by themselves; click a heading to open or close it. In the grid, click a tile for its settings.
