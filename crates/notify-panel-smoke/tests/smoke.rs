@@ -116,10 +116,16 @@ fn without_a_daemon_the_panel_says_so_and_does_not_crash() {
     assert_eq!(r.code, 0, "{}", r.stderr);
     assert_eq!(rep["state"], "no-daemon", "{rep}");
     assert_eq!(rep["connected"], false);
-    assert!(rep["state_message"].as_str().unwrap_or("").contains("systemctl --user start notifd"), "{rep}");
+    assert!(rep["state_message"].as_str().unwrap_or("").contains("notify takeover --now"), "notifd is not installed in this test's state folder, so the advice is to install it: {rep}");
+    // once `notify takeover` has been run (its record exists) the advice is to start the service
+    let state = std::env::temp_dir().join(format!("notify-panel-installed-{}", std::process::id()));
+    std::fs::create_dir_all(state.join("notifd")).unwrap();
+    std::fs::write(state.join("notifd/takeover.json"), "{}").unwrap();
+    let r2 = run_panel_env(&nowhere, &["--quit-after=3", "--report"], &[("XDG_STATE_HOME", &state)]);
+    assert!(r2.report()["state_message"].as_str().unwrap_or("").contains("systemctl --user start notifd"), "{}", r2.report());
     assert!(r.qml_errors().is_empty(), "{:?}", r.qml_errors());
     let ui = r.ui();
-    assert!(ui["banner"].as_str().unwrap_or("").contains("notifd is not running"), "the banner must be VISIBLE, ui = {ui}");
+    assert!(ui["banner"].as_str().unwrap_or("").contains("notifd is not installed"), "the banner must be VISIBLE, ui = {ui}");
     assert_eq!(ui["subtitle"], "Not connected", "{ui}");
     assert_eq!(ui["zones"], 0, "{ui}");
 }

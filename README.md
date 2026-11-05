@@ -173,11 +173,15 @@ notify update --payload notifd   # deploy the checkout's daemon files instead of
 
 - Plasma's per-app notification settings page no longer applies (notifd has its own rules).
 - Popups appear on one screen (`"screen"` in rules.json picks which).
-- Screen-share detection is unconfirmed (above).
+- Wayland does not tell applications when their window is minimised, so "minimise to tray" cannot work there; closing the window does go to the tray.
+- Screen-share detection is unconfirmed (above), as is start-up ordering at a real login and Brave web push arriving through notifd; these need a live desktop session to prove.
+- The panel is built against one Qt minor version. Release archives record it (`qt-version`) and `notify upgrade` refuses a panel that does not match; a `portable-qml` archive works across Qt versions.
+- Release archives are x86_64 Linux only and are not signed (they are checked against a published sha256).
+- CI runs unit, CLI and offscreen-panel tests; the daemon and popup suites need Quickshell and a compositor and are run locally.
 
 ## Planned
 
-A Rust + Kirigami control panel; see [docs/control-panel-plan.md](docs/control-panel-plan.md). Phases 0-4 (daemon/CLI groundwork, toolkit spike, the shell with Overview and History, the Rules editor with simulator, Zones and Appearance) are done; see `docs/phase1-toolkit-spike.md`.
+See [docs/control-panel-plan.md](docs/control-panel-plan.md) and the open issues for what is next.
 
 ## Licence
 

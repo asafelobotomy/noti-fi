@@ -78,6 +78,7 @@ pub fn run_panel_env(socket: &std::path::Path, args: &[&str], env: &[(&str, &std
         .env("NOTIFY_PANEL_SOCKET", std::env::temp_dir().join(format!("notify-panel-{}-{}.sock", std::process::id(), Instant::now().elapsed().as_nanos())))
         .env("NOTIFY_PANEL_NO_TRAY", "1")
         .env("NOTIFY_PANEL_TEST", "1")
+        .env("XDG_STATE_HOME", &settings)
         .envs(env.iter().copied())
         .env("XDG_CONFIG_HOME", &settings)
         .env("XDG_DATA_HOME", &settings)

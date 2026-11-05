@@ -38,3 +38,9 @@ jobs:
           cargo test --locked -p notify-cli --test loc --test version
       - name: Clippy (reported, not blocking)
         run: cargo clippy --workspace --all-targets --locked || true
+
+  deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2

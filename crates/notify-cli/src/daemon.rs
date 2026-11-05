@@ -18,7 +18,13 @@ pub fn connect(dev: bool) -> Result<Client> {
         Error::Connect { .. } => anyhow!(
             "notifd is not running (no control socket at {}). {}",
             path.display(),
-            if dev { "Start one with: notify dev" } else { "Start it with: systemctl --user start notifd" }
+            if dev {
+                "Start one with: notify dev"
+            } else if paths().takeover_state.exists() {
+                "Start it with: systemctl --user start notifd"
+            } else {
+                "It is not installed: see what that changes with `notify takeover --dry-run`, then run `notify takeover --now`"
+            }
         ),
         Error::VersionMismatch { .. } => anyhow!("{e}"),
         other => anyhow!("{other}"),

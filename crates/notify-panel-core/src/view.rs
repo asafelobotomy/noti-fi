@@ -29,9 +29,15 @@ impl Conn {
         }
     }
 
-    /// Plain-words explanation with advice, for the banner.
+    /// Plain-words explanation with advice, for the banner (assuming notifd is installed).
     pub fn message(&self) -> String {
+        self.message_with(true)
+    }
+
+    /// The same, knowing whether notifd is installed on this machine: if it is not, starting it cannot help and the advice is to install it.
+    pub fn message_with(&self, daemon_installed: bool) -> String {
         match self {
+            Conn::NoDaemon if !daemon_installed => "notifd is not installed on this machine. See what installing it changes with: notify takeover --dry-run, then run: notify takeover --now".into(),
             Conn::Connecting => "Connecting to notifd...".into(),
             Conn::Connected => String::new(),
             Conn::NoDaemon => "notifd is not running. Start it with: systemctl --user start notifd".into(),
@@ -41,6 +47,12 @@ impl Conn {
             Conn::Lost(why) => format!("Lost the connection to notifd ({why}). Reconnecting..."),
         }
     }
+}
+
+/// Has `notify takeover` been run (it leaves a record in the state folder)?
+pub fn daemon_installed() -> bool {
+    let state = std::env::var_os("XDG_STATE_HOME").filter(|v| !v.is_empty()).map(std::path::PathBuf::from).or_else(|| std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".local/state")));
+    state.is_some_and(|s| s.join("notifd/takeover.json").exists())
 }
 
 /// Map a client error to a connection state.
@@ -200,6 +212,9 @@ mod tests {
     fn connection_states_have_codes_and_advice() {
         assert_eq!(Conn::NoDaemon.code(), "no-daemon");
         assert!(Conn::NoDaemon.message().contains("systemctl --user start notifd"));
+        assert!(Conn::NoDaemon.message_with(false).contains("notify takeover --now"), "not installed: the advice is to install it, not to start it");
+        assert!(!Conn::NoDaemon.message_with(false).contains("systemctl"));
+        assert_eq!(Conn::Lost("x".into()).message_with(false), Conn::Lost("x".into()).message(), "only the no-daemon message depends on installation");
         let i = Conn::Incompatible { daemon: 9 };
         assert_eq!(i.code(), "incompatible");
         assert!(i.message().contains("protocol 9") && i.message().contains("notify update"));

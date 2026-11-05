@@ -154,7 +154,7 @@ fn the_notify_binary_end_to_end() {
     // ---- no daemon
     let o = Command::new(env!("CARGO_BIN_EXE_notify")).args(["dnd", "status"]).env("NOTIFD_SOCKET", d.dir.join("nothing-here.sock")).output().unwrap();
     let err = String::from_utf8_lossy(&o.stderr);
-    k.check("without a daemon, commands fail with advice", o.status.code() == Some(1) && err.contains("notifd is not running") && err.contains("systemctl --user start notifd"), || err.to_string());
+    k.check("without a daemon, commands fail with advice", o.status.code() == Some(1) && err.contains("notifd is not running") && (err.contains("systemctl --user start notifd") || err.contains("notify takeover")), || err.to_string());
     let o = Command::new(env!("CARGO_BIN_EXE_notify")).args(["--json", "dnd", "status"]).env("NOTIFD_SOCKET", d.dir.join("nothing-here.sock")).output().unwrap();
     let last: Value = serde_json::from_str(String::from_utf8_lossy(&o.stdout).trim()).unwrap_or(Value::Null);
     k.check("...and in --json mode with a failed result object", last["type"] == "result" && last["ok"] == false, || last.to_string());
