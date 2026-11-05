@@ -67,6 +67,7 @@ Kirigami.Page {
     readonly property var templates: data.templates
     // the look section opens by itself when the rule already changes something
     property bool lookOpen: false
+    property bool simOpen: false
     function hasLook(r) { return !!r && [r.sOpacity, r.sClickThrough, r.sNoFocus, r.sWidth, r.sFontFamily, r.sFontSize, r.sGroup, r.sPriority, r.sMedia, r.sStack, r.sTimer].some(v => v !== undefined && v !== null && v !== "") }
     onCurrentChanged: lookOpen = hasLook(current)
     property var opened: ({})                // conditions added by hand for the selected rule
@@ -222,7 +223,7 @@ Kirigami.Page {
 
                         Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
 
-                        Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Matches when…" }
+                        Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "When a notification matches" }
                         QQC2.Label {
                             Layout.fillWidth: true
                             wrapMode: Text.Wrap
@@ -337,7 +338,15 @@ Kirigami.Page {
                     Kirigami.Separator { Layout.fillWidth: true }
 
                     // ---- the simulator
+                    QQC2.Button {
+                        Layout.leftMargin: Kirigami.Units.largeSpacing
+                        icon.name: "system-search"
+                        text: page.simOpen ? "Hide the tester" : "Test the rules with a sample notification…"
+                        onClicked: page.simOpen = !page.simOpen
+                        Accessible.name: "Test the rules"
+                    }
                     RulesSimulator {
+                        visible: page.simOpen
                         Layout.fillWidth: true
                         Layout.margins: Kirigami.Units.largeSpacing
                         model: page.model

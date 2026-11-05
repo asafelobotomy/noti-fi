@@ -16,6 +16,7 @@ Kirigami.Page {
     readonly property var vals: page.settings.values !== undefined ? page.settings.values : ({})
     readonly property var zones: page.settings.zones !== undefined ? page.settings.zones : []
     property string selectedId: ""
+    property bool sizesOpen: false
     readonly property var selectedZone: { for (const z of page.zones) if (z.id === page.selectedId) return z; return null }
     onZonesChanged: if (selectedZone === null && zones.length) selectedId = zones[0].id
 
@@ -103,6 +104,31 @@ Kirigami.Page {
             ColumnLayout {
                 width: parent.width
                 spacing: Kirigami.Units.largeSpacing
+
+                // ---- pick the zone to edit (the map and the card below follow it)
+                Flow {
+                    Layout.fillWidth: true
+                    Layout.margins: Kirigami.Units.largeSpacing
+                    Layout.bottomMargin: 0
+                    spacing: Kirigami.Units.smallSpacing
+                    Repeater {
+                        model: page.zones
+                        delegate: QQC2.Button {
+                            id: pick
+                            required property var modelData
+                            checkable: true; autoExclusive: true
+                            checked: modelData.id === page.selectedId
+                            onClicked: page.selectedId = modelData.id
+                            contentItem: RowLayout {
+                                spacing: Kirigami.Units.smallSpacing
+                                Rectangle { implicitWidth: 10; implicitHeight: 10; radius: 5; color: pick.modelData.accent !== "" ? pick.modelData.accent : Kirigami.Theme.disabledTextColor }
+                                QQC2.Label { text: pick.modelData.label || pick.modelData.id; textFormat: Text.PlainText }
+                            }
+                            Accessible.name: "Edit zone " + (modelData.label || modelData.id)
+                        }
+                    }
+                    QQC2.Button { icon.name: "list-add"; text: "Add zone"; flat: true; onClicked: page.selectedId = page.model.zoneAdd(); Accessible.name: "Add a zone" }
+                }
 
                 // ---- the mini screen: nine places on a grid, or drag a zone anywhere ("free")
                 QQC2.Label {
@@ -245,20 +271,18 @@ Kirigami.Page {
                     }
                 }
 
-                // ---- one card per zone
+                // ---- the selected zone
                 Repeater {
-                    model: page.zones
+                    model: page.selectedZone ? [page.selectedZone] : []
                     delegate: Kirigami.AbstractCard {
                         id: card
                         required property var modelData
                         Layout.fillWidth: true
                         Layout.leftMargin: Kirigami.Units.largeSpacing
                         Layout.rightMargin: Kirigami.Units.largeSpacing
-                        highlighted: modelData.id === page.selectedId
-                        showClickFeedback: true
-                        onClicked: page.selectedId = modelData.id
                         contentItem: ColumnLayout {
                             spacing: Kirigami.Units.smallSpacing
+                            Kirigami.Heading { level: 4; text: "Zone: " + (card.modelData.label || card.modelData.id) }
                             Kirigami.FormLayout {
                                 QQC2.TextField {
                                     id: labelField
@@ -302,7 +326,7 @@ Kirigami.Page {
                             }
                             QQC2.Button {
                                 Layout.alignment: Qt.AlignHCenter
-                                text: look.visible ? "Hide look and behavior" : "Look and behavior…"
+                                text: look.visible ? "Hide look and behavior" : "Change how this zone's popups look…"
                                 icon.name: look.visible ? "go-up" : "go-down"
                                 onClicked: look.visible = !look.visible
                             }
@@ -324,7 +348,7 @@ Kirigami.Page {
                     Layout.fillWidth: true
                     Layout.margins: Kirigami.Units.largeSpacing
                     Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
-                    Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Layout" }
+                    Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "All zones" }
                     QQC2.ComboBox {
                         Kirigami.FormData.label: "Show popups on:"
                         model: page.screenNames()
@@ -339,8 +363,14 @@ Kirigami.Page {
                         onActivated: index => page.model.settingSet("defaultZone", model[index])
                         Accessible.name: "Default zone"
                     }
+                    QQC2.Button {
+                        Kirigami.FormData.label: ""
+                        icon.name: page.sizesOpen ? "go-up" : "go-down"
+                        text: page.sizesOpen ? "Hide size, spacing and limits" : "Size, spacing and limits…"
+                        onClicked: page.sizesOpen = !page.sizesOpen
+                    }
                     Repeater {
-                        model: [
+                        model: !page.sizesOpen ? [] : [
                             { path: "maxVisible", label: "Popups per zone:", note: "0 = no limit; extras wait" },
                             { path: "width", label: "Popup width (px):", note: "" },
                             { path: "margin", label: "Gap from the screen edge (px):", note: "" },

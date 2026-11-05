@@ -139,7 +139,7 @@ Kirigami.Page {
             Layout.rightMargin: Kirigami.Units.largeSpacing
             wrapMode: Text.Wrap
             opacity: 0.7
-            text: "Pick where each app's popups go, or mute it. Open an app for its timeout, look and the kinds of notification it sends. These are saved as rules (“App: …” on the Rules tab); Flatpak permissions apply at once."
+            text: "Choose where each app's popups appear, or mute it. Use the arrow for more. Changes are saved as rules (named “App: …” on the Rules tab)."
         }
 
         Kirigami.AbstractCard {
@@ -164,7 +164,7 @@ Kirigami.Page {
         }
         QQC2.ToolButton {
             Layout.leftMargin: Kirigami.Units.largeSpacing
-            text: page.showWays ? "Hide notification methods" : "What can notifications do?"
+            text: page.showWays ? "Hide" : "What can a notification do?"
             icon.name: "help-about"
             onClicked: page.showWays = !page.showWays
         }
@@ -201,6 +201,8 @@ Kirigami.Page {
                 readonly property var appStyle: JSON.parse(appStyleJson)
                 readonly property var kinds: JSON.parse(kindsJson)
                 property bool detailsOpen: page.openAll
+                property bool lookOpen: page.openAll
+                property bool kindsOpen: page.openAll
                 width: ListView.view.width - Kirigami.Units.largeSpacing * 2
                 x: Kirigami.Units.largeSpacing
                 contentItem: ColumnLayout {
@@ -262,7 +264,7 @@ Kirigami.Page {
                             columns: 4
                             columnSpacing: Kirigami.Units.largeSpacing
                             rowSpacing: Kirigami.Units.smallSpacing
-                            QQC2.Label { text: "Stays (ms):" }
+                            QQC2.Label { text: "Hide after (ms):" }
                             QQC2.TextField {
                                 id: timeoutField
                                 Layout.preferredWidth: Kirigami.Units.gridUnit * 6
@@ -285,15 +287,15 @@ Kirigami.Page {
                         }
 
                         QQC2.Button {
+                            Layout.alignment: Qt.AlignLeft
                             flat: true
-                            icon.name: "view-filter"
-                            text: "Write a custom rule for this app…"
-                            onClicked: page.openTab("rules")
-                            Accessible.name: "Open the Rules tab"
+                            icon.name: card.lookOpen ? "go-up" : "go-down"
+                            text: card.lookOpen ? "Hide look and behavior" : "Change how its popups look and behave…"
+                            onClicked: card.lookOpen = !card.lookOpen
+                            Accessible.name: "Look and behavior of " + card.name
                         }
-
-                        Kirigami.Heading { level: 4; text: "How every notification from " + card.name + " looks and behaves" }
                         StyleFields {
+                            visible: card.lookOpen
                             Layout.fillWidth: true
                             showGroup: true
                             inheritFrom: "its zone and the theme"
@@ -301,17 +303,25 @@ Kirigami.Page {
                             onEdited: (key, text) => page.model.appSet(card.matchField, card.matchValue, card.name, key, text)
                         }
 
-                        Kirigami.Heading { level: 4; text: card.kindCount > 0 ? "Kinds of notification it has sent" : "Kinds of notification" }
+                        QQC2.Button {
+                            Layout.alignment: Qt.AlignLeft
+                            flat: true
+                            icon.name: card.kindsOpen ? "go-up" : "go-down"
+                            text: card.kindsOpen ? "Hide notification types" : "Treat its notification types separately (" + card.kindCount + ")…"
+                            onClicked: card.kindsOpen = !card.kindsOpen
+                            Accessible.name: "Notification types of " + card.name
+                        }
                         QQC2.Label {
+                            visible: card.kindsOpen
                             Layout.fillWidth: true
                             wrapMode: Text.Wrap
                             opacity: 0.7
                             text: card.kindCount > 0
-                                ? "Each kind can go to its own zone, be muted, grouped apart from the others, or look different."
+                                ? "Each type can go to its own zone, be muted, be grouped, or look different from the app's other notifications."
                                 : "None yet. A kind (for example email.arrived or a web page's notification) is listed as soon as the app sends one."
                         }
                         Repeater {
-                            model: card.kindCount
+                            model: card.kindsOpen ? card.kindCount : 0
                             delegate: Kirigami.AbstractCard {
                                 id: kindCard
                                 required property int index

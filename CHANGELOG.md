@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Routing tabs tidied:** Zones shows one zone at a time (pick it from the row of zone buttons, on the map, or add a new one), with the screen, default zone and size/spacing settings under "All zones". Apps keeps one line per app; the look and the per-type settings open separately under the arrow. Rules hides the look section and the sample-notification tester until asked for.
+
 ## 0.11.0
 
 - **One Routing page:** Apps, Zones and Rules are now three tabs of a single page with one Save, so a tab switch never loses an edit.
