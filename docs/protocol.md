@@ -13,7 +13,7 @@ How tools talk to the running daemon. The Rust types live in `crates/notify-prot
 ## Conversation
 
 ```
-server -> client   {"event":"hello","protocol":1,"daemon":"0.6.0","pid":123,"seq":0}      (always first)
+server -> client   {"event":"hello","protocol":1,"daemon":"0.7.0","pid":123,"seq":0}      (always first)
 client -> server   {"id":1,"method":"status","params":{}}
 server -> client   {"id":1,"result":{...}}
                    {"id":1,"error":{"code":"bad_params","message":"mode must be on, off or toggle"}}

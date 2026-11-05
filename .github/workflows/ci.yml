@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    container: archlinux:latest        # Manjaro/Arch is the target; Qt 6 and cxx-qt build against its libraries
+    steps:
+      - name: Install build tools and Qt
+        run: |
+          pacman -Syu --noconfirm --needed base-devel git rust qt6-base qt6-declarative python
+      - uses: actions/checkout@v4
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ci-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ci-
+      - name: Build everything
+        run: cargo build --workspace --locked
+      - name: Unit tests and the project's own rules (line limit, version agreement)
+        run: |
+          cargo test --locked -p notify-protocol -p notify-apps -p notify-panel-core --lib
+          cargo test --locked -p notify-cli --test loc --test version
+      - name: Clippy (reported, not blocking)
+        run: cargo clippy --workspace --all-targets --locked || true

@@ -3,7 +3,7 @@ members = ["crates/notify-protocol", "crates/notify-client", "crates/notify-test
 resolver = "3"
 
 [workspace.package]
-version = "0.6.0"
+version = "0.7.0"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
@@ -13,3 +13,6 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 thiserror = "2"
 anyhow = "1"
+
+[profile.release]
+strip = true

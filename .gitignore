@@ -11,3 +11,4 @@
 /shots/
 *.log
 *.tmp
+/dist/

@@ -3,7 +3,7 @@
 //! Wire format: one JSON object per line.
 //!
 //! ```text
-//! server -> client (first):  {"event":"hello","protocol":1,"daemon":"0.6.0","pid":123,"seq":0}
+//! server -> client (first):  {"event":"hello","protocol":1,"daemon":"0.7.0","pid":123,"seq":0}
 //! client -> server:          {"id":1,"method":"status","params":{}}
 //! server -> client:          {"id":1,"result":{...}}   or   {"id":1,"error":{"code":"...","message":"..."}}
 //! after "subscribe":         {"event":"state"|"notification"|"updated"|"closed"|"config"|"preview","seq":N,"t":ms,...}
