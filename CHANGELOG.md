@@ -1,12 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.11.0
 
 - **One Routing page:** Apps, Zones and Rules are now three tabs of a single page with one Save, so a tab switch never loses an edit.
 - **Apps:** compact rows (icon, activity, zone, mute); timeout, Flatpak permission, look and notification types open with the arrow.
 - **Zones:** a Snap to grid / Freeform switch. Snapping drops a dragged zone on the nearest of nine places; freeform places it anywhere.
 - **Rules:** conditions are tags with suggestions from your history and apps (patterns that are real regular expressions stay editable as text); only the conditions in use are shown, with "Add a condition"; "New from template" for common rules (mute an app, send it to a zone, keep popups until dismissed, critical stays, silence a website, hide by title); the look section opens only when a rule changes something.
-
 - **Panel layout pass:** the General page now scrolls and is grouped as Window and tray, Start at login, Updates, with shorter help text. Help text on General, Rules, Focus and Appearance is the small font it was meant to be (it rendered large). Focus mode cards stack their fields so nothing runs past the card. Section headings have breathing room, the Appearance heading no longer clips, and the System page buttons line up.
 
 ## 0.10.0
