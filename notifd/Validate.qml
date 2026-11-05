@@ -21,6 +21,8 @@ QtObject {
             if (o[k] !== undefined && typeof o[k] !== "boolean") return k + " must be true or false"
         if (o.width !== undefined && (typeof o.width !== "number" || !(o.width >= 120 && o.width <= 4000))) return "width must be a number from 120 to 4000"
         if (o.fontFamily !== undefined && (typeof o.fontFamily !== "string" || o.fontFamily.length > 100)) return "fontFamily must be a font name"
+        if (o.timerStyle !== undefined && (typeof o.timerStyle !== "string" || o.timerStyle.split(",").some(t => ["none", "line", "circle", "frame"].indexOf(t.trim()) < 0)))
+            return "timerStyle must be none, or any of line, circle, frame separated by commas"
         if (o.fontSize !== undefined && (typeof o.fontSize !== "number" || !(o.fontSize >= 6 && o.fontSize <= 48))) return "fontSize must be a number from 6 to 48"
         if (o.group !== undefined && (typeof o.group !== "string" || o.group.length > 60)) return "group must be a short name"
         if (o.priority !== undefined && priorities.indexOf(o.priority) < 0) return "priority must be " + priorities.join(", ")
@@ -74,7 +76,7 @@ QtObject {
         if (!(c.defaultZone in zones)) return "defaultZone '" + c.defaultZone + "' is not a defined zone"
         for (const k of ["defaultTimeout", "width", "margin", "spacing", "maxVisible"])
             if (typeof c[k] !== "number" || !(c[k] >= 0)) return k + " must be a number >= 0"
-        const te = styleError({ opacity: c.theme.opacity, fontFamily: c.theme.fontFamily, fontSize: c.theme.fontSize }, false)
+        const te = styleError({ opacity: c.theme.opacity, fontFamily: c.theme.fontFamily, fontSize: c.theme.fontSize, timerStyle: c.theme.timerStyle }, false)
         if (te !== "") return "theme: " + te
         const fe = focusError(c.focus)
         if (fe !== "") return "focus: " + fe

@@ -81,6 +81,9 @@ fn style_problems(o: &serde_json::Map<String, Value>, allow_group: bool) -> Vec<
     if num("fontSize", 6.0, 48.0) == Some(false) {
         e.push("fontSize must be a number from 6 to 48".to_string());
     }
+    if o.get("timerStyle").is_some_and(|v| !v.as_str().is_some_and(|s| s.split(',').all(|t| ["none", "line", "circle", "frame"].contains(&t.trim())))) {
+        e.push("timerStyle must be none, or any of line, circle, frame separated by commas".to_string());
+    }
     for k in ["clickThrough", "noFocus"] {
         if o.get(k).is_some_and(|v| !v.is_boolean()) {
             e.push(format!("{k} must be true or false"));
@@ -327,11 +330,11 @@ mod tests {
         v["zones"]["system"]["width"] = json!(10);
         v["rules"] = json!([
             {"name": "a", "opacity": 0, "match": {"category": "^email"}},
-            {"name": "b", "clickThrough": "yes", "fontSize": 400, "group": 5},
+            {"name": "b", "clickThrough": "yes", "fontSize": 400, "group": 5, "timerStyle": "sparkle"},
             {"name": "ok", "opacity": 0.5, "clickThrough": false, "noFocus": true, "width": 400, "fontFamily": "Serif", "fontSize": 14, "group": "g", "match": {"channel": "web"}}
         ]);
         let e = lint_config(&v);
-        for want in ["theme: opacity must be", "zone 'system': group can only be set on a rule", "zone 'system': width must be", "rule 'a': opacity must be", "rule 'b': clickThrough must be", "rule 'b': fontSize must be", "rule 'b': group must be"] {
+        for want in ["theme: opacity must be", "zone 'system': group can only be set on a rule", "zone 'system': width must be", "rule 'a': opacity must be", "rule 'b': clickThrough must be", "rule 'b': fontSize must be", "rule 'b': group must be", "rule 'b': timerStyle must be"] {
             assert!(e.iter().any(|x| x.contains(want)), "missing `{want}` in {e:?}");
         }
         assert!(!e.iter().any(|x| x.contains("rule 'ok'")), "a valid rule must pass: {e:?}");

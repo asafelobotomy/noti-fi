@@ -13,11 +13,14 @@ pub const POPUP_QML: &str = include_str!("../../../notifd/Popup.qml");
 pub const MEDIA_QML: &str = include_str!("../../../notifd/Media.qml");
 pub const CHART_QML: &str = include_str!("../../../notifd/TransferChart.qml");
 pub const VALIDATE_QML: &str = include_str!("../../../notifd/Validate.qml");
+pub const TRANSFERS_QML: &str = include_str!("../../../notifd/Transfers.qml");
+pub const MEDIAFILE_QML: &str = include_str!("../../../notifd/MediaFile.qml");
+pub const TIMER_QML: &str = include_str!("../../../notifd/TimerIndicators.qml");
 pub const SCHEMA: &str = include_str!("../../../notifd/rules.schema.json");
 pub const DEFAULT_RULES: &str = include_str!("../../../notifd/rules.json");
 
 /// The files that make up the daemon (not the user's rules.json).
-pub const FILE_NAMES: [&str; 6] = ["shell.qml", "Popup.qml", "Media.qml", "TransferChart.qml", "Validate.qml", "rules.schema.json"];
+pub const FILE_NAMES: [&str; 9] = ["shell.qml", "Popup.qml", "Media.qml", "TransferChart.qml", "Validate.qml", "Transfers.qml", "MediaFile.qml", "TimerIndicators.qml", "rules.schema.json"];
 
 pub struct Payload {
     pub files: Vec<(String, String)>,
@@ -34,6 +37,9 @@ impl Payload {
                 ("Media.qml".into(), MEDIA_QML.into()),
                 ("TransferChart.qml".into(), CHART_QML.into()),
                 ("Validate.qml".into(), VALIDATE_QML.into()),
+                ("Transfers.qml".into(), TRANSFERS_QML.into()),
+                ("MediaFile.qml".into(), MEDIAFILE_QML.into()),
+                ("TimerIndicators.qml".into(), TIMER_QML.into()),
                 ("rules.schema.json".into(), SCHEMA.into()),
             ],
             rules: DEFAULT_RULES.into(),

@@ -164,10 +164,10 @@ Item {
             else if (step === 2) call("ruleSetStyle", 0, "clickThrough", "true")
             else if (step === 3) call("ruleSetStyle", 0, "noFocus", "false")
             else if (step === 4) call("ruleSetStyle", 0, "width", "480")
-            else if (step === 5) call("ruleSetStyle", 0, "fontFamily", "Serif")
+            else if (step === 5) { call("ruleSetStyle", 0, "fontFamily", "Serif"); call("ruleSetStyle", 0, "timerStyle", "line,frame") }
             else if (step === 6) call("ruleSetStyle", 0, "group", "Sites")
             else if (step === 7) call("zoneStyle", "personal", "opacity", "0.5")
-            else if (step === 8) call("settingSet", "theme.opacity", "0.9")
+            else if (step === 8) { call("settingSet", "theme.opacity", "0.9"); call("settingSet", "theme.timerStyle", "circle") }
             else if (step === 9) call("settingSet", "theme.fontSize", "14")
             else if (step === 10) call("appSet", "appName", "Styleapp", "Styleapp", "fontSize", "16")
             else if (step === 11) call("appSetKind", JSON.stringify([["appName", "Styleapp"], ["category", "email.arrived"], ["channel", "app"]]), "Styleapp mail", "group", "Styleapp mail")

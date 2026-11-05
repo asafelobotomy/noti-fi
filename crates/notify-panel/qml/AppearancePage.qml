@@ -134,6 +134,15 @@ Kirigami.Page {
                         }
                         QQC2.Label { text: Math.round(opacitySlider.value) + "%"; opacity: 0.8 }
                     }
+                    QQC2.ComboBox {
+                        Kirigami.FormData.label: "Show time left:"
+                        readonly property var choices: [["none", "No indicator"], ["line", "Footer line (shortens)"], ["circle", "Circle (empties)"], ["frame", "Frame (shrinks)"],
+                                                        ["line,circle", "Footer line and circle"], ["line,frame", "Footer line and frame"], ["circle,frame", "Circle and frame"], ["line,circle,frame", "All three"]]
+                        model: choices.map(c => c[1])
+                        currentIndex: { const v = String(page.vals["theme.timerStyle"] !== undefined ? page.vals["theme.timerStyle"] : "none"); const k = ["line", "circle", "frame"].filter(t => v.indexOf(t) >= 0).join(",") || "none"; return Math.max(0, choices.findIndex(c => c[0] === k)) }
+                        onActivated: index => page.model.settingSet("theme.timerStyle", choices[index][0])
+                        Accessible.name: "Show the time left on popups"
+                    }
                     QQC2.TextField {
                         id: fontFamily
                         Kirigami.FormData.label: "Font:"

@@ -23,6 +23,7 @@ Rectangle {
     property bool handleOnLeft: false  // which edge carries the resize handle (the one facing the screen's inside)
     property bool centered: false      // a centred popup grows on both sides, so the handle moves it twice as fast
     property real maxWidth: 1200
+    property string timerStyle: "none"   // how the time left is shown: any of line, circle, frame (comma separated), or none
     property bool media: true; property bool players: false   // large pictures; audio/video players are off unless a rule enables them (a notification can name any local file)
     property var samples: []             // transfer measurements (see TransferChart.qml); 2 or more make the popup expandable
     property string chartDefault: "line"
@@ -77,32 +78,9 @@ Rectangle {
         return ""
     }
 
-    // ---- media: a large picture, and a player for a local audio/video file. Never anything remote.
-    // Apps that want a player set one of the hints x-notify-video, x-notify-audio or x-notify-media to a local file;
-    // x-kde-urls (the files a notification is about) is honoured too.
-    function mediaKind(path) {
-        const ext = (String(path).split("?")[0].split(".").pop() || "").toLowerCase()
-        if (["mp4", "mkv", "webm", "mov", "avi", "m4v", "ogv"].indexOf(ext) >= 0) return "video"
-        if (["mp3", "ogg", "oga", "opus", "flac", "wav", "m4a", "aac"].indexOf(ext) >= 0) return "audio"
-        return ""
-    }
-    function localMedia(v) {
-        let u = String(v || "")
-        if (u.startsWith("file://")) u = decodeURIComponent(u.slice(7))
-        if (!u.startsWith("/") || u.indexOf("\u0000") >= 0) return null
-        const kind = mediaKind(u)
-        return kind === "" ? null : { kind: kind, url: "file://" + encodeURI(u) }
-    }
-    readonly property var mediaFile: {
-        if (!media || !players || !notif || !notif.hints) return null
-        const h = notif.hints
-        const list = []
-        for (const k of ["x-notify-video", "x-notify-audio", "x-notify-media"]) if (h[k]) list.push(h[k])
-        const urls = h["x-kde-urls"]
-        if (urls) for (const u of (Array.isArray(urls) ? urls : String(urls).split(","))) list.push(u)
-        for (const c of list) { const m = localMedia(c); if (m) return m }
-        return null
-    }
+    // ---- media: a large picture, and a player for a local audio/video file (never anything remote; see MediaFile.qml)
+    MediaFile { id: mediaFiles }
+    readonly property var mediaFile: (media && players && notif && notif.hints) ? mediaFiles.fileFor(notif.hints) : null
     property bool mediaPlaying: false
 
     function sendReply(text) {
@@ -138,15 +116,29 @@ Rectangle {
         color: card.accent
     }
 
-    // timeout: paused while hovered, restarted when the notification is replaced.
-    // timeoutMs 0 means "never expire" (the app asked for a persistent notification).
-    property bool restarting: false
-    onGenChanged: { restarting = true; Qt.callLater(() => card.restarting = false) }
+    // timeout: counted only while nothing holds it (hover, reply box, pin, player, graph), and started again when the notification is replaced.
+    // timeoutMs 0 means "never expire" (the app asked for a persistent notification). `remaining` (1 to 0) drives the timer indicators.
+    property real elapsed: 0
+    readonly property real remaining: timeoutMs > 0 ? Math.max(0, 1 - elapsed / timeoutMs) : 1
+    onGenChanged: elapsed = 0
     Timer {
-        interval: card.timeoutMs
-        running: card.active && !card.pinned && !card.mediaPlaying && !card.graphOpen && card.timeoutMs > 0 && !hover.hovered && !replyInput.activeFocus && card.notif !== null && !card.restarting
-        repeat: false
-        onTriggered: card.expired()
+        id: clock
+        property real last: 0
+        interval: 40
+        repeat: true
+        running: card.active && !card.pinned && !card.mediaPlaying && !card.graphOpen && card.timeoutMs > 0 && !hover.hovered && !replyInput.activeFocus && card.notif !== null
+        onRunningChanged: last = Date.now()
+        onTriggered: { const n = Date.now(); card.elapsed += n - last; last = n; if (card.elapsed >= card.timeoutMs) card.expired() }
+    }
+    // which indicators to show: timerStyle holds any of "line", "circle", "frame" (comma separated), or "none"
+    readonly property bool showTimer: active && !pinned && timeoutMs > 0 && timerStyle !== "" && timerStyle !== "none"
+    TimerIndicators {
+        anchors.fill: parent
+        visible: card.showTimer
+        fraction: card.remaining
+        styles: card.timerStyle
+        color: card.accent
+        cornerRadius: card.radius
     }
 
     ColumnLayout {
@@ -193,6 +185,14 @@ Rectangle {
                 }
             }
 
+            // the circle that empties as the time runs out
+            TimerRing {
+                Layout.alignment: Qt.AlignTop
+                visible: card.showTimer && card.timerStyle.indexOf("circle") >= 0
+                fraction: card.remaining
+                color: card.accent
+                track: card.cBorder
+            }
             // how many notifications this popup stands for
             Rectangle {
                 Layout.alignment: Qt.AlignTop

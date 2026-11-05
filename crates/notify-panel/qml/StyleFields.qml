@@ -23,6 +23,15 @@ Kirigami.FormLayout {
         Accessible.name: "Priority"
     }
     QQC2.ComboBox {
+        Kirigami.FormData.label: "Show time left:"
+        readonly property var choices: [["", "Inherit (" + root.inheritFrom + ")"], ["none", "No indicator"], ["line", "Footer line"], ["circle", "Circle"], ["frame", "Frame"],
+                                        ["line,circle", "Footer line and circle"], ["line,frame", "Footer line and frame"], ["circle,frame", "Circle and frame"], ["line,circle,frame", "All three"]]
+        model: choices.map(c => c[1])
+        currentIndex: { const v = ["line", "circle", "frame"].filter(t => root.val("timerStyle").indexOf(t) >= 0).join(",") || root.val("timerStyle"); const i = choices.findIndex(c => c[0] === v); return i < 0 ? 0 : i }
+        onActivated: index => root.edited("timerStyle", choices[index][0])
+        Accessible.name: "Show time left"
+    }
+    QQC2.ComboBox {
         Kirigami.FormData.label: "Stack notifications:"
         model: ["Inherit (" + root.inheritFrom + ")", "Yes, stack with a count", "No, show each one"]
         currentIndex: root.triIndex("stack")

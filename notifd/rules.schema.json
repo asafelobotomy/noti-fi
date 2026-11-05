@@ -144,6 +144,11 @@
           "minimum": 6,
           "maximum": 48,
           "description": "Body text size in pixels (title +2, app line -1)."
+        },
+        "timerStyle": {
+          "type": "string",
+          "pattern": "^(none|((line|circle|frame)(,(line|circle|frame))*))$",
+          "description": "How a popup shows the time it has left: none, or any of line (a footer line that shortens), circle (a ring that empties) and frame (an outline that shrinks), separated by commas."
         }
       }
     },
@@ -255,6 +260,11 @@
           "stack": {
             "type": "boolean",
             "description": "Stack notifications of the same app/site/kind (or group) into one place with a count; click to expand."
+          },
+          "timerStyle": {
+            "type": "string",
+            "pattern": "^(none|((line|circle|frame)(,(line|circle|frame))*))$",
+            "description": "How a popup shows the time it has left: none, or any of line (a footer line that shortens), circle (a ring that empties) and frame (an outline that shrinks), separated by commas."
           }
         }
       }
@@ -351,6 +361,11 @@
           "stack": {
             "type": "boolean",
             "description": "Stack notifications of the same app/site/kind (or group) into one place with a count; click to expand."
+          },
+          "timerStyle": {
+            "type": "string",
+            "pattern": "^(none|((line|circle|frame)(,(line|circle|frame))*))$",
+            "description": "How a popup shows the time it has left: none, or any of line (a footer line that shortens), circle (a ring that empties) and frame (an outline that shrinks), separated by commas."
           }
         }
       }

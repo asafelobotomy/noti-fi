@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0
+
+- **Time left on each popup.** Three optional indicators, alone or together: a footer line that shortens, a circle that empties (in the popup's header), and a frame around the card that shrinks from the top middle clockwise. Set `timerStyle` (`none`, or any of `line`, `circle`, `frame` separated by commas) on the theme, a zone, an app, a kind of notification or a rule; the Appearance page and the look sections of the Rules, Zones and Apps pages have a picker. New installs default to the footer line; existing configs stay as they are (off) until you choose.
+- Hovering, a reply box, a pin, a playing media file or an open graph now *pause* a popup's countdown instead of restarting it, and the indicators freeze with it.
+- Internal: the daemon's transfer sampling and media-file lookup moved into `Transfers.qml` and `MediaFile.qml`, the protocol's config model into its own file, and the test harnesses copy every `*.qml` in `notifd/` instead of keeping a list.
+
 ## 0.8.2
 
 - **The panel now runs on any Qt 6, not just the one it was built with.** Qt compiles QML ahead of time into code that uses its private interfaces, which is what made 0.7.0 and 0.8.0 fail to start on a machine with a different Qt. The panel's build now skips that step (the QML is compiled when the panel starts, which is a little slower to open) and so uses no private interfaces. Release archives mark such a panel `portable-qml`, and `install.sh` and `notify upgrade --apply` install it on any Qt 6; the Qt-version guard from 0.8.1 still protects older, non-portable archives. Set `NOTIFI_QML_AOT=1` when building to keep Qt's ahead-of-time compilation.

@@ -16,7 +16,7 @@ use serde_json::{Map, Value, json};
 pub const MATCH_FIELDS: [&str; 8] = ["appName", "desktopEntry", "origin", "summary", "body", "urgency", "category", "channel"];
 
 /// How a popup looks and behaves: settable on a rule, on a zone, and (opacity, fontFamily, fontSize) on the theme. `group` is for rules only.
-pub const STYLE_KEYS: [&str; 10] = ["opacity", "clickThrough", "noFocus", "width", "fontFamily", "fontSize", "group", "priority", "media", "stack"];
+pub const STYLE_KEYS: [&str; 11] = ["opacity", "clickThrough", "noFocus", "width", "fontFamily", "fontSize", "group", "priority", "media", "stack", "timerStyle"];
 
 enum StyleKind {
     Num,
@@ -28,7 +28,7 @@ fn style_kind(key: &str) -> Option<StyleKind> {
     Some(match key {
         "opacity" | "width" | "fontSize" | "timeout" => StyleKind::Num,
         "clickThrough" | "noFocus" | "silent" | "media" | "stack" => StyleKind::Flag,
-        "fontFamily" | "group" | "zone" | "priority" => StyleKind::Text,
+        "fontFamily" | "group" | "zone" | "priority" | "timerStyle" => StyleKind::Text,
         _ => return None,
     })
 }
@@ -737,8 +737,8 @@ const SETTING_DEFAULTS: &[(&str, Kind)] = &[
     ("theme.button", Kind::Color("#272a36")),
     ("theme.buttonHover", Kind::Color("#323646")),
     ("theme.opacity", Kind::Num(1.0)),
-    ("theme.fontFamily", Kind::Text("")),
-    ("theme.fontSize", Kind::Num(12.0)),
+    ("theme.fontFamily", Kind::Text("")), ("theme.fontSize", Kind::Num(12.0)),
+    ("theme.timerStyle", Kind::Text("none")),
     ("transfer.chart", Kind::Text("line")),
 ];
 

@@ -218,3 +218,9 @@ New keys, usable on a **rule**, on a **zone** and (opacity, fontFamily, fontSize
   (`qInitResources_qmlcache_org_notify_panel`). The QML is then loaded from the binary's resources and compiled at start-up instead of being compiled ahead of time, which removes every `Qt_6_PRIVATE_API` symbol from the binary (check: `nm -D --undefined-only notify-panel | grep -c PRIVATE_API` is 0).
 - `packaging/build-tarball.sh` writes `portable-qml` into the archive only when that check passes; the updater and `install.sh` then accept the panel on any Qt 6 and fall back to the strict same-minor rule when the marker is absent.
 - `NOTIFI_QML_AOT=1` builds the old way. Still unverified: that a panel built on a newer Qt runs on an older one (the release workflow builds on Arch's newest Qt; the first release built this way is the test on a Qt 6.11 machine).
+
+## Addendum: time-left indicators
+
+- `timerStyle` is a style key (theme, zone, rule, app, kind) holding `none` or any of `line`, `circle`, `frame` separated by commas; per key the first matching rule wins, then the zone, then the theme (default `none`). A popup counts its own elapsed time
+  in 40 ms steps (`elapsed`, using timestamps so a busy machine does not stretch it) and exposes `remaining` (1 to 0). The footer line and frame are `TimerIndicators.qml`, the ring is `TimerRing.qml`; nothing is drawn for a persistent popup (timeout 0) or a pinned one.
+- The frame is drawn by tracing the rounded outline segment by segment (Qt Quick's canvas ignores `setLineDash`).

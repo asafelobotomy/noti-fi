@@ -199,6 +199,7 @@ fn look_and_behavior_edits_are_saved_and_accepted_by_the_daemon() {
     assert_eq!((user["opacity"].as_f64(), user["clickThrough"].as_bool(), user["noFocus"].as_bool(), user["width"].as_i64()), (Some(0.6), Some(true), Some(false), Some(480)), "{user}");
     assert_eq!((user["fontFamily"].as_str(), user["group"].as_str()), (Some("Serif"), Some("Sites")));
     assert_eq!(after["zones"]["personal"]["opacity"], 0.5);
+    assert_eq!((user["timerStyle"].as_str(), after["theme"]["timerStyle"].as_str()), (Some("line,frame"), Some("circle")), "the time-left indicator is saved on the rule and the theme");
     assert_eq!((after["theme"]["opacity"].as_f64(), after["theme"]["fontSize"].as_i64()), (Some(0.9), Some(14)));
     let kind = &after["rules"][0];
     assert_eq!(kind["match"]["category"], "^email\\.arrived$");

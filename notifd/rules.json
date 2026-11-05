@@ -28,7 +28,8 @@
     "text": "#f2f3f7",
     "subtext": "#b9bccb",
     "button": "#272a36",
-    "buttonHover": "#323646"
+    "buttonHover": "#323646",
+    "timerStyle": "line"
   },
   "focus": {
     "modes": {

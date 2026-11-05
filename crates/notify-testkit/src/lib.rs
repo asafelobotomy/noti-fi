@@ -44,8 +44,9 @@ impl TestDaemon {
         let state = dir.join("state");
         fs::create_dir_all(&payload).unwrap();
         fs::create_dir_all(&state).unwrap();
-        for f in ["shell.qml", "Popup.qml", "Media.qml", "TransferChart.qml", "Validate.qml"] {
-            fs::copy(root.join("notifd").join(f), payload.join(f)).unwrap();
+        // every QML file of the daemon (the folder is the payload; new files need no list here)
+        for e in fs::read_dir(root.join("notifd")).unwrap().flatten().filter(|e| e.path().extension().is_some_and(|x| x == "qml")) {
+            fs::copy(e.path(), payload.join(e.file_name())).unwrap();
         }
         fs::write(payload.join("rules.json"), config.to_json_pretty()).unwrap();
         let sock = dir.join("control.sock");

@@ -26,7 +26,7 @@ Kirigami.Page {
             mSummary: r.match.summary, mBody: r.match.body, mUrgency: r.match.urgency, mCategory: r.match.category, mChannel: r.match.channel,
             sOpacity: r.style.opacity, sClickThrough: r.style.clickThrough, sNoFocus: r.style.noFocus, sWidth: r.style.width,
             sFontFamily: r.style.fontFamily, sFontSize: r.style.fontSize, sGroup: r.style.group,
-            sPriority: r.style.priority, sMedia: r.style.media, sStack: r.style.stack
+            sPriority: r.style.priority, sMedia: r.style.media, sStack: r.style.stack, sTimer: r.style.timerStyle
         }
     }
     function sync() {
@@ -353,7 +353,7 @@ Kirigami.Page {
                         inheritFrom: "later rules, the zone and the theme"
                         values: page.current ? ({ opacity: page.current.sOpacity, clickThrough: page.current.sClickThrough, noFocus: page.current.sNoFocus, width: page.current.sWidth,
                                                   fontFamily: page.current.sFontFamily, fontSize: page.current.sFontSize, group: page.current.sGroup,
-                                                  priority: page.current.sPriority, media: page.current.sMedia, stack: page.current.sStack }) : ({})
+                                                  priority: page.current.sPriority, media: page.current.sMedia, stack: page.current.sStack, timerStyle: page.current.sTimer }) : ({})
                         onEdited: (key, text) => page.model.ruleSetStyle(page.selected, key, text)
                     }
 

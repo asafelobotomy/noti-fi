@@ -37,8 +37,8 @@ class Daemon:
         self.dir = Path(tempfile.mkdtemp(prefix="notifd-test-"))
         self.payload = self.dir / "p"
         self.payload.mkdir()
-        for f in ("shell.qml", "Popup.qml", "Media.qml", "TransferChart.qml", "Validate.qml"):
-            shutil.copy2(SRC / f, self.payload / f)
+        for f in sorted(SRC.glob("*.qml")):       # every QML file of the daemon: new files need no list here
+            shutil.copy2(f, self.payload / f.name)
         self.state = self.dir / "state"
         self.state.mkdir()
         self.write_config(BASE_CONFIG)

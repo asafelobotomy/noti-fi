@@ -22,7 +22,7 @@ ShellRoot {
         sound: { enabled: true, defaultName: "" },
         autoDnd: { fullscreen: true, screenShare: true },
         theme: { card: "#1d1f27", border: "#2c2f3a", text: "#f2f3f7", subtext: "#b9bccb",
-                 button: "#272a36", buttonHover: "#323646", opacity: 1, fontFamily: "", fontSize: 12 },
+                 button: "#272a36", buttonHover: "#323646", opacity: 1, fontFamily: "", fontSize: 12, timerStyle: "none" },
         // Focus modes (like Apple's): while one is on, only notifications at or above `minPriority`, or matching an `allow` entry, are shown.
         focus: { modes: { urgent: { label: "Urgent only", minPriority: "urgent" } } },
         // how the graph of a download / transfer popup is drawn by default: bars, line or heatmap
@@ -34,7 +34,7 @@ ShellRoot {
     // fontSize) on the theme. Per key: the first matching rule that sets it wins, then the zone, then the theme / global width.
     // Patterns run on text that apps and web pages control, on the thread that draws every popup: see Validate.qml (pattern length) and maxSubject (text length).
     readonly property int maxSubject: 2000
-    readonly property var styleKeys: ["opacity", "clickThrough", "noFocus", "width", "fontFamily", "fontSize", "group", "priority", "media", "stack"]
+    readonly property var styleKeys: ["opacity", "clickThrough", "noFocus", "width", "fontFamily", "fontSize", "group", "priority", "media", "stack", "timerStyle"]
     // the registry of apps is written a few seconds after its last change; make sure a stop does not lose that
     Component.onDestruction: if (seenTimer.running) saveNow()
     Validate { id: checks }       // configuration checks and the lists they use (places, match fields, priorities, charts)
@@ -319,6 +319,7 @@ ShellRoot {
         if (style.opacity === undefined) style.opacity = c.theme.opacity ?? 1
         if (style.fontFamily === undefined) style.fontFamily = c.theme.fontFamily ?? ""
         if (style.fontSize === undefined) style.fontSize = c.theme.fontSize ?? 12
+        if (style.timerStyle === undefined) style.timerStyle = c.theme.timerStyle ?? "none"
         if (style.width === undefined) style.width = c.width
         if (style.priority === undefined) style.priority = f.urgency === "critical" ? "urgent" : (f.urgency === "low" ? "low" : "normal")
         // media: pictures are shown unless a rule says false; audio/video players only when a rule (or zone) says true, because a notification
@@ -354,48 +355,13 @@ ShellRoot {
     ListModel { id: rows }
     function touch() { topo++; scheduleState() }
 
-    // ---- transfers: a notification with a progress value or a speed in its text is a download/transfer; its progress is sampled over time
-    property var transferSamples: ({})
-    readonly property var noSamples: []      // one shared empty list: a fresh [] per popup would make every popup re-evaluate on every sample
-    property int sampleRev: 0
-    readonly property var speedUnits: ({ "": 1, "k": 1e3, "m": 1e6, "g": 1e9, "t": 1e12 })
-    function parseSpeed(text) {
-        const m = /(\d+(?:[.,]\d+)?)\s*([KMGT]?)(i?)B\/s/i.exec(String(text || ""))
-        if (!m) return null
-        const base = m[3] ? 1024 : 1000
-        const exp = "kmgt".indexOf(m[2].toLowerCase()) + 1
-        const v = parseFloat(m[1].replace(",", ".")) * Math.pow(base, exp)
-        return isFinite(v) ? v : null
-    }
-    function noteTransfer(n, f, t) {
-        const h = n.hints || {}
-        const pct = (typeof h["value"] === "number" && h["value"] >= 0 && h["value"] <= 100) ? h["value"] : -1
-        const bps = parseSpeed(String(f.summary || "") + " " + String(f.body || ""))
-        if (pct < 0 && bps === null) return
-        const prev = transferSamples[n.id] || []
-        const last = prev.length ? prev[prev.length - 1] : null
-        const now = t ?? Date.now()
-        if (last && now - last.t < 50) return                 // an app that updates in bursts: keep one sample per 50 ms
-        const next = prev.length >= 240 ? prev.slice(prev.length - 239) : prev.slice()
-        next.push({ t: now, pct: pct, bps: bps })
-        const all = Object.assign({}, transferSamples)
-        all[n.id] = next
-        transferSamples = all
-        sampleRev++
-    }
-    function dropSamples(nid) {
-        if (transferSamples[nid] === undefined) return
-        const all = Object.assign({}, transferSamples)
-        delete all[nid]
-        transferSamples = all
-        sampleRev++
-    }
+    Transfers { id: tx }       // samples of downloads and transfers (rate over time), see Transfers.qml
 
     // One row per notification on screen. Style comes from decide(); `pinned` and `userWidth` are changed on the popup itself.
     function rowFor(nid, zone, timeout, st) {
         return { nid: nid, zone: zone, timeout: timeout, leaving: false, gen: 0, pinned: false, userWidth: 0,
                  cardWidth: st.width, bgOpacity: st.opacity, clickThrough: st.clickThrough, noFocus: st.noFocus,
-                 fontFamily: st.fontFamily, fontSize: st.fontSize, group: st.group,
+                 fontFamily: st.fontFamily, fontSize: st.fontSize, group: st.group, timerStyle: st.timerStyle ?? "none",
                  priority: st.priority, media: st.media, players: st.players === true, stack: st.stack, stackKey: st.stackKey ?? "" }
     }
     function applyStyle(i, st) {
@@ -405,6 +371,7 @@ ShellRoot {
         rows.setProperty(i, "noFocus", st.noFocus)
         rows.setProperty(i, "fontFamily", st.fontFamily)
         rows.setProperty(i, "fontSize", st.fontSize)
+        rows.setProperty(i, "timerStyle", st.timerStyle ?? "none")
         rows.setProperty(i, "group", st.group)
         rows.setProperty(i, "priority", st.priority)
         rows.setProperty(i, "media", st.media)
@@ -593,7 +560,7 @@ ShellRoot {
         if (r.why !== "") { n.expire(); return }
 
         byId[n.id] = n
-        noteTransfer(n, f)
+        tx.note(n, f)
         addRow(rowFor(n.id, r.zone, r.timeout, r.style))
         n.closed.connect(() => root.drop(n.id))
         watchUpdates(n)
@@ -628,7 +595,7 @@ ShellRoot {
         const r = decide(cfg, compiled, f, n.expireTimeout, liveState())
         rows.setProperty(i, "timeout", r.timeout)
         rows.setProperty(i, "zone", r.zone)
-        noteTransfer(n, f)
+        tx.note(n, f)
         applyStyle(i, r.style)
         rows.setProperty(i, "gen", rows.get(i).gen + 1)
         root.rev++
@@ -643,7 +610,7 @@ ShellRoot {
             n.tracked = true
             if (rowIndex(n.id) >= 0) return
             byId[n.id] = n
-            addRow(rowFor(n.id, cfg.defaultZone, cfg.defaultTimeout, { width: cfg.width, opacity: 1, clickThrough: false, noFocus: false, fontFamily: "", fontSize: 12, group: "", priority: "normal", media: true, players: false, stack: false, stackKey: "" }))
+            addRow(rowFor(n.id, cfg.defaultZone, cfg.defaultTimeout, { width: cfg.width, opacity: 1, clickThrough: false, noFocus: false, fontFamily: "", fontSize: 12, group: "", timerStyle: "none", priority: "normal", media: true, players: false, stack: false, stackKey: "" }))
             n.closed.connect(() => root.drop(n.id))
             watchUpdates(n)
             touch()
@@ -667,7 +634,7 @@ ShellRoot {
         onTriggered: {
             for (const nid of root.reapQueue) {
                 const i = root.rowIndex(nid)
-                if (i >= 0 && rows.get(i).leaving) { rows.remove(i); root.dropSamples(nid); const o = root.byId[nid]; delete root.byId[nid]; if (nid < 0 && o) o.destroy() }
+                if (i >= 0 && rows.get(i).leaving) { rows.remove(i); tx.drop(nid); const o = root.byId[nid]; delete root.byId[nid]; if (nid < 0 && o) o.destroy() }
             }
             root.reapQueue = []
             root.pruneStacks()
@@ -744,7 +711,7 @@ ShellRoot {
                 actions: (s.actions || []).map(t => ({ text: String(t), invoke: () => {} })),
                 hasInlineReply: s.reply === true, inlineReplyPlaceholder: s.reply === true ? "Reply…" : ""
             })
-            if (typeof s.progress === "number") seedPreviewSamples(nid, s.progress)
+            if (typeof s.progress === "number") tx.seed(nid, s.progress)
             addRow(rowFor(nid, zone, secs * 1000, d.style))
             ids.push(nid)
         }
@@ -753,23 +720,6 @@ ShellRoot {
         previewTimer.restart()
         touch()
         return { ok: true, shown: ids.length, seconds: secs }
-    }
-
-    // A made-up but plausible transfer history so a preview shows the graph
-    function seedPreviewSamples(nid, pct) {
-        const out = []
-        const now = Date.now()
-        const n = 36
-        let p = 0
-        for (let i = 0; i < n; i++) {
-            const speed = 4e6 + 3e6 * Math.sin(i / 3) + 1.5e6 * Math.sin(i * 1.7) + (i > 22 && i < 27 ? -3.5e6 : 0)
-            p = Math.min(pct, p + pct / n)
-            out.push({ t: now - (n - i) * 1000, pct: p, bps: Math.max(2e5, speed) })
-        }
-        const all = Object.assign({}, transferSamples)
-        all[nid] = out
-        transferSamples = all
-        sampleRev++
     }
 
     function endPreview() {
@@ -834,7 +784,7 @@ ShellRoot {
     //   - the control socket          (JSON lines, request/response plus pushed events)
     // The api* functions return plain objects and throw Error(message) on failure.
     // =====================================================================
-    readonly property string daemonVersion: "0.8.2"
+    readonly property string daemonVersion: "0.9.0"
     readonly property int protocolVersion: 1
     property string rawConfig: ""
 
@@ -908,7 +858,7 @@ ShellRoot {
         else fail("bad_params", "action must be toggle, clear or scroll")
         return apiStatus()
     }
-    function apiSamples(nid) { return (transferSamples[Number(nid)] || []).map(x => Object.assign({}, x)) }
+    function apiSamples(nid) { return tx.copyOf(nid) }
     function apiSetAuto(kind, on) {
         if (kind !== "fullscreen" && kind !== "share") fail("bad_params", "kind must be fullscreen or share")
         setAuto(kind, on)
@@ -1218,6 +1168,7 @@ ShellRoot {
                         required property bool noFocus
                         required property string fontFamily
                         required property real fontSize
+                        required property string timerStyle
                         required property string group
                         required property string priority
                         required property bool media
@@ -1341,6 +1292,7 @@ ShellRoot {
                             bgOpacity: slot.bgOpacity
                             fontFamily: slot.fontFamily
                             fontSize: slot.fontSize
+                            timerStyle: slot.timerStyle
                             noFocus: slot.noFocus
                             clickThrough: slot.clickThrough
                             handleOnLeft: win.atRight
@@ -1349,7 +1301,7 @@ ShellRoot {
                             priority: slot.priority
                             media: slot.media
                             players: slot.players
-                            samples: { root.sampleRev; return root.transferSamples[slot.nid] ?? root.noSamples }
+                            samples: { tx.rev; return tx.samplesFor(slot.nid) }
                             chartDefault: root.cfg.transfer.chart
                             stackCount: slot.stacked ? slot.sinfo.count : 1
                             stackExpanded: slot.expanded

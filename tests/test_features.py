@@ -37,6 +37,15 @@ def make_tests(check, BASE_CONFIG):
             check(f"validate rejects a rule with {name}", isinstance(r, dict) and r.get("ok") is False, str(r))
         r = d.ipc("validate", json.dumps({**cfg, "zones": {**cfg["zones"], "system": {**cfg["zones"]["system"], "group": "x"}}}))
         check("a group cannot be set on a zone", isinstance(r, dict) and r.get("ok") is False and "group" in r.get("error", ""), str(r))
+        ts = sim({"appName": "Chatty", "category": "email.arrived"}, c={**cfg, "theme": {**cfg["theme"], "timerStyle": "line"}, "rules": [{"name": "t", "match": {"category": "^email"}, "timerStyle": "circle,frame"}, *cfg["rules"]]})["style"]
+        check("a rule's timerStyle wins over the theme's", ts["timerStyle"] == "circle,frame", str(ts))
+        check("the theme's timerStyle applies when no rule sets one", sim({"appName": "Other"}, c={**cfg, "theme": {**cfg["theme"], "timerStyle": "line"}})["style"]["timerStyle"] == "line")
+        check("with nothing set the time-left indicator is off", sim({"appName": "Other"})["style"]["timerStyle"] == "none")
+        for bad in ("sparkle", "line,sparkle", 5):
+            r = d.ipc("validate", json.dumps({**cfg, "rules": [{"name": "t", "timerStyle": bad}]}))
+            check(f"validate rejects timerStyle {bad!r}", isinstance(r, dict) and r.get("ok") is False and "timerStyle" in r.get("error", ""), str(r))
+        r = d.ipc("validate", json.dumps({**cfg, "theme": {**cfg["theme"], "timerStyle": "line,circle,frame"}}))
+        check("validate accepts all three indicators on the theme", isinstance(r, dict) and r.get("ok") is True, str(r))
         r = d.ipc("validate", json.dumps({**cfg, "theme": {"opacity": 5}}))
         check("validate rejects a theme opacity out of range", isinstance(r, dict) and r.get("ok") is False and "theme" in r.get("error", ""), str(r))
 
