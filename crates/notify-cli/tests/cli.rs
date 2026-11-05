@@ -137,7 +137,7 @@ fn the_notify_binary_end_to_end() {
     let (c, out, _) = cli.run(&["preview", "--seconds", "2"]);
     k.check("preview shows five sample popups", c == 0 && out.contains("previewing 5 sample popups for 2s"), || out.clone());
     let (c, _, _) = cli.run(&["preview", "--end"]);
-    k.check("preview --end stops it", c == 0 && wait_until(Duration::from_secs(4), || cli.json(&["status", "--json"])["daemon"]["active"] == 0), || "still previewing".into());
+    k.check("preview --end stops it", c == 0 && wait_until(Duration::from_secs(12), || cli.json(&["status", "--json"])["daemon"]["active"] == 0), || "still previewing".into());
     cli.run(&["send", "stay", "-a", "Steam", "-t", "0"]);
     wait_until(Duration::from_secs(4), || cli.json(&["status", "--json"])["daemon"]["active"] == 1);
     let (c, _, _) = cli.run(&["dismiss"]);

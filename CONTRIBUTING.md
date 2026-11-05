@@ -6,7 +6,7 @@ Thanks for helping. A few project rules:
 - `notifd/*.qml` is the daemon payload and is embedded into `notify` at build time; no list needs editing when you add a file.
 - Run before sending a change:
   - `cargo test --workspace --no-fail-fast -- --test-threads=1`
-  - `python3 tests/test_notifd.py` and `python3 tests/test_features.py` (need Quickshell, `dbus-run-session`, `notify-send`)
+  - `python3 tests/test_notifd.py` (includes the feature and socket suites) and `python3 tests/test_sound.py` (need Quickshell, `dbus-run-session`, `notify-send`)
   - `cargo clippy --workspace --all-targets`
 - Tests use a private D-Bus session; they never touch your real notifications.
 - Branding: "noti-fi" is display only. The command is `notify`, the daemon `notifd`, the app id `org.notify.Panel`.

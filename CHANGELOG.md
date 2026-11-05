@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- **System page in the panel:** the health checks (`notify doctor`) and the install actions (take over, restore, make Brave deliver, update the daemon). Every action shows its plan first and only runs after a second click and a confirmation.
+- **First run:** when notifd was never installed, the panel and `notify` now say so and show the two commands to run, instead of "notifd is not running".
+- **Panel:** a "Hide to tray" button on the General page (Wayland never reports a minimise, so the minimise-to-tray option cannot work there; the button does the same job on demand).
+- **Popups** announce themselves to screen readers (alert role with app, title and text).
+- **Packaging:** an AppStream metainfo file and a scalable icon (`org.notify.Panel`).
+- **Repo:** SECURITY.md, CONTRIBUTING.md, issue templates, Dependabot, and a `cargo deny` job in CI (advisories, licences, sources). README "Known limits" now lists what is unverified or unsupported.
+- **Tests:** popup interaction tests (tap, pin, stack, click-through, drag-resize) with Qt Quick Test, a sound-playback test with a stand-in player, a System page smoke test; one timing-sensitive daemon test given a wider margin.
+- **Internal:** clippy is clean; `draft.rs`, `install.rs`, `model.rs`, the protocol and apps crates, `Popup.qml`, `RulesPage.qml` and the daemon test suite are now under the 400-line limit (`shell.qml` is down from 1394 to 1073 lines and stays baselined).
+
 ## 0.9.1
 
 - **Fix: `notify update` / `notify upgrade --apply` from 0.9.0 failed its smoke test and left the daemon on the old version** (nothing was broken: the check exists to stop exactly this). The binary's hand-kept list of daemon files was missing `TimerRing.qml`. The list is now generated from the `notifd/` folder at build time, and tests check that every file there is embedded and that the embedded daemon starts on a private bus.
