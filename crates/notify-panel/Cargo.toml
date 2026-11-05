@@ -1,0 +1,27 @@
+[package]
+name = "notify-panel"
+description = "noti-fi: a native Plasma control panel for notifd (Rust + cxx-qt + Kirigami)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+build = "build.rs"
+
+[[bin]]
+name = "notify-panel"
+path = "src/main.rs"
+
+[dependencies]
+cxx = "1"
+cxx-qt = "0.10"
+cxx-qt-lib = { version = "0.10", features = ["qt_full"] }
+notify-apps = { path = "../notify-apps" }
+notify-client = { path = "../notify-client" }
+notify-panel-core = { path = "../notify-panel-core" }
+notify-protocol = { path = "../notify-protocol" }
+serde_json.workspace = true
+
+[build-dependencies]
+cxx-qt-build = "0.10"
+
+[dev-dependencies]
+notify-testkit = { path = "../notify-testkit" }

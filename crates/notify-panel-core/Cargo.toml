@@ -1,0 +1,18 @@
+[package]
+name = "notify-panel-core"
+description = "The control panel's logic (connection worker, view data, filtering) with no Qt in it"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+notify-client = { path = "../notify-client" }
+notify-protocol = { path = "../notify-protocol" }
+notify-apps = { path = "../notify-apps" }
+serde.workspace = true
+serde_json.workspace = true
+# the system tray icon and its menu (StatusNotifierItem over D-Bus; no Qt involved)
+ksni = { version = "0.3", default-features = false, features = ["async-io", "blocking"] }
+
+[dev-dependencies]
+notify-testkit = { path = "../notify-testkit" }

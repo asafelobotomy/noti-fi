@@ -1,0 +1,24 @@
+[package]
+name = "notify-cli"
+description = "noti-fi command line (`notify`): install, run and control the notifd notification daemon"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "notify"
+path = "src/main.rs"
+
+[dependencies]
+notify-client = { path = "../notify-client" }
+notify-protocol = { path = "../notify-protocol" }
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+clap = { version = "4", features = ["derive"] }
+regress = "0.12"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+rusqlite = { version = "0.37", features = ["bundled"] }
+
+[dev-dependencies]
+notify-testkit = { path = "../notify-testkit" }

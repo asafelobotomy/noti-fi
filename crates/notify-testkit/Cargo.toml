@@ -1,0 +1,12 @@
+[package]
+name = "notify-testkit"
+description = "Test harness: a throwaway notifd on a private D-Bus session"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+notify-client = { path = "../notify-client" }
+notify-protocol = { path = "../notify-protocol" }
+serde_json.workspace = true

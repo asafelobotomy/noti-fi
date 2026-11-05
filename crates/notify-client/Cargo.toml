@@ -1,0 +1,15 @@
+[package]
+name = "notify-client"
+description = "Blocking client for the notifd control socket"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+notify-protocol = { path = "../notify-protocol" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+notify-testkit = { path = "../notify-testkit" }

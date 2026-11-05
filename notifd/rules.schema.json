@@ -1,0 +1,423 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://notify.local/rules.schema.json",
+  "title": "notifd rules.json",
+  "description": "Structure of ~/.config/notifd/rules.json. The daemon is the authority on semantics (regex validity, zone references); this schema describes shape, types and ranges, for editors and forms. Unknown keys are ignored by the daemon but rejected here so typos are caught.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "screen": {
+      "type": "string",
+      "description": "Output name to show popups on (e.g. eDP-1). Empty = first screen."
+    },
+    "debug": {
+      "type": "boolean",
+      "description": "Log every routing decision."
+    },
+    "defaultZone": {
+      "type": "string",
+      "description": "Zone used when no rule sets one. Must be a key of `zones`."
+    },
+    "defaultTimeout": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Milliseconds a popup stays when the app did not ask for a time."
+    },
+    "maxVisible": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Popups shown per zone; extras queue. 0 = unlimited."
+    },
+    "width": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Popup width in pixels."
+    },
+    "margin": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Gap from the screen edge in pixels."
+    },
+    "spacing": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Gap between stacked popups in pixels."
+    },
+    "dnd": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allowCritical": {
+          "type": "boolean",
+          "description": "Critical notifications still show during Do Not Disturb."
+        }
+      }
+    },
+    "history": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Entries kept."
+        },
+        "persist": {
+          "type": "boolean",
+          "description": "Keep history across restarts (writes message text to disk)."
+        }
+      }
+    },
+    "sound": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "defaultName": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._-]*$",
+          "description": "Sound-theme name played for every popup ('' = none)."
+        }
+      }
+    },
+    "autoDnd": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fullscreen": {
+          "type": "boolean",
+          "description": "Hold popups while a window is full screen."
+        },
+        "screenShare": {
+          "type": "boolean",
+          "description": "Hold popups while the screen is being shared."
+        },
+        "watch": {
+          "type": "boolean",
+          "description": "Internal: false stops the watchers (tests)."
+        }
+      }
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "card": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{3,8}$"
+        },
+        "border": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{3,8}$"
+        },
+        "text": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{3,8}$"
+        },
+        "subtext": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{3,8}$"
+        },
+        "button": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{3,8}$"
+        },
+        "buttonHover": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{3,8}$"
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 1,
+          "description": "Background opacity of the popup (text stays solid). 1 = solid."
+        },
+        "fontFamily": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Font for the popup text ('' = system font)."
+        },
+        "fontSize": {
+          "type": "number",
+          "minimum": 6,
+          "maximum": 48,
+          "description": "Body text size in pixels (title +2, app line -1)."
+        }
+      }
+    },
+    "zones": {
+      "type": "object",
+      "minProperties": 1,
+      "description": "Named places popups appear.",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "anchor"
+        ],
+        "additionalProperties": false,
+        "if": {
+          "properties": {
+            "anchor": {
+              "const": "free"
+            }
+          },
+          "required": [
+            "anchor"
+          ]
+        },
+        "then": {
+          "required": [
+            "x",
+            "y"
+          ]
+        },
+        "properties": {
+          "anchor": {
+            "enum": [
+              "top-left",
+              "top-center",
+              "top-right",
+              "middle-left",
+              "center",
+              "middle-right",
+              "bottom-left",
+              "bottom-center",
+              "bottom-right",
+              "free"
+            ],
+            "description": "One of nine places on a 3x3 grid, or `free` (then set x and y)."
+          },
+          "x": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "`free` zones only: horizontal position, 0 = left edge, 1 = right edge."
+          },
+          "y": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "`free` zones only: vertical position, 0 = top, 1 = bottom. In the lower half popups stack upward."
+          },
+          "accent": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{3,8}$"
+          },
+          "label": {
+            "type": "string"
+          },
+          "opacity": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 1,
+            "description": "Background opacity of the popup (text stays solid). 1 = solid."
+          },
+          "clickThrough": {
+            "type": "boolean",
+            "description": "Clicks pass through the popup to the window underneath."
+          },
+          "noFocus": {
+            "type": "boolean",
+            "description": "The popup never takes keyboard focus (so it has no reply box)."
+          },
+          "width": {
+            "type": "number",
+            "minimum": 120,
+            "maximum": 4000,
+            "description": "Popup width in pixels."
+          },
+          "fontFamily": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Font for the popup text ('' = system font)."
+          },
+          "fontSize": {
+            "type": "number",
+            "minimum": 6,
+            "maximum": 48,
+            "description": "Body text size in pixels (title +2, app line -1)."
+          },
+          "priority": {
+            "enum": [
+              "low",
+              "normal",
+              "high",
+              "urgent"
+            ],
+            "description": "How important: urgent passes Do Not Disturb and focus modes; high is marked. Default follows the app's urgency (critical = urgent)."
+          },
+          "media": {
+            "type": "boolean",
+            "description": "Show large pictures and audio/video players in the popup (default true)."
+          },
+          "stack": {
+            "type": "boolean",
+            "description": "Stack notifications of the same app/site/kind (or group) into one place with a count; click to expand."
+          }
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "description": "Checked top to bottom; for each of zone, timeout and silent the first matching rule that sets it wins.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "match": {
+            "type": "object",
+            "description": "Every listed field must match its regex (case-insensitive, JavaScript syntax). category = the app's category hint (email.arrived, im.received...); channel = app, portal or web.",
+            "propertyNames": {
+              "enum": [
+                "appName",
+                "desktopEntry",
+                "origin",
+                "summary",
+                "body",
+                "urgency",
+                "category",
+                "channel"
+              ]
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "zone": {
+            "type": "string"
+          },
+          "timeout": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Milliseconds; 0 = stays until dismissed."
+          },
+          "silent": {
+            "type": "boolean"
+          },
+          "opacity": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 1,
+            "description": "Background opacity of the popup (text stays solid). 1 = solid."
+          },
+          "clickThrough": {
+            "type": "boolean",
+            "description": "Clicks pass through the popup to the window underneath."
+          },
+          "noFocus": {
+            "type": "boolean",
+            "description": "The popup never takes keyboard focus (so it has no reply box)."
+          },
+          "width": {
+            "type": "number",
+            "minimum": 120,
+            "maximum": 4000,
+            "description": "Popup width in pixels."
+          },
+          "fontFamily": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Font for the popup text ('' = system font)."
+          },
+          "fontSize": {
+            "type": "number",
+            "minimum": 6,
+            "maximum": 48,
+            "description": "Body text size in pixels (title +2, app line -1)."
+          },
+          "group": {
+            "type": "string",
+            "maxLength": 60,
+            "description": "Notifications with the same group name (in one zone) are kept together under a heading."
+          },
+          "priority": {
+            "enum": [
+              "low",
+              "normal",
+              "high",
+              "urgent"
+            ],
+            "description": "How important: urgent passes Do Not Disturb and focus modes; high is marked. Default follows the app's urgency (critical = urgent)."
+          },
+          "media": {
+            "type": "boolean",
+            "description": "Show large pictures and audio/video players in the popup (default true)."
+          },
+          "stack": {
+            "type": "boolean",
+            "description": "Stack notifications of the same app/site/kind (or group) into one place with a count; click to expand."
+          }
+        }
+      }
+    },
+    "focus": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Focus modes (like Apple's): while one is on, only notifications at or above minPriority, or matching an allow entry, are shown.",
+      "properties": {
+        "modes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "minPriority": {
+                "enum": [
+                  "low",
+                  "normal",
+                  "high",
+                  "urgent"
+                ],
+                "description": "Default urgent."
+              },
+              "allow": {
+                "type": "array",
+                "description": "Each entry is a set of patterns like a rule's match; a notification matching all of one entry always gets through.",
+                "items": {
+                  "type": "object",
+                  "propertyNames": {
+                    "enum": [
+                      "appName",
+                      "desktopEntry",
+                      "origin",
+                      "summary",
+                      "body",
+                      "urgency",
+                      "category",
+                      "channel"
+                    ]
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "transfer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "chart": {
+          "enum": [
+            "bars",
+            "line",
+            "heatmap"
+          ],
+          "description": "How the graph of a download or transfer popup is drawn by default."
+        }
+      }
+    }
+  }
+}

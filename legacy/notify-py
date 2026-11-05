@@ -1,0 +1,1378 @@
+#!/usr/bin/env python3
+"""LEGACY Python version of `notify` (superseded by the Rust CLI in crates/notify-cli).
+Kept only so tests/parity.py can prove the Rust CLI does exactly what this one did.
+
+notify - manage the notifd notification system.
+
+Inspect (read-only):
+  status [--json]              who owns notifications, daemon state, config errors
+  doctor                       run every check and say what needs attention
+  apps [--json]                browsers and apps, and how ready each is for notifications
+  rules [--file F] [--json]    validate rules.json (static lint + the running daemon's verdict, without applying a --file)
+  simulate [SUMMARY] --app A   ask the daemon what it would do with a notification (--origin --entry -u --config DRAFT)
+  preview [--config DRAFT]     show real sample popups on screen with the current or a draft config
+
+Install / maintain (each supports --dry-run where it changes your system, and is reversible):
+  takeover [--now] [--no-portal]   install notifd as a user service that owns notifications
+  update                           install changed daemon files; rolls back if notifd won't start
+  restore [--purge]                hand notifications back to Plasma
+  portal [--remove]                route Flatpak/portal notifications through notifd
+  adapt [--apply] [--background] [--autostart]   make Brave deliver notifications
+  hotkey [KEYS] [--remove]         global shortcut that toggles Do Not Disturb (default Meta+Shift+N)
+
+Daily controls (talk to the running daemon):
+  dnd [on|off|toggle|status]   Do Not Disturb (critical alerts still show by default)
+  mute ZONE / unmute ZONE      silence a zone but keep it in history
+  history                      recent notifications (--missed --zone --app --full --json --clear)
+  dismiss                      close every popup on screen
+  reply ID TEXT                answer a notification that accepts replies
+  autodnd [install|remove]     pause popups automatically while a window is full screen (KWin script)
+  tray [hide|show]             Plasma's own notification icon in the system tray
+  send SUMMARY [BODY]          send a notification (--app --origin SITE -u urgency -t ms)
+  test                         send samples to every zone
+
+Development:
+  dev                          run a throwaway daemon from the source on a private bus
+  selftest                     run the regression suite (also on a private bus)
+  --dev (before any command)   point commands at the `dev` daemon instead of the real one
+"""
+import argparse, configparser, datetime, glob, json, os, re, shutil, sqlite3, subprocess, sys, tempfile, time
+from pathlib import Path
+
+HOME = Path.home()
+HERE = Path(__file__).resolve().parent
+SRC = HERE.parent / "notifd"           # the project checkout (this file lives in legacy/)
+NAME = "org.freedesktop.Notifications"
+PAYLOAD_FILES = ("shell.qml", "Popup.qml", "Media.qml", "TransferChart.qml", "Validate.qml", "rules.schema.json")
+OK, WARN, BAD, INFO = "ok", "warn", "FAIL", "info"
+PORTAL_MARK = "# managed by notify: routes portal notifications through notifd"
+DEV = False
+
+
+# ============================================================ helpers
+def xdg(var, default):
+    return Path(os.environ.get(var) or HOME / default)
+
+
+def paths():
+    cfg, data, state = xdg("XDG_CONFIG_HOME", ".config"), xdg("XDG_DATA_HOME", ".local/share"), xdg("XDG_STATE_HOME", ".local/state")
+    desktop = (os.environ.get("XDG_CURRENT_DESKTOP") or "KDE").split(":")[0].lower()
+    return {
+        "unit": cfg / "systemd/user/notifd.service",
+        "fallback_unit": cfg / "systemd/user/notifd-fallback.service",
+        "dbus": data / "dbus-1/services/org.freedesktop.Notifications.service",
+        "payload": data / "notifd",
+        "prev": data / "notifd.prev",
+        "rules": cfg / "notifd/rules.json",
+        "portal": cfg / f"xdg-desktop-portal/{desktop}-portals.conf",
+        "portal_system": Path(f"/usr/share/xdg-desktop-portal/{desktop}-portals.conf"),
+        "state": state / "notifd/takeover.json",
+        "dev_bus": state / "notify/dev.bus",
+        "dev_state": state / "notify/dev-state",
+        "backups": state / "notify/backups",
+    }
+
+
+def sh(*cmd, timeout=10):
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        return r.returncode, r.stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        return 1, ""
+
+
+def line(level, msg, hint=None):
+    print(f"  [{level:>4}] {msg}")
+    if hint:
+        print(f"         -> {hint}")
+
+
+def atomic_write(path: Path, text: str):
+    """Write via a temp file + rename so a crash can never leave a half-written file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    mode = path.stat().st_mode & 0o777 if path.exists() else 0o644
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(text)
+        os.chmod(tmp, mode)
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def exe_path():
+    p = HOME / ".local/bin/notify"
+    return str(p) if p.exists() else str(HERE / "notify")
+
+
+def systemctl(a, *cmd):
+    if a.no_systemctl:
+        return 0
+    rc, _ = sh("systemctl", "--user", *cmd, timeout=30)
+    return rc
+
+
+def owner():
+    rc, out = sh("busctl", "--user", "status", NAME)
+    if rc != 0:
+        return None
+    d = dict(l.split("=", 1) for l in out.splitlines() if "=" in l)
+    return {"pid": d.get("PID"), "comm": d.get("Comm"), "unit": d.get("UserUnit")}
+
+
+def notifd_owns():
+    o = owner()
+    return bool(o and o["comm"] in ("qs", "quickshell"))
+
+
+def qs_target():
+    if DEV:
+        return SRC
+    installed = paths()["payload"]
+    return installed if installed.exists() else SRC
+
+
+def ipc(fn, *args, quiet=False):
+    """Call a function on the running notifd via Quickshell IPC; parsed JSON or None."""
+    rc, out = sh("qs", "-p", str(qs_target()), "ipc", "call", "notifd", fn, *map(str, args))
+    if rc != 0 or not out:
+        if not quiet:
+            print("notifd is not running (or does not answer). Start it with: systemctl --user start notifd"
+                  + (" -- or `notify dev` for the dev daemon" if DEV else ""), file=sys.stderr)
+        return None
+    try:
+        d = json.loads(out)
+    except ValueError:
+        if not quiet:
+            print(f"unexpected reply: {out}", file=sys.stderr)
+        return None
+    if isinstance(d, dict) and set(d) == {"error"}:      # a failure reply carries only an error
+        if not quiet:
+            print(f"error: {d['error']}", file=sys.stderr)
+        return None
+    return d
+
+
+def exe_running(*needles):
+    """True if any process runs a binary whose path contains one of the needles."""
+    for pid in os.listdir("/proc"):
+        if not pid.isdigit():
+            continue
+        try:
+            exe = os.readlink(f"/proc/{pid}/exe")
+        except OSError:
+            continue
+        if any(n in exe for n in needles):
+            return True
+    return False
+
+
+# ============================================================ rules validation
+# keep in sync with matchFields / anchorNames in notifd/shell.qml; the daemon is authoritative
+MATCH_FIELDS = ("appName", "desktopEntry", "origin", "summary", "body", "urgency")
+ANCHORS = ("top-left", "top-right", "bottom-left", "bottom-right")
+JS_INCOMPATIBLE = [
+    (r"\(\?P[<=]", "named groups are written (?<name>...) in JavaScript, not (?P<name>...)"),
+    (r"\(\?[aiLmsux]+[:)]", "inline flags like (?i) are not supported (matching is already case-insensitive)"),
+    (r"\(\?#", "(?#...) comments are not supported"),
+    (r"\\[AZ]", "\\A and \\Z are not supported; use ^ and $"),
+]
+
+
+def lint_config(cfg):
+    """Return a list of problems; the same rules the daemon enforces when it loads the file."""
+    errs = []
+    if not isinstance(cfg, dict):
+        return ["top level must be a JSON object"]
+    zones = cfg.get("zones")
+    if not isinstance(zones, dict) or not zones:
+        errs.append("zones: need at least one zone")
+        zones = {}
+    for z, zz in zones.items():
+        if not isinstance(zz, dict) or zz.get("anchor") not in ANCHORS:
+            errs.append(f"zone '{z}': anchor must be one of {', '.join(ANCHORS)}")
+        elif "accent" in zz and not re.fullmatch(r"#[0-9a-fA-F]{3,8}", str(zz["accent"])):
+            errs.append(f"zone '{z}': accent must be a #hex colour")
+    if cfg.get("defaultZone", "personal") not in zones:
+        errs.append(f"defaultZone '{cfg.get('defaultZone', 'personal')}' is not a defined zone")
+    for k in ("defaultTimeout", "width", "margin", "spacing", "maxVisible"):
+        if k in cfg and (not isinstance(cfg[k], (int, float)) or isinstance(cfg[k], bool) or cfg[k] < 0):
+            errs.append(f"{k} must be a number >= 0")
+    ad = cfg.get("autoDnd", {})
+    if not isinstance(ad, dict) or any(not isinstance(ad.get(k, True), bool) for k in ("fullscreen", "screenShare")):
+        errs.append("autoDnd.fullscreen and autoDnd.screenShare must be true or false")
+    rules = cfg.get("rules", [])
+    if not isinstance(rules, list):
+        return errs + ["rules must be a list"]
+    for i, r in enumerate(rules, 1):
+        if not isinstance(r, dict):
+            errs.append(f"rule #{i}: must be an object")
+            continue
+        name = r.get("name", f"#{i}")
+        if "zone" in r and r["zone"] not in zones:
+            errs.append(f"rule '{name}': unknown zone '{r['zone']}'")
+        if "timeout" in r and (not isinstance(r["timeout"], (int, float)) or r["timeout"] < 0):
+            errs.append(f"rule '{name}': timeout must be a number >= 0")
+        match = r.get("match", {})
+        if not isinstance(match, dict):
+            errs.append(f"rule '{name}': match must be an object")
+            continue
+        for k, pat in match.items():
+            if k not in MATCH_FIELDS:
+                errs.append(f"rule '{name}': unknown match field '{k}' (use {', '.join(MATCH_FIELDS)})")
+                continue
+            try:
+                re.compile(pat)
+            except (re.error, TypeError) as e:
+                errs.append(f"rule '{name}': bad regex for {k}: {e}")
+                continue
+            for bad, why in JS_INCOMPATIBLE:
+                if re.search(bad, pat):
+                    errs.append(f"rule '{name}': regex for {k}: {why}")
+    return errs
+
+
+def schema_file():
+    for d in (SRC, paths()["payload"]):
+        if (d / "rules.schema.json").exists():
+            return d / "rules.schema.json"
+    return None
+
+
+def lint_warnings(cfg):
+    """Keys the daemon silently ignores (almost always typos), found by walking the JSON Schema."""
+    sf = schema_file()
+    if not sf:
+        return []
+    try:
+        schema = json.loads(sf.read_text())
+    except (OSError, ValueError):
+        return []
+    out = []
+
+    def walk(val, sch, path):
+        if not isinstance(sch, dict):
+            return
+        if isinstance(val, dict):
+            props = sch.get("properties", {})
+            extra = sch.get("additionalProperties")
+            for k, v in val.items():
+                if k in props:
+                    walk(v, props[k], f"{path}.{k}" if path else k)
+                elif extra is False and k != "name":
+                    out.append(f"unknown setting '{(path + '.' if path else '') + k}' (the daemon ignores it; typo?)")
+                elif isinstance(extra, dict):
+                    walk(v, extra, f"{path}.{k}" if path else k)
+        elif isinstance(val, list) and isinstance(sch.get("items"), dict):
+            for i, it in enumerate(val):
+                walk(it, sch["items"], f"{path}[{i}]")
+    walk(cfg, schema, "")
+    return out
+
+
+def rules_file():
+    return paths()["rules"] if paths()["rules"].exists() else SRC / "rules.json"
+
+
+def cmd_rules(a):
+    f = Path(a.file) if a.file else rules_file()
+    res = {"file": str(f), "errors": [], "warnings": [], "daemon": None}
+    try:
+        text = f.read_text()
+        cfg = json.loads(text)
+    except (OSError, ValueError) as e:
+        res["errors"].append(f"cannot load: {e}")
+        text = cfg = None
+    if cfg is not None:
+        res["errors"] += lint_config(cfg)
+        res["warnings"] = lint_warnings(cfg)
+        # the daemon is the authority: ask it about this exact text (installed file: ask for the live verdict)
+        if a.file:
+            res["daemon"] = ipc("validate", text, quiet=True)
+        else:
+            c = ipc("configStatus", quiet=True)
+            res["daemon"] = None if c is None else {"ok": c["ok"], "error": c["error"], "rules": c["rules"]}
+    daemon_bad = bool(res["daemon"]) and not res["daemon"].get("ok")
+    if getattr(a, "json", False):
+        print(json.dumps(res, indent=1))
+        return 1 if (res["errors"] or daemon_bad) else 0
+    print(f"Rules: {f}")
+    for e in res["errors"]:
+        line(BAD, e)
+    for w in res["warnings"]:
+        line(WARN, w)
+    if cfg is not None and not res["errors"]:
+        line(OK, f"{len(cfg.get('zones', {}))} zones, {len(cfg.get('rules', []))} rules: valid")
+    d = res["daemon"]
+    if d is None:
+        line(INFO, "daemon not running; only the static lint above applies")
+    elif d.get("ok"):
+        line(OK, "the running daemon accepts this config" + ("" if not a.file else " (checked without applying it)"))
+    else:
+        line(BAD, "the running daemon " + ("REJECTS this config: " if a.file else "REJECTED the config and is using the previous one: ") + d["error"])
+    return 1 if (res["errors"] or daemon_bad) else 0
+
+
+# ============================================================ status / doctor
+def status_data():
+    o = owner()
+    return {"owner": o, "notifd_owns": bool(o and o["comm"] in ("qs", "quickshell")),
+            "daemon": ipc("status", quiet=True), "config": ipc("configStatus", quiet=True)}
+
+
+def cmd_status(a):
+    if getattr(a, "json", False):
+        print(json.dumps(status_data(), indent=1))
+        return 0
+    print("Notification ownership")
+    o = owner()
+    if not o:
+        line(WARN, f"nobody owns {NAME}", "notifications from apps are being dropped")
+    else:
+        mine = o["comm"] in ("qs", "quickshell")
+        line(OK if mine else INFO, f"owner: {o['comm']} (pid {o['pid']}, unit {o['unit'] or 'none'})")
+        line(INFO, "notifd is the owner" if mine else "stock owner is active (notifd is NOT in control)")
+    d = ipc("status", quiet=True)
+    if d is None:
+        line(INFO, "no notifd instance answering")
+        return 0
+    line(INFO, f"Do Not Disturb {'ON' if d['dnd'] else 'off'}, muted: {', '.join(d['muted']) or 'none'}, "
+               f"{d['active']} on screen" + (f" (+{d['queued']} queued)" if d.get("queued") else "") + f", {d['history']} in history")
+    if d.get("holding") and d["holding"] != "dnd":
+        line(INFO, f"holding popups automatically: {d['holding']} (critical ones still show)")
+    if d.get("cfgError"):
+        line(BAD, f"rules.json rejected, running on the previous config: {d['cfgError']}", "fix it, then check with: notify rules")
+    return 0
+
+
+def cmd_doctor(a):
+    p = paths()
+    print("Tools")
+    for t, why in (("qs", "Quickshell runs the daemon"), ("busctl", "inspect D-Bus ownership"),
+                   ("notify-send", "send test notifications"), ("systemctl", "manage the service")):
+        line(OK if shutil.which(t) else WARN, f"{t}: {'found' if shutil.which(t) else 'missing'} ({why})")
+    print()
+    cmd_status(a)
+    print("\nInstall")
+    installed = p["state"].exists()
+    line(OK if installed else INFO, "takeover installed (starts at login)" if installed else "takeover not installed (Plasma owns notifications)")
+    if installed:
+        rc, out = sh("systemctl", "--user", "is-enabled", "notifd.service")
+        line(OK if out == "enabled" else WARN, f"notifd.service: {out or 'unknown'}")
+        line(OK if p["fallback_unit"].exists() else WARN, "automatic fallback to Plasma if notifd keeps failing: "
+             + ("armed" if p["fallback_unit"].exists() else "missing"), None if p["fallback_unit"].exists() else "run: notify update")
+        ok_portal = p["portal"].exists() and PORTAL_MARK in p["portal"].read_text()
+        line(OK if ok_portal else WARN, "Flatpak/portal notifications routed through notifd: " + ("yes" if ok_portal else "NO"),
+             None if ok_portal else "run: notify portal")
+        line(OK if kwin_loaded() else WARN, "automatic Do Not Disturb for full-screen windows: " + ("active" if kwin_loaded() else "KWin script not loaded"),
+             None if kwin_loaded() else "run: notify autodnd install")
+        ts = tray_state()
+        if ts == "shown":
+            line(WARN, "Plasma's own notification icon is still in the system tray (it does nothing now)", "run: notify tray hide")
+    print()
+    rc = cmd_rules(argparse.Namespace(file=None, json=False))
+    print()
+    cmd_apps(a)
+    return rc
+
+
+# ============================================================ apps
+CHROMIUM_FAMILY = [
+    ("Brave Origin", HOME / ".config/BraveSoftware/Brave-Origin", "brave-origin"),
+    ("Brave",        HOME / ".config/BraveSoftware/Brave-Browser", "brave"),
+    ("Chrome",       HOME / ".config/google-chrome", "chrome"),
+    ("Chromium",     HOME / ".config/chromium", "chromium"),
+    ("Vivaldi",      HOME / ".config/vivaldi", "vivaldi"),
+    ("Edge",         HOME / ".config/microsoft-edge", "msedge"),
+]
+RUNNING_NEEDLES = {   # executable paths that mean "this browser is running" (specific: Electron apps ship chrome_* helpers)
+    "brave-origin": ("brave-origin",), "brave": ("brave-bin", "brave.com", "brave-browser"),
+    "chrome": ("google-chrome", "/opt/google/chrome"), "chromium": ("/usr/lib/chromium", "/chromium/chromium"),
+    "vivaldi": ("vivaldi",), "msedge": ("microsoft-edge", "msedge"),
+}
+ELECTRON = ["Claude", "discord", "Slack", "Signal", "Cursor", "Code", "obsidian", "Proton Mail"]
+
+
+def chromium_profile(base: Path):
+    """Readiness facts for a Chromium-family user-data dir. Counts only; no site names."""
+    prefs = base / "Default" / "Preferences"
+    if not prefs.exists():
+        return None
+    try:
+        d = json.loads(prefs.read_text())
+    except (OSError, ValueError):
+        return {"error": "unreadable Preferences"}
+    cs = d.get("profile", {}).get("content_settings", {}).get("exceptions", {}).get("notifications", {})
+    return {"allowed": sum(1 for v in cs.values() if isinstance(v, dict) and v.get("setting") == 1),
+            "blocked": sum(1 for v in cs.values() if isinstance(v, dict) and v.get("setting") == 2),
+            "gcm_channel": d.get("brave", {}).get("gcm", {}).get("channel_status")}
+
+
+def firefox_profiles():
+    """Profile folders from profiles.ini in every place Firefox keeps them (XDG, classic, Flatpak)."""
+    out = []
+    for root in (HOME / ".config/mozilla/firefox", HOME / ".mozilla/firefox", HOME / ".var/app/org.mozilla.firefox/.mozilla/firefox"):
+        ini = root / "profiles.ini"
+        if not ini.exists():
+            continue
+        cp = configparser.ConfigParser()
+        try:
+            cp.read(ini)
+        except configparser.Error:
+            continue
+        for sec in cp.sections():
+            if sec.startswith("Profile") and cp.has_option(sec, "Path"):
+                p = cp.get(sec, "Path")
+                rel = cp.get(sec, "IsRelative", fallback="1") == "1"
+                d = root / p if rel else Path(p)
+                if d.exists():
+                    out.append((cp.get(sec, "Name", fallback=d.name), d))
+    return out
+
+
+def firefox_notification_perms(profile: Path):
+    db = profile / "permissions.sqlite"
+    if not db.exists():
+        return None
+    try:
+        con = sqlite3.connect(f"file:{db}?mode=ro&immutable=1", uri=True, timeout=2)
+        rows = con.execute("select permission, count(*) from moz_perms where type='desktop-notification' group by permission").fetchall()
+        con.close()
+    except sqlite3.Error:
+        return None
+    m = dict(rows)
+    return m.get(1, 0), m.get(2, 0)
+
+
+def apps_data():
+    chromium = []
+    for name, base, entry in CHROMIUM_FAMILY:
+        if not base.exists():
+            continue
+        f = chromium_profile(base)
+        item = {"name": name, "profile": f is not None and "error" not in f, "running": exe_running(*RUNNING_NEEDLES.get(entry, (entry,)))}
+        if f and "error" not in f:
+            item.update(allowed=f["allowed"], blocked=f["blocked"], push=bool(f["gcm_channel"]))
+        elif f:
+            item["error"] = f["error"]
+        chromium.append(item)
+    flat = [Path(p).name for p in glob.glob(str(HOME / ".var/app/*Chrom*")) + glob.glob(str(HOME / ".var/app/*Brave*"))]
+    ff = []
+    for name, d in firefox_profiles():
+        perms = firefox_notification_perms(d)
+        ff.append({"profile": name, "allowed": perms[0] if perms else None, "blocked": perms[1] if perms else None})
+    return {"chromium": chromium, "flatpak_browsers": flat, "firefox": ff,
+            "electron": [x for x in ELECTRON if (HOME / ".config" / x).exists()]}
+
+
+def cmd_apps(a):
+    data = apps_data()
+    if getattr(a, "json", False):
+        print(json.dumps(data, indent=1))
+        return 0
+    print("Chromium-family browsers")
+    for c in data["chromium"]:
+        if "error" in c:
+            line(WARN, f"{c['name']}: {c['error']}")
+        elif not c["profile"]:
+            line(INFO, f"{c['name']}: profile folder exists, no Default profile")
+        else:
+            line(OK if c["allowed"] else INFO, f"{c['name']}{' (running)' if c['running'] else ''}: {c['allowed']} sites allowed, "
+                                              f"{c['blocked']} blocked, push (GCM) {'on' if c['push'] else 'off/unset'}")
+            if c["name"].startswith("Brave") and not c["push"]:
+                line(INFO, "web push needs Google push messaging enabled", "see: notify adapt")
+    for n in data["flatpak_browsers"]:
+        line(INFO, f"Flatpak browser: {n} (its notifications use the portal; see: notify portal)")
+    print("Firefox-family")
+    for f in data["firefox"]:
+        extra = f", {f['allowed']} sites allowed, {f['blocked']} blocked" if f["allowed"] is not None else ""
+        line(INFO, f"profile '{f['profile']}'{extra} (web notifications carry no site name, so rules can only match their text)")
+    if not data["firefox"]:
+        line(INFO, "no Firefox profile found")
+    print("Electron / native apps (use system notifications, nothing to adapt)")
+    line(INFO, ", ".join(data["electron"]) if data["electron"] else "none found")
+    return 0
+
+
+# ============================================================ takeover / update / restore / portal
+def unit_text(payload):
+    qs = shutil.which("qs") or "/usr/bin/qs"
+    return f"""[Unit]
+Description=notifd notification daemon (owns org.freedesktop.Notifications)
+# Start before plasmashell so we claim the name first; Plasma then runs without it.
+After=plasma-kwin_wayland.service
+Before=plasma-plasmashell.service
+PartOf=graphical-session.target
+# If notifd keeps failing to start (5 failed starts within 3 minutes, about a minute of
+# trying), hand notifications back to Plasma instead of leaving none.
+OnFailure=notifd-fallback.service
+StartLimitIntervalSec=180
+StartLimitBurst=5
+
+[Service]
+Type=dbus
+BusName=org.freedesktop.Notifications
+ExecStart={qs} -p {payload}
+Restart=always
+RestartSec=1
+TimeoutStartSec=12
+Slice=session.slice
+# notifd needs nothing privileged: it cannot gain privileges, and files it creates (history, state) are private to you.
+NoNewPrivileges=yes
+UMask=0077
+LockPersonality=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=plasma-core.target
+"""
+
+
+def fallback_unit_text():
+    return f"""[Unit]
+Description=Hand notifications back to Plasma because notifd failed
+
+[Service]
+Type=oneshot
+ExecStart={exe_path()} restore --auto
+"""
+
+
+def dbus_text():
+    return """[D-BUS Service]
+Name=org.freedesktop.Notifications
+Exec=/usr/bin/false
+SystemdService=notifd.service
+"""
+
+
+class Plan:
+    """Ordered steps: printed in a dry run, executed otherwise."""
+    def __init__(self, dry):
+        self.dry, self.steps = dry, []
+
+    def add(self, desc, fn=None):
+        self.steps.append((desc, fn))
+
+    def run(self):
+        for i, (desc, fn) in enumerate(self.steps, 1):
+            print(f"  {i}. {desc}")
+            if not self.dry and fn:
+                fn()
+
+
+def portal_enable(a):
+    p = paths()
+    if p["portal"].exists() and PORTAL_MARK not in p["portal"].read_text():
+        print(f"  ! {p['portal']} already exists and was not made by notify; leaving it alone")
+        return False
+    if not Path("/usr/share/xdg-desktop-portal/portals/gtk.portal").exists():
+        print("  ! xdg-desktop-portal-gtk is not installed (it provides the notification route notifd needs)")
+        return False
+    base = p["portal_system"].read_text() if p["portal_system"].exists() else "[preferred]\ndefault=*\n"
+    if re.search(r"^org\.freedesktop\.impl\.portal\.Notification=", base, re.M):
+        base = re.sub(r"^org\.freedesktop\.impl\.portal\.Notification=.*$", "org.freedesktop.impl.portal.Notification=gtk", base, flags=re.M)
+    else:
+        base = base.rstrip("\n") + "\norg.freedesktop.impl.portal.Notification=gtk\n"
+    atomic_write(p["portal"], PORTAL_MARK + "\n" + base)
+    systemctl(a, "restart", "xdg-desktop-portal.service")
+    return True
+
+
+def portal_disable(a):
+    p = paths()
+    if p["portal"].exists() and PORTAL_MARK in p["portal"].read_text():
+        p["portal"].unlink()
+        systemctl(a, "restart", "xdg-desktop-portal.service")
+        return True
+    return False
+
+
+def cmd_portal(a):
+    p = paths()
+    print(("DRY RUN - " if a.dry_run else "") + ("remove" if a.remove else "enable") + " portal routing")
+    if a.remove:
+        print(f"  remove {p['portal']} (if made by notify) and restart xdg-desktop-portal; Flatpak notifications go back to Plasma")
+        if not a.dry_run:
+            print("  done" if portal_disable(a) else "  nothing to remove")
+        return 0
+    print(f"  write {p['portal']}: Notification backend plasmanotify -> gtk (the GTK backend sends through org.freedesktop.Notifications)")
+    print("  restart xdg-desktop-portal (apps keep running; portal dialogs may blink for a second)")
+    if a.dry_run:
+        print("\nDry run only; nothing was changed.")
+        return 0
+    return 0 if portal_enable(a) else 1
+
+
+def cmd_takeover(a):
+    p = paths()
+    errs = lint_config(json.loads((SRC / "rules.json").read_text())) if (SRC / "rules.json").exists() else ["no source rules.json"]
+    if errs:
+        print("refusing: source rules.json invalid:", "; ".join(errs))
+        return 1
+    if not shutil.which("qs") and not a.no_systemctl:
+        print("refusing: quickshell (qs) not installed")
+        return 1
+    missing = [f for f in PAYLOAD_FILES if not (SRC / f).exists()]
+    if missing:
+        print(f"refusing: missing daemon files in {SRC}: {missing}")
+        return 1
+    if p["state"].exists():
+        print("notifd takeover is already installed (use 'notify update' to change it, or 'notify restore' first)")
+        return 1
+
+    print(("DRY RUN - " if a.dry_run else "") + "takeover plan")
+    plan = Plan(a.dry_run)
+
+    def install_payload():
+        p["payload"].mkdir(parents=True, exist_ok=True)
+        for f in PAYLOAD_FILES:
+            shutil.copy2(SRC / f, p["payload"] / f)
+    plan.add(f"copy daemon ({', '.join(PAYLOAD_FILES)}) to {p['payload']}", install_payload)
+
+    def install_rules():
+        if not p["rules"].exists():
+            p["rules"].parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(SRC / "rules.json", p["rules"])
+        link = p["payload"] / "rules.json"
+        if link.is_symlink() or link.exists():
+            link.unlink()
+        link.symlink_to(p["rules"])
+    plan.add(f"config at {p['rules']} (kept if it exists), linked into the daemon folder", install_rules)
+    plan.add(f"write user unit {p['unit']} (starts before plasmashell)", lambda: atomic_write(p["unit"], unit_text(p["payload"])))
+    plan.add(f"write fallback unit {p['fallback_unit']} (hands back to Plasma if notifd keeps failing)",
+             lambda: atomic_write(p["fallback_unit"], fallback_unit_text()))
+    plan.add(f"write D-Bus activation override {p['dbus']} (restarts notifd if it ever stops)", lambda: atomic_write(p["dbus"], dbus_text()))
+    autodnd_done = []
+    if not a.no_autodnd:
+        plan.add("install the KWin script for automatic Do Not Disturb (full-screen windows)", lambda: autodnd_done.append(autodnd_install()) if not a.no_systemctl else None)
+    portal_done = []
+    if not a.no_portal:
+        plan.add(f"route Flatpak/portal notifications through notifd ({p['portal']})", lambda: portal_done.append(portal_enable(a)))
+    plan.add("systemctl --user daemon-reload", lambda: systemctl(a, "daemon-reload"))
+    plan.add("systemctl --user enable notifd.service (active from next login)", lambda: systemctl(a, "enable", "notifd.service"))
+    plan.add(f"record what was installed in {p['state']} (restore removes exactly these)", lambda: atomic_write(
+        p["state"], json.dumps({"unit": str(p["unit"]), "fallback_unit": str(p["fallback_unit"]), "dbus": str(p["dbus"]),
+                                "portal": str(p["portal"]) if portal_done and portal_done[0] else None,
+                                "autodnd": bool(autodnd_done and autodnd_done[0])}, indent=1)))
+
+    if a.now:
+        def live():
+            systemctl(a, "stop", "plasma-plasmashell.service")
+            rc = systemctl(a, "start", "notifd.service")
+            systemctl(a, "start", "plasma-plasmashell.service")
+            if not a.no_systemctl and (rc != 0 or not notifd_owns()):
+                print("  ! takeover did not take effect; rolling back")
+                do_restore(a, quiet=True)
+                raise SystemExit(1)
+        plan.add("NOW: stop plasmashell, start notifd, start plasmashell (panel disappears ~5s); auto-rollback if notifd is not the owner", live)
+    else:
+        plan.add("(no --now: nothing running changes; notifd takes over at next login)")
+    plan.run()
+    print("\nDry run only; nothing was changed." if a.dry_run else "\nDone. Undo any time with: notify restore")
+    return 0
+
+
+def merge_new_defaults(src_rules: Path, dst_rules: Path):
+    """Add config keys that exist in the source defaults but not in the user's file. Never overwrites."""
+    try:
+        s, d = json.loads(src_rules.read_text()), json.loads(dst_rules.read_text())
+    except (OSError, ValueError):
+        return []
+    added = [k for k in s if k not in d]
+    if added:
+        for k in added:
+            d[k] = s[k]
+        atomic_write(dst_rules, json.dumps(d, indent=2) + "\n")
+    return added
+
+
+def healthy(timeout=15, abandoned_if_missing=None):
+    """notifd owns the name and answers on IPC (works for any version, old or new).
+    Returns False early if abandoned_if_missing (the takeover record) disappears: the automatic
+    fallback has fired and there is nothing left to wait for."""
+    end = time.time() + timeout
+    while time.time() < end:
+        if notifd_owns() and ipc("status", quiet=True) is not None:
+            return True
+        if abandoned_if_missing is not None and not abandoned_if_missing.exists():
+            return False
+        time.sleep(0.5)
+    return False
+
+
+def preflight(files_dir: Path, rules: Path, timeout=30):
+    """Start the new daemon on a private D-Bus session and check it comes up and answers.
+    This runs BEFORE the live daemon is touched, so a broken version can never take notifications down."""
+    import signal
+    tmp = Path(tempfile.mkdtemp(prefix="notifd-preflight-"))
+    try:
+        for f in PAYLOAD_FILES:
+            shutil.copy2(files_dir / f, tmp / f)
+        shutil.copy2(rules, tmp / "rules.json")
+        (tmp / "state").mkdir()
+        env = dict(os.environ, QT_NO_XDG_DESKTOP_PORTAL="1", XDG_STATE_HOME=str(tmp / "state"))
+        proc = subprocess.Popen(["dbus-run-session", "--", "bash", "-c", f"exec qs -p {tmp}"], env=env,
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        ok = False
+        end = time.time() + timeout
+        while time.time() < end and proc.poll() is None:
+            rc, out = sh("qs", "-p", str(tmp), "ipc", "call", "notifd", "status")
+            if rc == 0 and out:
+                ok = True
+                break
+            time.sleep(0.5)
+        try:
+            os.killpg(proc.pid, signal.SIGTERM)
+            proc.wait(timeout=8)
+        except (ProcessLookupError, subprocess.TimeoutExpired):
+            pass
+        return ok
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def cmd_update(a):
+    p = paths()
+    if not p["state"].exists():
+        print("takeover is not installed; run 'notify takeover' first")
+        return 1
+    if not SRC.exists():
+        print(f"no source folder at {SRC}; run update from the project checkout")
+        return 1
+    missing = [f for f in PAYLOAD_FILES if not (SRC / f).exists()]
+    if missing:
+        print(f"refusing: missing {missing} in {SRC}")
+        return 1
+    if not a.no_systemctl:
+        print("  smoke-testing the new version on a private bus (your live notifications are not touched)...")
+        rules_for_test = p["rules"] if p["rules"].exists() else SRC / "rules.json"
+        if not preflight(SRC, rules_for_test):
+            print("  ! the new version failed its smoke test, so NOTHING was changed. Fix it, or run `notify dev` to see the errors.")
+            return 1
+        print("  smoke test passed")
+    # keep the working version so a bad update can be undone
+    p["prev"].mkdir(parents=True, exist_ok=True)
+    for f in PAYLOAD_FILES:
+        if (p["payload"] / f).exists():
+            shutil.copy2(p["payload"] / f, p["prev"] / f)
+    for f in PAYLOAD_FILES:
+        shutil.copy2(SRC / f, p["payload"] / f)
+        print(f"  updated {f}")
+    for key, text in (("unit", unit_text(p["payload"])), ("fallback_unit", fallback_unit_text()), ("dbus", dbus_text())):
+        if not p[key].exists() or p[key].read_text() != text:
+            atomic_write(p[key], text)
+            print(f"  refreshed {p[key].name}")
+    added = merge_new_defaults(SRC / "rules.json", p["rules"])
+    if added:
+        print(f"  added new settings to your rules.json (existing values untouched): {', '.join(added)}")
+    if a.no_systemctl:
+        return 0
+    systemctl(a, "daemon-reload")
+    systemctl(a, "restart", "notifd.service")
+    print("  restarted notifd.service (notifications pause for about a second)")
+    if healthy(abandoned_if_missing=p["state"]):
+        print("  health check passed")
+        return 0
+    if not p["state"].exists():
+        print("  ! notifd kept crashing and the automatic fallback has handed notifications back to Plasma.")
+        print("    Fix the problem, then re-enable with: notify takeover --now")
+        return 1
+    print("  ! notifd did not come back healthy; rolling back to the previous version")
+    for f in PAYLOAD_FILES:
+        if (p["prev"] / f).exists():
+            shutil.copy2(p["prev"] / f, p["payload"] / f)
+    systemctl(a, "reset-failed", "notifd.service")
+    systemctl(a, "restart", "notifd.service")
+    print("  rolled back and restarted: " + ("notifd is healthy again" if healthy() else "STILL NOT HEALTHY - run: notify restore"))
+    return 1
+
+
+def do_restore(a, quiet=False, auto=False):
+    p = paths()
+    state = {}
+    if p["state"].exists():
+        try:
+            state = json.loads(p["state"].read_text())
+        except ValueError:
+            pass
+    systemctl(a, "disable", "--now", "notifd.service")
+    for key in ("unit", "fallback_unit", "dbus"):
+        f = Path(state.get(key) or p[key])
+        if f.exists():
+            f.unlink()
+    portal_changed = portal_disable(a)
+    if state.get("autodnd") and not a.no_systemctl:
+        autodnd_remove()
+    if not a.no_systemctl:
+        systemctl(a, "daemon-reload")
+        systemctl(a, "reset-failed", "notifd.service")
+        for _ in range(6):                    # give a queued plasmashell a moment to take the name
+            if owner():
+                break
+            time.sleep(0.5)
+        if not owner():                       # nobody owns it -> bring Plasma's back
+            systemctl(a, "restart", "plasma-plasmashell.service")
+    if p["state"].exists():
+        p["state"].unlink()
+    if getattr(a, "purge", False):
+        shutil.rmtree(p["payload"], ignore_errors=True)
+        shutil.rmtree(p["prev"], ignore_errors=True)
+    if not quiet:
+        print("restored: Plasma owns notifications again" + ("; portal routing removed" if portal_changed else ""))
+    if auto and not a.no_systemctl:
+        for _ in range(20):
+            if owner():
+                break
+            time.sleep(0.5)
+        sh("notify-send", "-a", "noti-fi", "-u", "critical", "Notification daemon failed",
+           "notifd kept failing, so notifications were handed back to Plasma. Check the setup, then run: notify takeover --now")
+
+
+def cmd_restore(a):
+    p = paths()
+    print(("DRY RUN - " if a.dry_run else "") + "restore plan")
+    plan = Plan(True)
+    plan.add("systemctl --user disable --now notifd.service")
+    plan.add(f"remove {p['unit'].name}, {p['fallback_unit'].name} and the D-Bus activation override")
+    plan.add("remove the portal routing (if notify created it) and the full-screen KWin script")
+    plan.add("daemon-reload; if nobody owns the name, restart plasmashell so Plasma takes it back")
+    if a.purge:
+        plan.add(f"delete daemon files {p['payload']} (your config in {p['rules']} is kept)")
+    plan.run()
+    if a.dry_run:
+        print("\nDry run only; nothing was changed.")
+        return 0
+    do_restore(a, auto=a.auto)
+    return 0
+
+
+# ============================================================ automatic DND (KWin script) and tray
+KWIN_ID = "notifd-autodnd"
+KWIN_META = {
+    "KPlugin": {"Id": KWIN_ID, "Name": "notifd automatic Do Not Disturb", "Version": "1.0", "License": "MIT",
+                "Description": "Logs whether the active window is full screen so notifd can pause popups",
+                "Authors": [{"Name": "noti-fi"}], "EnabledByDefault": False},
+    "X-Plasma-API": "javascript", "X-Plasma-MainScript": "code/main.js", "KPackageStructure": "KWin/Script",
+}
+KWIN_JS = """// Installed by `notify autodnd`. Logs the active window's full-screen state; notifd follows this log line.
+var last = null;
+var watched = {};
+function isFull(w) { return !!(w && w.fullScreen && !w.desktopWindow && !w.dock); }
+function report() {
+    var s = isFull(workspace.activeWindow);
+    if (s !== last) { last = s; print("notifd-autodnd: fullscreen=" + (s ? 1 : 0)); }
+}
+function watch(w) {
+    if (!w || watched[w.internalId]) return;
+    watched[w.internalId] = true;
+    w.fullScreenChanged.connect(report);
+}
+workspace.windowActivated.connect(function (w) { watch(w); report(); });
+workspace.windowRemoved.connect(report);
+watch(workspace.activeWindow);
+report();
+"""
+
+
+def kwin_dir():
+    return xdg("XDG_DATA_HOME", ".local/share") / "kwin/scripts" / KWIN_ID
+
+
+def kwin_loaded():
+    rc, out = sh("qdbus6", "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting.isScriptLoaded", KWIN_ID)
+    return rc == 0 and out.strip() == "true"
+
+
+def autodnd_install(a=None):
+    d = kwin_dir()
+    atomic_write(d / "metadata.json", json.dumps(KWIN_META, indent=2) + "\n")
+    atomic_write(d / "contents/code/main.js", KWIN_JS)
+    sh("kwriteconfig6", "--file", "kwinrc", "--group", "Plugins", "--key", f"{KWIN_ID}Enabled", "true")
+    sh("qdbus6", "org.kde.KWin", "/KWin", "reconfigure")
+    time.sleep(1.5)
+    if not kwin_loaded():                      # reconfigure did not pick it up: load it directly
+        sh("qdbus6", "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting.loadScript", str(d / "contents/code/main.js"), KWIN_ID)
+        sh("qdbus6", "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting.start")
+        time.sleep(1)
+    return kwin_loaded()
+
+
+def autodnd_remove():
+    sh("qdbus6", "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting.unloadScript", KWIN_ID)
+    sh("kwriteconfig6", "--file", "kwinrc", "--group", "Plugins", "--key", f"{KWIN_ID}Enabled", "false")
+    sh("qdbus6", "org.kde.KWin", "/KWin", "reconfigure")
+    shutil.rmtree(kwin_dir(), ignore_errors=True)
+    ipc("setAuto", "fullscreen", "false", quiet=True)        # never leave a stale "full screen" hold behind
+
+
+def cmd_autodnd(a):
+    if a.action == "install":
+        print("installing the KWin script that reports full-screen windows to notifd...")
+        ok = autodnd_install()
+        print("  " + ("installed and running" if ok else "installed, but KWin did not load it; log out and in, or check: qdbus6 org.kde.KWin /Scripting"))
+        return 0 if ok else 1
+    if a.action == "remove":
+        autodnd_remove()
+        print("removed")
+        return 0
+    d = kwin_dir()
+    line(OK if d.exists() else INFO, f"KWin script files: {'present' if d.exists() else 'not installed (run: notify autodnd install)'}")
+    line(OK if kwin_loaded() else INFO, f"KWin script loaded: {'yes' if kwin_loaded() else 'no'}")
+    st = ipc("status", quiet=True)
+    if st:
+        line(INFO, f"daemon sees: fullscreen={st['auto']['fullscreen']} screen-share={st['auto']['share']}; "
+                   f"holding notifications: {st['holding'] or 'no'}")
+    return 0
+
+
+TRAY_ITEM = "org.kde.plasma.notifications"
+TRAY_JS = """
+var out = "no system tray found";
+var ps = panels();
+for (var i = 0; i < ps.length; i++) {
+  var ws = ps[i].widgets();
+  for (var j = 0; j < ws.length; j++) {
+    var w = ws[j];
+    if (w.type != "org.kde.plasma.systemtray") continue;
+    w.currentConfigGroup = ["General"];
+    var items = String(w.readConfig("extraItems")).split(",").filter(function (x) { return x.length > 0; });
+    var has = items.indexOf("%(item)s") >= 0;
+    var action = "%(action)s";
+    if (action == "hide" && has) { items.splice(items.indexOf("%(item)s"), 1); w.writeConfig("extraItems", items); w.reloadConfig(); has = false; }
+    if (action == "show" && !has) { items.push("%(item)s"); w.writeConfig("extraItems", items); w.reloadConfig(); has = true; }
+    out = has ? "shown" : "hidden";
+  }
+}
+print(out);
+"""
+
+
+def tray_state(action="status"):
+    rc, out = sh("qdbus6", "org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell.evaluateScript",
+                 TRAY_JS % {"item": TRAY_ITEM, "action": action})
+    return out.strip() if rc == 0 else None
+
+
+def cmd_tray(a):
+    st = tray_state(a.action)
+    if st is None:
+        print("could not reach plasmashell's scripting interface")
+        return 1
+    print(f"Plasma's notification item in the system tray: {st}"
+          + ("  (it no longer does anything since notifd owns notifications)" if st == "shown" and notifd_owns() else ""))
+    return 0
+
+
+def cmd_reply(a):
+    d = ipc("reply", a.id, a.text)
+    if d is None:
+        return 1
+    print("reply sent")
+    return 0
+
+
+# ============================================================ browsers: adapt
+def get_path(d, dotted):
+    for k in dotted.split("."):
+        if not isinstance(d, dict) or k not in d:
+            return None
+        d = d[k]
+    return d
+
+
+def set_path(d, dotted, value):
+    keys = dotted.split(".")
+    for k in keys[:-1]:
+        d = d.setdefault(k, {})
+    d[keys[-1]] = value
+
+
+def cmd_adapt(a):
+    """Make Brave able to deliver notifications through notifd. Preview by default."""
+    targets = [(n, b, e) for n, b, e in CHROMIUM_FAMILY if n.startswith("Brave") and (b / "Default/Preferences").exists()]
+    if not targets:
+        print("no Brave profile found")
+        return 1
+    print(("APPLY" if a.apply else "PREVIEW (nothing is changed without --apply)") + " - Brave adaptation")
+    rc = 0
+    for name, base, entry in targets:
+        print(f"\n{name}")
+        prefs_f, ls_f = base / "Default/Preferences", base / "Local State"
+        try:
+            prefs, ls = json.loads(prefs_f.read_text()), json.loads(ls_f.read_text())
+        except (OSError, ValueError) as e:
+            line(BAD, f"cannot read profile: {e}")
+            rc = 1
+            continue
+        changes = []   # (file, parsed json, dotted key, value, label)
+        push = get_path(prefs, "brave.gcm.channel_status")
+        line(OK if push else WARN, f"web push (Google push messaging): {'on' if push else 'off'}")
+        if not push:
+            changes.append((prefs_f, prefs, "brave.gcm.channel_status", True, "enable web push"))
+        line(INFO, f"{len(get_path(prefs, 'gcm.push_messaging_application_id_map') or {})} sites currently hold a push subscription")
+        bg = get_path(ls, "background_mode.enabled")
+        line(INFO, f"keeps running after the last window closes: {'yes' if bg else 'no'}"
+                   + ("" if a.background or bg else "   (--background to enable; push only arrives while Brave runs)"))
+        if a.background and not bg:
+            changes.append((ls_f, ls, "background_mode.enabled", True, "keep running in the background"))
+
+        if changes:
+            for _, _, key, val, label in changes:
+                line(INFO, f"will set {key} = {val}  ({label})")
+            if a.apply:
+                if exe_running(*RUNNING_NEEDLES.get(entry, (entry,))):
+                    line(BAD, f"{name} is running; it would overwrite the change on exit", "close all Brave windows (and its tray icon), then retry")
+                    rc = 1
+                    continue
+                stamp = paths()["backups"] / datetime.datetime.now().strftime("%Y%m%d-%H%M%S") / name.replace(" ", "-")
+                stamp.mkdir(parents=True, exist_ok=True)
+                files = {c[0]: c[1] for c in changes}
+                for f in files:
+                    shutil.copy2(f, stamp / f.name)
+                for f, data, key, val, _ in changes:
+                    set_path(data, key, val)
+                for f, data in files.items():
+                    atomic_write(f, json.dumps(data, separators=(",", ":"), ensure_ascii=False))
+                line(OK, f"applied; backup of the originals in {stamp}")
+        else:
+            line(OK, "nothing to change")
+
+        if a.autostart:
+            exe = shutil.which("brave-origin" if entry == "brave-origin" else "brave-browser") or shutil.which("brave")
+            ent = xdg("XDG_CONFIG_HOME", ".config") / "autostart" / f"notify-{entry}.desktop"
+            line(INFO, f"autostart at login (hidden, no window): {ent}")
+            if a.apply and exe:
+                atomic_write(ent, f"[Desktop Entry]\nType=Application\nName={name} (background, for notifications)\nExec={exe} --no-startup-window\nX-GNOME-Autostart-enabled=true\n")
+                line(OK, "autostart entry written")
+    if not a.apply:
+        print("\nPreview only. Re-run with --apply (and close Brave first) to make the changes.")
+    return rc
+
+
+# ============================================================ hotkey
+HOTKEY_DESKTOP = "notify-dnd-toggle.desktop"
+HOTKEY_NAME = "Toggle Do Not Disturb (noti-fi)"
+QT_MODS = {"meta": 0x10000000, "super": 0x10000000, "shift": 0x02000000, "ctrl": 0x04000000, "control": 0x04000000, "alt": 0x08000000}
+
+
+def qt_keycode(combo):
+    """'Meta+Shift+N' -> Qt key integer. Supports modifiers plus one letter, digit or F1-F12."""
+    code = 0
+    for part in combo.split("+"):
+        k = part.strip().lower()
+        if k in QT_MODS:
+            code |= QT_MODS[k]
+        elif len(k) == 1 and (k.isalpha() or k.isdigit()):
+            code |= ord(k.upper())
+        elif re.fullmatch(r"f([1-9]|1[0-2])", k):
+            code |= 0x01000030 + int(k[1:]) - 1
+        else:
+            raise ValueError(f"unsupported key '{part}'")
+    if code & 0x00FFFFFF == 0:
+        raise ValueError("needs a main key, like Meta+Shift+N")
+    return code
+
+
+def kga(*args):
+    return sh("busctl", "--user", "call", "org.kde.kglobalaccel", "/kglobalaccel", "org.kde.KGlobalAccel", *args)
+
+
+def cmd_hotkey(a):
+    desktop = xdg("XDG_DATA_HOME", ".local/share") / "applications" / HOTKEY_DESKTOP
+    if a.remove:
+        kga("unregister", "ss", HOTKEY_DESKTOP, "_launch")
+        if desktop.exists():
+            desktop.unlink()
+        print("hotkey removed")
+        return 0
+    try:
+        code = qt_keycode(a.keys)
+    except ValueError as e:
+        print(f"error: {e}")
+        return 1
+    print(f"{a.keys} -> {exe_path()} dnd toggle")
+    if a.dry_run:
+        print("\nDry run only; nothing was changed.")
+        return 0
+    atomic_write(desktop, f"[Desktop Entry]\nType=Application\nName={HOTKEY_NAME}\nExec={exe_path()} dnd toggle\nNoDisplay=true\n"
+                          "X-KDE-GlobalAccel-CommandShortcut=true\n")
+    sh("kbuildsycoca6")
+    rc, _ = kga("doRegister", "as", "4", HOTKEY_DESKTOP, "_launch", "", HOTKEY_NAME)
+    rc2, _ = kga("setShortcut", "asaiu", "4", HOTKEY_DESKTOP, "_launch", "", HOTKEY_NAME, "1", str(code), "3")
+    if rc or rc2:
+        print("could not register with KDE's shortcut service; set it in System Settings -> Shortcuts -> Add Command instead")
+        return 1
+    print("registered. Press it to toggle Do Not Disturb. Change it in System Settings -> Shortcuts if you like.")
+    return 0
+
+
+# ============================================================ simulate / preview (the daemon decides)
+def cmd_simulate(a):
+    """Ask the running daemon what it would do with a notification. Same code path as a real one."""
+    req = {"notification": {"appName": a.app, "desktopEntry": a.entry, "origin": a.origin, "summary": a.summary,
+                            "body": a.body or "", "urgency": a.urgency, "expireTimeout": a.timeout}}
+    if a.ignore_state:
+        req["ignoreState"] = True
+    if a.config:
+        try:
+            req["config"] = json.loads(Path(a.config).read_text())
+        except (OSError, ValueError) as e:
+            print(f"cannot read --config: {e}")
+            return 1
+    d = ipc("simulate", json.dumps(req))
+    if d is None:
+        return 1
+    if a.json:
+        print(json.dumps(d, indent=1))
+        return 0
+    by = d["decidedBy"]
+    def why(k):
+        return f" (rule '{by[k]}')" if by[k] else " (default)"
+    print(f"zone:     {d['zone']}{why('zone')}")
+    print(f"timeout:  {'stays until dismissed' if d['timeout'] == 0 else str(d['timeout']) + ' ms'}{why('timeout')}")
+    print(f"outcome:  {'shown' if d['wouldShow'] else 'NOT shown: ' + d['hold']}")
+    print(f"matched:  {', '.join(d['matched']) if d['matched'] else 'no rules (defaults apply)'}")
+    return 0
+
+
+def cmd_preview(a):
+    """Show real popups on screen with a draft config (or the current one) for a few seconds."""
+    if a.end:
+        return 0 if ipc("endPreview") is not None else 1
+    req = {"seconds": a.seconds}
+    if a.config:
+        try:
+            req["config"] = json.loads(Path(a.config).read_text())
+        except (OSError, ValueError) as e:
+            print(f"cannot read --config: {e}")
+            return 1
+    d = ipc("preview", json.dumps(req))
+    if d is None:
+        return 1
+    print(f"previewing {d['shown']} sample popups for {d['seconds']}s" + (" using the draft config" if a.config else ""))
+    return 0
+
+
+# ============================================================ daily controls
+def show_state(d):
+    print(f"Do Not Disturb: {'ON' if d['dnd'] else 'off'}   muted zones: {', '.join(d['muted']) or 'none'}   "
+          f"on screen: {d['active']}   history: {d['history']}")
+
+
+def cmd_dnd(a):
+    d = ipc("status") if a.mode == "status" else ipc("dnd", a.mode)
+    if d is None:
+        return 1
+    show_state(d)
+    return 0
+
+
+def cmd_mute(a):
+    d = ipc("mute", a.zone, "true" if a.cmd == "mute" else "false")
+    if d is None:
+        return 1
+    show_state(d)
+    return 0
+
+
+def cmd_dismiss(_):
+    d = ipc("dismissAll")
+    if d is None:
+        return 1
+    print("dismissed everything on screen")
+    return 0
+
+
+def cmd_history(a):
+    if a.clear:
+        if ipc("clearHistory") is None:
+            return 1
+        print("history cleared")
+        return 0
+    items = ipc("history", 1000)
+    if items is None:
+        return 1
+    if a.zone:
+        items = [i for i in items if i["zone"] == a.zone]
+    if a.app:
+        items = [i for i in items if re.search(a.app, i["app"] or "", re.I)]
+    if a.missed:
+        items = [i for i in items if not i["shown"]]
+    items = items[: a.n]
+    if a.json:
+        print(json.dumps(items, indent=1))
+        return 0
+    if not items:
+        print("no notifications in history")
+        return 0
+    for i in items:
+        t = datetime.datetime.fromtimestamp(i["t"] / 1000).strftime("%H:%M:%S")
+        flag = f"  [{i['why']}]" if not i["shown"] else ""
+        site = f" ({i['origin']})" if i["origin"] else ""
+        upd = f" (updated x{i['updates']})" if i.get("updates") else ""
+        print(f"{t}  {i['zone']:<9} {i['app']}{site}: {i['summary']}{upd}{flag}")
+        if a.full and i["body"]:
+            print(f"          {i['body']}")
+    return 0
+
+
+def cmd_send(a):
+    cmd = ["notify-send", "-a", a.app, "-u", a.urgency, "-t", str(a.timeout)]
+    if a.origin:
+        cmd += ["-h", f"string:x-kde-origin-name:{a.origin}"]
+    if a.desktop_entry:
+        cmd += ["-h", f"string:desktop-entry:{a.desktop_entry}"]
+    cmd += [a.summary] + ([a.body] if a.body else [])
+    return subprocess.run(cmd).returncode
+
+
+SAMPLES = [
+    ("Brave Origin", "normal", "New message", "A subscriber sent you a message", "onlyfans.com", "brave-origin"),
+    ("Brave Origin", "normal", "Review requested", "A pull request needs you", "github.com", "brave-origin"),
+    ("Steam", "normal", "Friend online", "someone started playing a game", None, None),
+    ("Claude", "normal", "Task finished", "Your workspace review is ready", None, None),
+    ("Software Update", "normal", "Updates available", "12 packages can be updated", None, None),
+    ("kernel", "critical", "Disk almost full", "/home is at 97%", None, None),
+]
+
+
+def cmd_test(a):
+    for app, urg, summ, body, origin, de in SAMPLES:
+        cmd_send(argparse.Namespace(app=app, urgency=urg, timeout=a.timeout, origin=origin, desktop_entry=de, summary=summ, body=body))
+        time.sleep(0.3)
+    print(f"sent {len(SAMPLES)} sample notifications")
+    return 0
+
+
+# ============================================================ development
+def cmd_dev(a):
+    """Run a throwaway daemon from the source on a private D-Bus session (never touches the real one)."""
+    p = paths()
+    if not SRC.exists():
+        print("no source folder; run `notify dev` from the project checkout")
+        return 1
+    p["dev_bus"].parent.mkdir(parents=True, exist_ok=True)
+    p["dev_state"].mkdir(parents=True, exist_ok=True)
+    env = dict(os.environ, QT_NO_XDG_DESKTOP_PORTAL="1", XDG_STATE_HOME=str(p["dev_state"]))
+    print("dev daemon starting on a private bus; Ctrl+C stops it.\nIn another terminal try:  notify --dev test    notify --dev dnd on")
+    proc = subprocess.Popen(["dbus-run-session", "--", "bash", "-c",
+                             f'echo "$DBUS_SESSION_BUS_ADDRESS" > {p["dev_bus"]}; exec qs -p {SRC}'], env=env, start_new_session=True)
+    try:
+        return proc.wait()
+    except KeyboardInterrupt:
+        import signal
+        os.killpg(proc.pid, signal.SIGTERM)
+        proc.wait(timeout=8)
+        return 0
+    finally:
+        if p["dev_bus"].exists():
+            p["dev_bus"].unlink()
+
+
+def cmd_selftest(_):
+    t = HERE.parent / "tests" / "test_notifd.py"
+    if not t.exists():
+        print("tests/test_notifd.py not found (run from the project checkout)")
+        return 1
+    return subprocess.run([sys.executable, "-I", str(t)]).returncode
+
+
+# ============================================================ CLI
+def main():
+    global DEV
+    ap = argparse.ArgumentParser(prog="notify", description="Manage the notifd notification system.")
+    ap.add_argument("--dev", action="store_true", help="talk to the `notify dev` daemon instead of the real one")
+    ap.add_argument("--no-systemctl", action="store_true", help=argparse.SUPPRESS)  # tests only
+    sub = ap.add_subparsers(dest="cmd", required=True)
+
+    def add(name, fn, help_, **kw):
+        s = sub.add_parser(name, help=help_, **kw)
+        s.set_defaults(fn=fn, cmd=name)
+        return s
+
+    st = add("status", cmd_status, "who owns notifications, daemon state")
+    st.add_argument("--json", action="store_true")
+    ap_ = add("apps", cmd_apps, "scan apps and browsers")
+    ap_.add_argument("--json", action="store_true")
+    add("doctor", cmd_doctor, "run all checks")
+    r = add("rules", cmd_rules, "validate rules.json")
+    r.add_argument("--file", help="check this file instead of the installed one (static lint + the daemon's verdict, without applying it)")
+    r.add_argument("--json", action="store_true")
+    sm = add("simulate", cmd_simulate, "what would the daemon do with this notification?")
+    sm.add_argument("summary", nargs="?", default="")
+    sm.add_argument("--app", default=""); sm.add_argument("--entry", default="", help="desktop entry")
+    sm.add_argument("--origin", default="", help="site name, like a browser sends"); sm.add_argument("--body")
+    sm.add_argument("-u", "--urgency", default="normal", choices=["low", "normal", "critical"])
+    sm.add_argument("--timeout", type=int, default=-1, help="the app's requested timeout in ms (-1 = none, 0 = never)")
+    sm.add_argument("--config", help="evaluate against a draft rules.json instead of the live one")
+    sm.add_argument("--ignore-state", action="store_true", help="ignore Do Not Disturb / mutes / full screen right now")
+    sm.add_argument("--json", action="store_true")
+    pv = add("preview", cmd_preview, "show real sample popups on screen (optionally with a draft config)")
+    pv.add_argument("--config", help="draft rules.json to preview; the live config is restored afterwards")
+    pv.add_argument("--seconds", type=int, default=6); pv.add_argument("--end", action="store_true", help="stop a running preview")
+
+    t = add("takeover", cmd_takeover, "make notifd the notification owner (reversible)")
+    t.add_argument("--dry-run", action="store_true"); t.add_argument("--now", action="store_true", help="also switch the running session")
+    t.add_argument("--no-portal", action="store_true", help="do not touch portal routing")
+    t.add_argument("--no-autodnd", action="store_true", help="do not install the full-screen KWin script")
+    add("update", cmd_update, "install changed daemon files; rolls back if notifd will not start")
+    rs = add("restore", cmd_restore, "hand notifications back to Plasma")
+    rs.add_argument("--dry-run", action="store_true"); rs.add_argument("--purge", action="store_true", help="also delete the installed daemon files")
+    rs.add_argument("--auto", action="store_true", help=argparse.SUPPRESS)
+    po = add("portal", cmd_portal, "route Flatpak/portal notifications through notifd")
+    po.add_argument("--remove", action="store_true"); po.add_argument("--dry-run", action="store_true")
+    ad = add("adapt", cmd_adapt, "make Brave deliver notifications (preview unless --apply)")
+    ad.add_argument("--apply", action="store_true", help="make the changes (Brave must be closed; originals are backed up)")
+    ad.add_argument("--background", action="store_true", help="keep Brave running after its last window closes")
+    ad.add_argument("--autostart", action="store_true", help="start Brave hidden at login")
+    hk = add("hotkey", cmd_hotkey, "global shortcut that toggles Do Not Disturb")
+    hk.add_argument("keys", nargs="?", default="Meta+Shift+N", help="default Meta+Shift+N")
+    hk.add_argument("--remove", action="store_true"); hk.add_argument("--dry-run", action="store_true")
+
+    d = add("dnd", cmd_dnd, "Do Not Disturb: on, off, toggle or status")
+    d.add_argument("mode", nargs="?", default="status", choices=["on", "off", "toggle", "status"])
+    for name, hlp in (("mute", "silence one zone (still kept in history)"), ("unmute", "restore a muted zone")):
+        m = add(name, cmd_mute, hlp)
+        m.add_argument("zone")
+    h = add("history", cmd_history, "show recent notifications")
+    h.add_argument("-n", type=int, default=20); h.add_argument("--zone"); h.add_argument("--app", help="regex on app name")
+    h.add_argument("--missed", action="store_true", help="only hidden ones (DND, mute, silent rule)")
+    h.add_argument("--full", action="store_true"); h.add_argument("--json", action="store_true"); h.add_argument("--clear", action="store_true")
+    add("dismiss", cmd_dismiss, "close every popup on screen")
+    ad2 = add("autodnd", cmd_autodnd, "automatic Do Not Disturb for full-screen windows (KWin script)")
+    ad2.add_argument("action", nargs="?", default="status", choices=["status", "install", "remove"])
+    tr = add("tray", cmd_tray, "show/hide Plasma's (now inert) notification icon in the system tray")
+    tr.add_argument("action", nargs="?", default="status", choices=["status", "hide", "show"])
+    rp = add("reply", cmd_reply, "answer a notification that has a reply box (id from `notify history --json`)")
+    rp.add_argument("id", type=int); rp.add_argument("text")
+    sn = add("send", cmd_send, "send a notification (for testing rules)")
+    sn.add_argument("summary"); sn.add_argument("body", nargs="?")
+    sn.add_argument("-a", "--app", default="notify")
+    sn.add_argument("-u", "--urgency", default="normal", choices=["low", "normal", "critical"])
+    sn.add_argument("-t", "--timeout", type=int, default=6000, help="ms (0 = never expires)")
+    sn.add_argument("--origin", help="site name, like a browser sends"); sn.add_argument("--desktop-entry")
+    te = add("test", cmd_test, "send sample notifications to every zone")
+    te.add_argument("-t", "--timeout", type=int, default=6000)
+    add("dev", cmd_dev, "run a throwaway daemon from the source on a private bus")
+    add("selftest", cmd_selftest, "run the regression suite")
+
+    a = ap.parse_args()
+    if a.dev:
+        DEV = True
+        bus = paths()["dev_bus"]
+        if a.cmd != "dev":
+            if not bus.exists():
+                print("no dev daemon running; start one with: notify dev")
+                sys.exit(1)
+            os.environ["DBUS_SESSION_BUS_ADDRESS"] = bus.read_text().strip()
+    sys.exit(a.fn(a) or 0)
+
+
+if __name__ == "__main__":
+    main()

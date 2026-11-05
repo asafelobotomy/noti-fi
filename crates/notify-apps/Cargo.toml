@@ -1,0 +1,11 @@
+[package]
+name = "notify-apps"
+description = "Finds the apps on this system that send, or could send, notifications"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+notify-protocol = { path = "../notify-protocol" }
+serde.workspace = true
+serde_json.workspace = true

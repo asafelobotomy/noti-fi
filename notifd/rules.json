@@ -1,0 +1,99 @@
+{
+  "screen": "",
+  "debug": false,
+  "defaultZone": "personal",
+  "defaultTimeout": 6000,
+  "maxVisible": 5,
+  "width": 380,
+  "margin": 16,
+  "spacing": 10,
+  "dnd": {
+    "allowCritical": true
+  },
+  "history": {
+    "limit": 200,
+    "persist": false
+  },
+  "sound": {
+    "enabled": true,
+    "defaultName": ""
+  },
+  "autoDnd": {
+    "fullscreen": true,
+    "screenShare": true
+  },
+  "theme": {
+    "card": "#1d1f27",
+    "border": "#2c2f3a",
+    "text": "#f2f3f7",
+    "subtext": "#b9bccb",
+    "button": "#272a36",
+    "buttonHover": "#323646"
+  },
+  "focus": {
+    "modes": {
+      "urgent": {
+        "label": "Urgent only",
+        "minPriority": "urgent"
+      }
+    }
+  },
+  "transfer": {
+    "chart": "line"
+  },
+  "zones": {
+    "business": {
+      "anchor": "top-left",
+      "accent": "#c084fc",
+      "label": "Business"
+    },
+    "personal": {
+      "anchor": "top-right",
+      "accent": "#60a5fa",
+      "label": "Personal"
+    },
+    "system": {
+      "anchor": "bottom-right",
+      "accent": "#fbbf24",
+      "label": "System"
+    }
+  },
+  "rules": [
+    {
+      "name": "Business sites",
+      "match": {
+        "origin": "\\b(onlyfans|fansly)\\b"
+      },
+      "zone": "business"
+    },
+    {
+      "name": "Business sites (by text)",
+      "match": {
+        "summary": "\\b(onlyfans|fansly)\\b"
+      },
+      "zone": "business"
+    },
+    {
+      "name": "System (known system apps)",
+      "match": {
+        "appName": "^(kernel|linux kernel|systemd|udisks|upower|networkmanager|nm-applet|plasma-?(workspace|nm|discover)|discover|pamac|powerdevil|kded|polkit|bluedevil|software update|system)\\b",
+        "desktopEntry": "^$"
+      },
+      "zone": "system"
+    },
+    {
+      "name": "System (by desktop entry)",
+      "match": {
+        "desktopEntry": "^(org\\.kde\\.(discover|plasma|powerdevil|kded|solid)|org\\.manjaro\\.pamac|org\\.freedesktop\\.|org\\.gnome\\.(PackageKit|Software))"
+      },
+      "zone": "system"
+    },
+    {
+      "name": "Critical anywhere stays until dismissed",
+      "match": {
+        "urgency": "critical"
+      },
+      "timeout": 0
+    }
+  ]
+}

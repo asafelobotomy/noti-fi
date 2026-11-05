@@ -1,0 +1,10 @@
+[package]
+name = "notify-protocol"
+description = "Typed messages for the notifd control socket and the rules.json config model"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true

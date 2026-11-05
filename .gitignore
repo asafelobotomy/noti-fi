@@ -1,0 +1,13 @@
+# build output
+/target/
+
+# editor and language-server files (they contain absolute paths)
+.qmlls.ini
+.idea/
+.vscode/
+*.swp
+
+# local scratch
+/shots/
+*.log
+*.tmp

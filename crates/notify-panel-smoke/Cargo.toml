@@ -1,0 +1,15 @@
+[package]
+name = "notify-panel-smoke"
+description = "Headless smoke tests that run the real notify-panel binary (a separate crate: a package with a cxx-qt bridge cannot link its own integration tests)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+
+[dev-dependencies]
+notify-client = { path = "../notify-client" }
+notify-protocol = { path = "../notify-protocol" }
+notify-testkit = { path = "../notify-testkit" }
+serde_json.workspace = true

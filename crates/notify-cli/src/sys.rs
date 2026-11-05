@@ -1,0 +1,104 @@
+//! Small helpers around the operating system: running commands, atomic writes, process detection.
+
+use std::fs;
+use std::io::Write;
+use std::os::unix::fs::PermissionsExt;
+use std::path::Path;
+use std::process::{Command, Stdio};
+use std::time::{Duration, Instant};
+
+use anyhow::{Context, Result};
+
+/// Run a command, return (exit code, trimmed stdout). A command that cannot start or times out gives (1, "").
+pub fn sh(cmd: &str, args: &[&str]) -> (i32, String) {
+    sh_timeout(cmd, args, Duration::from_secs(10))
+}
+
+pub fn sh_timeout(cmd: &str, args: &[&str], timeout: Duration) -> (i32, String) {
+    let Ok(mut child) = Command::new(cmd).args(args).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn() else {
+        return (1, String::new());
+    };
+    let deadline = Instant::now() + timeout;
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => break,
+            Ok(None) if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(15)),
+            _ => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return (1, String::new());
+            }
+        }
+    }
+    match child.wait_with_output() {
+        Ok(o) => (o.status.code().unwrap_or(1), String::from_utf8_lossy(&o.stdout).trim().to_string()),
+        Err(_) => (1, String::new()),
+    }
+}
+
+pub fn which(name: &str) -> Option<String> {
+    let path = std::env::var_os("PATH")?;
+    std::env::split_paths(&path).map(|d| d.join(name)).find(|p| p.is_file() && fs::metadata(p).map(|m| m.permissions().mode() & 0o111 != 0).unwrap_or(false)).map(|p| p.to_string_lossy().into_owned())
+}
+
+/// Write a file through a temp file + rename so a crash can never leave it half-written.
+pub fn atomic_write(path: &Path, text: &str) -> Result<()> {
+    let dir = path.parent().context("path has no parent")?;
+    fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
+    let mode = fs::metadata(path).map(|m| m.permissions().mode() & 0o777).unwrap_or(0o644);
+    let tmp = dir.join(format!(".{}.{}.tmp", path.file_name().and_then(|n| n.to_str()).unwrap_or("file"), std::process::id()));
+    {
+        let mut f = fs::File::create(&tmp).with_context(|| format!("creating {}", tmp.display()))?;
+        f.write_all(text.as_bytes())?;
+        f.sync_all()?;
+    }
+    fs::set_permissions(&tmp, fs::Permissions::from_mode(mode))?;
+    if let Err(e) = fs::rename(&tmp, path) {
+        let _ = fs::remove_file(&tmp);
+        return Err(e).with_context(|| format!("writing {}", path.display()));
+    }
+    Ok(())
+}
+
+/// True if any process runs a binary whose path contains one of the needles.
+pub fn exe_running(needles: &[&str]) -> bool {
+    let Ok(rd) = fs::read_dir("/proc") else { return false };
+    for e in rd.flatten() {
+        let name = e.file_name();
+        let Some(n) = name.to_str() else { continue };
+        if !n.bytes().all(|b| b.is_ascii_digit()) {
+            continue;
+        }
+        if let Ok(exe) = fs::read_link(e.path().join("exe")) {
+            let s = exe.to_string_lossy();
+            if needles.iter().any(|x| s.contains(x)) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+pub struct Owner {
+    pub pid: String,
+    pub comm: String,
+    pub unit: String,
+}
+
+/// Who owns org.freedesktop.Notifications right now.
+pub fn owner() -> Option<Owner> {
+    let (rc, out) = sh("busctl", &["--user", "status", "org.freedesktop.Notifications"]);
+    if rc != 0 {
+        return None;
+    }
+    let get = |k: &str| out.lines().find_map(|l| l.strip_prefix(&format!("{k}="))).unwrap_or("").to_string();
+    Some(Owner { pid: get("PID"), comm: get("Comm"), unit: get("UserUnit") })
+}
+
+pub fn notifd_owns() -> bool {
+    owner().map(|o| o.comm == "qs" || o.comm == "quickshell").unwrap_or(false)
+}
+
+pub fn sleep_ms(ms: u64) {
+    std::thread::sleep(Duration::from_millis(ms));
+}
