@@ -10,13 +10,15 @@ readonly property var matchFields: [
         { field: "body", label: "Text has:", menu: "Text contains", role: "mBody", kind: "contains", hint: "" },
         { field: "urgency", label: "Urgency:", menu: "Urgency", role: "mUrgency", kind: "choice", hint: "critical" },
         { field: "category", label: "Kind:", menu: "Kind of notification", role: "mCategory", kind: "start", hint: "email" },
-        { field: "channel", label: "Arrives as:", menu: "How it arrives", role: "mChannel", kind: "choice", hint: "web" }
+        { field: "channel", label: "Arrives as:", menu: "How it arrives", role: "mChannel", kind: "choice", hint: "web" },
+        { field: "group", label: "In group:", menu: "Group it is in (applies to a whole group)", role: "mGroup", kind: "choice", hint: "business" }
     ]
 
     // a name, the tags to match and what the rule does (zone "$first" = the first zone)
 readonly property var templates: [
         { name: "Mute an app", hint: "Pick the app, then it never pops up (kept in History)", match: {}, silent: true },
-        { name: "Send an app to a zone", hint: "Pick the app and the zone", match: {}, zone: "$first" },
+        { name: "Put an app in a group", hint: "Pick the app and the group", match: {}, zone: "$first" },
+        { name: "Change how a whole group looks", hint: "Pick the group, then the look", match: { group: "$firstGroup" } },
         { name: "Keep an app's popups until dismissed", hint: "Pick the app", match: {}, timeout: "0" },
         { name: "Critical notifications stay until dismissed", hint: "", match: { urgency: "^critical$" }, timeout: "0" },
         { name: "Silence a website's notifications", hint: "Pick the site", match: { channel: "^web$" }, silent: true },

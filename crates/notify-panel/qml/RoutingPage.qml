@@ -7,7 +7,7 @@ import org.kde.kirigami as Kirigami
 // Rules (the power tool), each chosen from the main sidebar. All three edit the same draft, so one Save covers them and a tab switch never loses an edit.
 Kirigami.Page {
     id: page
-    title: ({ apps: "Apps", zones: "Zones", rules: "Rules" })[page.tab] || "Apps"
+    title: ({ apps: "Apps", zones: "Groups", rules: "Rules" })[page.tab] || "Apps"
     padding: 0
     property var model
     property var ui

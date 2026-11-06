@@ -281,7 +281,7 @@
           },
           "match": {
             "type": "object",
-            "description": "Every listed field must match its regex (case-insensitive, JavaScript syntax). category = the app's category hint (email.arrived, im.received...); channel = app, portal or web.",
+            "description": "Every listed field must match its regex (case-insensitive, JavaScript syntax). category = the app's category hint (email.arrived, im.received...); channel = app, portal or web; group = the group (zone id) the notification is in, decided by the rules that do not test the group (such a rule cannot set zone).",
             "propertyNames": {
               "enum": [
                 "appName",
@@ -291,7 +291,8 @@
                 "body",
                 "urgency",
                 "category",
-                "channel"
+                "channel",
+                "group"
               ]
             },
             "additionalProperties": {

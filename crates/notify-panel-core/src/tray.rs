@@ -117,7 +117,7 @@ impl ksni::Tray for Tray {
         m.push(SubMenu { label: "Focus".into(), icon_name: "face-glasses".into(), enabled: s.online, submenu: focus, ..Default::default() }.into());
         if !s.zones.is_empty() {
             let zones = s.zones.iter().map(|(name, label, muted)| check(label, *muted, s.online, TrayAction::MuteZone(name.clone(), !muted))).collect();
-            m.push(SubMenu { label: "Mute a zone".into(), icon_name: "notifications-disabled".into(), enabled: s.online, submenu: zones, ..Default::default() }.into());
+            m.push(SubMenu { label: "Mute a group".into(), icon_name: "notifications-disabled".into(), enabled: s.online, submenu: zones, ..Default::default() }.into());
         }
         m.push(MenuItem::Separator);
         let mut recent: Vec<MenuItem<Tray>> = if s.recent.is_empty() {
@@ -217,7 +217,7 @@ mod tests {
         let t = tray(Default::default());
         let l = labels(&t.menu());
         assert_eq!(l[0], "noti-fi: Do Not Disturb on, Focus: Urgent only, 2 on screen");
-        for want in ["Do Not Disturb [x]", "Focus >", "  Off [ ]", "  Urgent only [x]", "  Work [ ]", "Mute a zone >", "  Business [x]", "  Personal [ ]", "Recent notifications >", "  2 min  Steam: New message", "  1 h  Brave  (held)", "  Show all history…", "Settings…", "Quit noti-fi"] {
+        for want in ["Do Not Disturb [x]", "Focus >", "  Off [ ]", "  Urgent only [x]", "  Work [ ]", "Mute a group >", "  Business [x]", "  Personal [ ]", "Recent notifications >", "  2 min  Steam: New message", "  1 h  Brave  (held)", "  Show all history…", "Settings…", "Quit noti-fi"] {
             assert!(l.iter().any(|x| x == want), "missing `{want}` in {l:#?}");
         }
         assert_eq!(t.icon_name(), "notifications-disabled", "Do Not Disturb has its own icon");

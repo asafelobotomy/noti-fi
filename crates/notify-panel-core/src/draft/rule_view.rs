@@ -36,7 +36,7 @@ fn plain_words(field: &str, p: &str) -> Option<Vec<String>> {
     let inner = match field {
         "appName" | "desktopEntry" => p.strip_prefix("^(").and_then(|x| x.strip_suffix(")$")).or_else(|| p.strip_prefix('^').and_then(|x| x.strip_suffix('$'))),
         // a closed set of values: a bare word means the same as the anchored one
-        "urgency" | "channel" => p.strip_prefix("^(").and_then(|x| x.strip_suffix(")$")).or_else(|| p.strip_prefix('^').and_then(|x| x.strip_suffix('$'))).or(Some(p)),
+        "urgency" | "channel" | "group" => p.strip_prefix("^(").and_then(|x| x.strip_suffix(")$")).or_else(|| p.strip_prefix('^').and_then(|x| x.strip_suffix('$'))).or(Some(p)),
         "origin" => p.strip_prefix("\\b(").and_then(|x| x.strip_suffix(")\\b")).or_else(|| p.strip_prefix("\\b").and_then(|x| x.strip_suffix("\\b"))),
         "category" => p.strip_prefix("^(").and_then(|x| x.strip_suffix(')')).or_else(|| p.strip_prefix('^')),
         _ => Some(p),
@@ -71,6 +71,7 @@ fn condition_text(field: &str, p: &str) -> String {
         "body" => ("text", true),
         "urgency" => ("urgency", false),
         "category" => ("kind", false),
+        "group" => ("group", false),
         _ => ("arrives as", false),
     };
     if has {

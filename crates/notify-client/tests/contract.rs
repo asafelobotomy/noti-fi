@@ -91,7 +91,7 @@ fn contract_against_a_real_daemon() {
         })
     };
     let r = sim(&mut c, "kernel", Urgency::Normal, false, None).unwrap();
-    k.check("simulate: kernel goes to system, decided by the named rule", r.zone == "system" && r.decided_by.zone.as_deref() == Some("system") && r.would_show, || format!("{r:?}"));
+    k.check("simulate: the kernel is in the System group, built in (no rule can move it)", r.zone == "system" && r.decided_by.zone.as_deref() == Some("System (built in)") && r.would_show, || format!("{r:?}"));
     let r = sim(&mut c, "Steam", Urgency::Normal, false, None).unwrap();
     k.check("simulate: unmatched app uses the default zone and timeout", r.zone == "personal" && r.decided_by.zone.is_none() && r.timeout == 1500 && r.matched.is_empty(), || format!("{r:?}"));
     let mut draft = cfg.clone();

@@ -7,7 +7,7 @@ QtObject {
     readonly property var anchorNames: ["top-left", "top-center", "top-right", "middle-left", "center", "middle-right",
                                         "bottom-left", "bottom-center", "bottom-right", "free"]
     // keep in sync with MATCH_FIELDS in the `notify` CLI
-    readonly property var matchFields: ["appName", "desktopEntry", "origin", "summary", "body", "urgency", "category", "channel"]
+    readonly property var matchFields: ["appName", "desktopEntry", "origin", "summary", "body", "urgency", "category", "channel", "group"]
     // Patterns run on text that apps and web pages control. A pattern that backtracks badly could stall the thread that draws every popup, so they are kept short.
     readonly property int maxPattern: 500
     // how important a notification is; an app's urgency maps to low / normal / urgent, a rule can set any of the four
@@ -90,6 +90,7 @@ QtObject {
             const name = (r && r.name) ? r.name : "#" + (i + 1)
             if (!r || typeof r !== "object") return "rule " + name + ": must be an object"
             if (r.zone !== undefined && !(r.zone in zones)) return "rule '" + name + "': unknown zone '" + r.zone + "'"
+            if (r.zone !== undefined && r.match && r.match.group !== undefined) return "rule '" + name + "': a rule for a group cannot move it to another group"
             if (r.timeout !== undefined && (typeof r.timeout !== "number" || r.timeout < 0)) return "rule '" + name + "': timeout must be a number >= 0"
             const se = styleError(r, true)
             if (se !== "") return "rule '" + name + "': " + se

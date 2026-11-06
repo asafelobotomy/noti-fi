@@ -85,7 +85,7 @@ fn the_notify_binary_end_to_end() {
 
     // ---- simulate
     let (c, out, _) = cli.run(&["simulate", "x", "--app", "kernel"]);
-    k.check("simulate names the zone and the rule that decided it", c == 0 && out.contains("zone:     system (rule 'system')") && out.contains("outcome:  shown"), || out.clone());
+    k.check("simulate names the zone and what decided it (the system's own notifications are in System, built in)", c == 0 && out.contains("zone:     system (rule 'System (built in)')") && out.contains("outcome:  shown"), || out.clone());
     let j = cli.json(&["simulate", "x", "--app", "Brave Origin", "--origin", "example-shop.com", "--json"]);
     k.check("simulate --json returns typed fields", j["zone"] == "business" && j["wouldShow"] == true && j["matched"][0] == "business sites", || j.to_string());
     let (c, out, _) = cli.run(&["simulate", "x", "--app", "Steam", "--timeout", "0"]);

@@ -57,7 +57,7 @@ Kirigami.ScrollablePage {
             Kirigami.SearchField {
                 id: search
                 Layout.fillWidth: true
-                placeholderText: "Filter by app, site, title or zone (Ctrl+F)"
+                placeholderText: "Filter by app, site, title or group (Ctrl+F)"
                 onTextChanged: page.applyFilter()
             }
             QQC2.CheckBox { text: "Missed only"; checked: page.missedOnly; onToggled: page.ui.missedOnly = checked }

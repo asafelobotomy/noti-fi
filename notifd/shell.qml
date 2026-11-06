@@ -45,6 +45,7 @@ ShellRoot {
 
     function mergeConfig(user) {
         const c = Object.assign({}, defaults, user)
+        if (!c.zones || !("system" in c.zones)) c.zones = Object.assign({}, c.zones, { system: { anchor: "bottom-right", accent: "#fbbf24", label: "System" } })
         for (const k of ["dnd", "history", "sound", "autoDnd", "theme", "focus", "transfer"])
             c[k] = Object.assign({}, defaults[k], (user && typeof user[k] === "object" && user[k]) || {})
         return c
@@ -278,72 +279,8 @@ ShellRoot {
         }
         return "focus " + st.focus
     }
-    function holdWhy(c, st, f, zone, silent, priority) {
-        const passCritical = priority === "urgent" && c.dnd.allowCritical !== false
-        if (silent) return "silent rule"
-        const hold = holdFor(c, st)
-        if (hold !== "" && !passCritical) return hold
-        const fh = focusHold(c, st, f, priority)
-        if (fh !== "") return fh
-        if (st.muted.indexOf(zone) >= 0 && !passCritical) return "muted " + zone
-        return ""
-    }
-    function decide(c, comp, f, exp, st) {
-        const out = { zone: undefined, timeout: undefined, silent: undefined }
-        const style = {}
-        const by = { zone: null, timeout: null, silent: null }
-        const matched = []
-        const matchedIdx = []
-        const byIdx = { zone: null, timeout: null, silent: null }
-        for (const sk of styleKeys) { by[sk] = null; byIdx[sk] = null }
-        for (let i = 0; i < comp.length; i++) {
-            const k = comp[i]
-            let ok = true
-            try {
-                for (const t of k.tests) if (!t[1].test(String(f[t[0]] ?? "").slice(0, maxSubject))) { ok = false; break }
-            } catch (e) { ok = false }
-            if (!ok) continue
-            const name = k.r.name || ("#" + (i + 1))
-            matched.push(name)
-            matchedIdx.push(i)
-            if (out.zone === undefined && k.r.zone !== undefined) { out.zone = k.r.zone; by.zone = name; byIdx.zone = i }
-            if (out.timeout === undefined && k.r.timeout !== undefined) { out.timeout = k.r.timeout; by.timeout = name; byIdx.timeout = i }
-            if (out.silent === undefined && k.r.silent !== undefined) { out.silent = k.r.silent; by.silent = name; byIdx.silent = i }
-            for (const sk of styleKeys)
-                if (style[sk] === undefined && k.r[sk] !== undefined) { style[sk] = k.r[sk]; by[sk] = name; byIdx[sk] = i }
-        }
-        // then the zone's own style, then the theme and global width
-        const z = c.zones[(out.zone !== undefined && out.zone in c.zones) ? out.zone : c.defaultZone] || {}
-        for (const sk of styleKeys)
-            if (style[sk] === undefined && z[sk] !== undefined && sk !== "group") style[sk] = z[sk]
-        if (style.opacity === undefined) style.opacity = c.theme.opacity ?? 1
-        if (style.fontFamily === undefined) style.fontFamily = c.theme.fontFamily ?? ""
-        if (style.fontSize === undefined) style.fontSize = c.theme.fontSize ?? 12
-        if (style.timerStyle === undefined) style.timerStyle = c.theme.timerStyle ?? "none"
-        if (style.width === undefined) style.width = c.width
-        if (style.priority === undefined) style.priority = f.urgency === "critical" ? "urgent" : (f.urgency === "low" ? "low" : "normal")
-        // media: pictures are shown unless a rule says false; audio/video players only when a rule (or zone) says true, because a notification
-        // can name any local file and the player would open it
-        style.players = style.media === true
-        style.media = style.media !== false
-        style.stack = style.stack === true
-        // notifications that share a stack key (same group, or same site/app and kind) in one zone are stacked together when `stack` is on
-        style.stackKey = !style.stack ? "" : ((style.group ?? "") !== "" ? "g:" + style.group : "a:" + String(f.origin || f.appName || f.desktopEntry).toLowerCase() + "|" + (f.category || ""))
-        style.clickThrough = style.clickThrough === true
-        style.noFocus = style.noFocus === true
-        style.group = style.group ?? ""
-        if (out.zone === undefined || !(out.zone in c.zones)) { out.zone = c.defaultZone; by.zone = null }
-        if (out.timeout === undefined)           // spec: -1 = server default, 0 = never expire, >0 = milliseconds
-            out.timeout = exp === 0 ? 0 : (exp > 0 ? exp : c.defaultTimeout)
-        out.silent = out.silent === true
-        out.style = style
-        out.why = holdWhy(c, st, f, out.zone, out.silent, style.priority)
-        out.matched = matched
-        out.matchedIdx = matchedIdx          // positions in the rules list (names can repeat or be missing)
-        out.decidedIdx = byIdx
-        out.decidedBy = by
-        return out
-    }
+    Route { id: route; shell: root }      // decide() and the System group: see Route.qml
+    function decide(c, comp, f, exp, st) { return route.decide(c, comp, f, exp, st) }
 
     // =====================================================================
     // On-screen rows. ListModels can't hold QObjects, so rows carry the id

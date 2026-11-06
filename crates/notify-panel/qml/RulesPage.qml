@@ -24,7 +24,7 @@ Kirigami.Page {
             index: r.index, title: r.title, name: r.name, summary: r.summary, zone: r.zone, timeout: r.timeout, silent: r.silent,
             matched: r.matched, decidesZone: r.decidesZone, decidesTimeout: r.decidesTimeout, decidesSilent: r.decidesSilent, hasError: r.hasError,
             mAppName: r.match.appName, mDesktopEntry: r.match.desktopEntry, mOrigin: r.match.origin,
-            mSummary: r.match.summary, mBody: r.match.body, mUrgency: r.match.urgency, mCategory: r.match.category, mChannel: r.match.channel,
+            mSummary: r.match.summary, mBody: r.match.body, mUrgency: r.match.urgency, mCategory: r.match.category, mChannel: r.match.channel, mGroup: r.match.group || "",
             sOpacity: r.style.opacity, sClickThrough: r.style.clickThrough, sNoFocus: r.style.noFocus, sWidth: r.style.width,
             sFontFamily: r.style.fontFamily, sFontSize: r.style.fontSize, sGroup: r.style.group,
             sPriority: r.style.priority, sMedia: r.style.media, sStack: r.style.stack, sTimer: r.style.timerStyle
@@ -49,7 +49,7 @@ Kirigami.Page {
         const i = page.model.ruleAdd()
         page.selected = i
         page.model.ruleSetName(i, t.name)
-        for (const f in t.match) page.model.ruleSetMatch(i, f, t.match[f])
+        for (const f in t.match) page.model.ruleSetMatch(i, f, t.match[f] === "$firstGroup" ? "^" + (page.zones[0] || "personal") + "$" : t.match[f])
         if (t.zone) page.model.ruleSetZone(i, t.zone === "$first" ? (page.zones[0] || "") : t.zone)
         if (t.timeout !== undefined) page.model.ruleSetTimeout(i, t.timeout)
         if (t.silent) page.model.ruleSetSilent(i, true)
@@ -80,6 +80,7 @@ Kirigami.Page {
     property var recent: []
     function refreshSuggestions() {
         try { page.suggest = JSON.parse(page.model.ruleSuggestions()) } catch (e) { page.suggest = ({}) }
+        page.suggest = Object.assign({}, page.suggest, { group: page.zoneObjs.map(z => z.id) })
         try { page.recent = JSON.parse(page.model.recentNotifications()) } catch (e) { page.recent = [] }
     }
     Connections { target: page.model; function onAppsJsonChanged() { page.refreshSuggestions() } function onHistoryTotalChanged() { page.refreshSuggestions() } }
@@ -259,8 +260,8 @@ Kirigami.Page {
                         Layout.leftMargin: Kirigami.Units.largeSpacing
                         Layout.rightMargin: Kirigami.Units.largeSpacing
                         enabled: page.current !== null
-                        inheritFrom: "later rules, the zone and the theme"
-                        levels: ["Theme", page.current && page.current.zone !== "" ? "Zone: " + page.zoneLabel(page.current.zone) : "Its zone", "Rule: " + (page.current ? page.current.title : "")]
+                        inheritFrom: "later rules, the group and the theme"
+                        levels: ["Theme", page.current && page.current.zone !== "" ? "Group: " + page.zoneLabel(page.current.zone) : "Its group", "Rule: " + (page.current ? page.current.title : "")]
                         groups: { const g = []; for (let i = 0; i < rules.count; i++) { const v = rules.get(i).sGroup; if (v && g.indexOf(v) < 0) g.push(v) } return g }
                         model: page.model
                         accent: page.zoneAccent(page.current ? page.current.zone : "")
@@ -341,54 +342,7 @@ Kirigami.Page {
 
                             RulePreview { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing; rule: page.current; recent: page.recent }
                         }
-                        ColumnLayout {
-                            Layout.alignment: Qt.AlignTop
-                            Layout.fillWidth: true
-                            Layout.preferredWidth: 1
-                            spacing: Kirigami.Units.smallSpacing
-                            Kirigami.Heading { level: 3; text: "Then" }
-                            QQC2.Label { text: "Show in zone"; font.bold: true }
-                            RowLayout {
-                              Layout.fillWidth: true
-                              spacing: Kirigami.Units.largeSpacing
-                              MiniScreen {
-                                readonly property var zn: page.current ? page.zoneInfo(page.current.zone) : null
-                                dim: zn === null
-                                anchorName: zn ? zn.anchor : "top-right"
-                                fx: zn ? Number(zn.x) : 0.5; fy: zn ? Number(zn.y) : 0.1
-                                accent: zn && zn.accent ? zn.accent : ""
-                                Accessible.name: "Where this rule puts popups"
-                              }
-                              QQC2.ComboBox {
-                                id: zoneBox
-                                Layout.fillWidth: true
-                                model: page.zoneChoiceLabels
-                            // shown from the rule itself: a list refresh can reset a combo box's index
-                            displayText: page.current && page.current.zone !== "" ? page.zoneLabel(page.current.zone) : page.zoneChoiceLabels[0]
-                                currentIndex: page.current && page.current.zone !== "" ? Math.max(0, page.zoneChoices.indexOf(page.current.zone)) : 0
-                                onActivated: index => page.model.ruleSetZone(page.selected, index === 0 ? "" : page.zoneChoices[index])
-                                Accessible.name: "Show in zone"
-                              }
-                            }
-                            QQC2.Label { Layout.topMargin: Kirigami.Units.smallSpacing; text: "Stays on screen"; font.bold: true }
-                            DurationChips {
-                                Layout.fillWidth: true
-                                unsetLabel: "Not set here"
-                                unsetTip: "Later rules, the app or the default decide"
-                                value: page.current ? page.current.timeout : ""
-                                onEdited: text => page.model.ruleSetTimeout(page.selected, text)
-                            }
-                            QQC2.CheckBox {
-                                Layout.topMargin: Kirigami.Units.smallSpacing
-                                text: "Never show it, keep it in history only"
-                                checked: page.current ? page.current.silent : false
-                                onToggled: {
-                                    page.model.ruleSetSilent(page.selected, checked)
-                                    checked = Qt.binding(() => page.current ? page.current.silent : false)
-                                }
-                                Accessible.name: "Never show, keep in history only"
-                            }
-                        }
+                        RuleThen { page: page; Layout.alignment: Qt.AlignTop; Layout.fillWidth: true; Layout.preferredWidth: 1 }
                     }
 
                 }

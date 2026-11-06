@@ -70,7 +70,7 @@ ColumnLayout {
         wrapMode: Text.Wrap
         opacity: 0.7
         font: Kirigami.Theme.smallFont
-        text: "Checked from the top; the first matching rule that sets the zone, timeout or silent wins."
+        text: "Checked from the top; the first matching rule that sets the group, timeout or silent wins."
     }
     Kirigami.Separator { Layout.fillWidth: true }
 
@@ -129,7 +129,7 @@ ColumnLayout {
             visible: root.rules.count === 0
             icon.name: "view-list-details"
             text: page.online ? "No rules yet" : "notifd is not running"
-            explanation: page.online ? "Without rules, every notification goes to the default zone." : ""
+            explanation: page.online ? "Without rules, every notification goes to the default group." : ""
         }
     }
 }

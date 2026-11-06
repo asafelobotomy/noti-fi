@@ -29,7 +29,7 @@ Item {
         id: tweak
         width: 800
         model: fake
-        entry: ({ id: 7, app: "Brave", desktopEntry: "brave-browser", origin: "shop.example", category: "im.received", zone: "personal", summary: "Sale", body: "" })
+        entry: ({ id: 7, app: "Brave", desktopEntry: "brave-browser", origin: "shop.example", category: "im.received", zone: "personal", summary: "Invoice ready", body: "Your invoice 42 from Acme" })
     }
     TestCase {
         name: "HistoryTweak"
@@ -49,6 +49,15 @@ Item {
             fake.ruleSetTimeout(tweak.ensureRule(), "15000")
             compare(fake.list.length, 2, "the same rule is edited, not a second one made")
             compare(fake.list[0].timeout, "15000")
+        }
+        function test_keywords_come_from_the_notification_and_land_in_the_right_field() {
+            compare(JSON.stringify(tweak.titleWords), '["invoice","ready"]')
+            verify(tweak.textWords.indexOf("acme") >= 0 && tweak.textWords.indexOf("invoice") < 0 && tweak.textWords.indexOf("42") < 0, JSON.stringify(tweak.textWords))
+            tweak.toggleWord("invoice"); tweak.toggleWord("acme")
+            compare(tweak.match.summary, "invoice")
+            compare(tweak.match.body, "acme")
+            verify(tweak.ruleName.indexOf("“invoice”") >= 0)
+            tweak.keywords = []
         }
         function test_switching_a_part_off_matches_less() {
             tweak.useType = false

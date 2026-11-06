@@ -58,9 +58,11 @@ def make_tests(check, BASE_CONFIG, ROOT, SRC):
 
 
     def test_simulate_details(d):
+        r = sim(d, {"appName": "Brave Origin", "origin": "example-shop.com", "summary": "x"})
+        check("simulate names the rule that decided the zone", r and r["decidedBy"]["zone"] == "business sites" and "business sites" in r["matched"], str(r))
+        check("simulate also reports the matched rule's position in the list", r and r["matchedIdx"] == [0] and r["decidedIdx"]["zone"] == 0, str(r))
         r = sim(d, {"appName": "kernel", "summary": "x", "urgency": "critical"})
-        check("simulate names the rule that decided the zone", r and r["decidedBy"]["zone"] == "system" and "system" in r["matched"], str(r))
-        check("simulate also reports the matched rule's position in the list", r and r["matchedIdx"] == [1] and r["decidedIdx"]["zone"] == 1, str(r))
+        check("the system's own notifications are in System, built in", r and r["zone"] == "system" and r["decidedBy"]["zone"] == "System (built in)", str(r))
         r = sim(d, {"appName": "Steam", "summary": "x"})
         check("simulate says 'default' when no rule decided", r and r["decidedBy"]["zone"] is None and r["matched"] == [] and r["timeout"] == 1500, str(r))
         r = sim(d, {"appName": "Steam", "summary": "x", "expireTimeout": 0})
@@ -77,6 +79,32 @@ def make_tests(check, BASE_CONFIG, ROOT, SRC):
         free = sim(d, {"appName": "Steam", "summary": "x"}, ignoreState=True)
         d.ipc("dnd", "off")
         check("ignoreState shows the rule outcome independent of Do Not Disturb", held["hold"] == "dnd" and free["hold"] == "" and free["wouldShow"], f"{held} / {free}")
+
+
+    def test_groups(d):
+        """Groups (zones): the locked System group, the system's own notifications, and rules that apply to a whole group."""
+        no_system = {**BASE_CONFIG, "zones": {k: v for k, v in BASE_CONFIG["zones"].items() if k != "system"}, "rules": []}
+        r = sim(d, {"appName": "kernel", "summary": "x"}, config=no_system)
+        check("the System group exists even when the config leaves it out", r and r["zone"] == "system", str(r))
+        grab = {**BASE_CONFIG, "rules": [{"name": "grab", "match": {"appName": "^(kernel|upower)$"}, "zone": "business", "silent": True}]}
+        r = sim(d, {"appName": "kernel", "summary": "low memory"}, config=grab)
+        check("a rule cannot move the system's own notifications out of System", r and r["zone"] == "system", str(r))
+        check("a rule cannot silence the system's own notifications", r and r["wouldShow"] and r["hold"] == "", str(r))
+        d.ipc("mute", "system", "true")
+        r = sim(d, {"appName": "systemd", "summary": "x"})
+        stock = sim(d, {"appName": "Discover", "summary": "x"}, config={**BASE_CONFIG, "rules": [{"name": "stock", "match": {"appName": "^discover$"}, "zone": "system"}]})
+        d.ipc("mute", "system", "false")
+        check("muting System never hides the system's own notifications", r and r["hold"] == "", str(r))
+        check("a stock app moved into System is muted with it", stock and stock["zone"] == "system" and stock["hold"] == "muted system", str(stock))
+        moved = sim(d, {"appName": "Discover", "summary": "x"}, config={**BASE_CONFIG, "rules": [{"name": "out", "match": {"appName": "^discover$"}, "zone": "personal"}]})
+        check("a stock app can be taken out of System", moved and moved["zone"] == "personal", str(moved))
+        by_group = {**BASE_CONFIG, "rules": BASE_CONFIG["rules"] + [{"name": "business stays", "match": {"group": "^business$"}, "timeout": 0, "width": 460}]}
+        r = sim(d, {"appName": "Brave Origin", "origin": "example-shop.com", "summary": "x"}, config=by_group)
+        check("a rule can apply to a whole group", r and r["zone"] == "business" and r["timeout"] == 0 and r["decidedBy"]["timeout"] == "business stays", str(r))
+        r = sim(d, {"appName": "Steam", "summary": "x"}, config=by_group)
+        check("a group rule leaves other groups alone", r and r["zone"] == "personal" and r["timeout"] == 1500, str(r))
+        bad = d.ipc("validate", json.dumps({**BASE_CONFIG, "rules": [{"name": "loop", "match": {"group": "^business$"}, "zone": "personal"}]}))
+        check("a rule for a group cannot also move it to another group", isinstance(bad, dict) and bad.get("ok") is False and "group" in bad.get("error", ""), str(bad))
 
 
     def test_preview(d):
@@ -195,4 +223,4 @@ def make_tests(check, BASE_CONFIG, ROOT, SRC):
 
     # ------------------------------------------------------------------ control socket
 
-    return [test_validate_does_not_apply, test_simulate_agrees_with_reality, test_simulate_details, test_preview, test_schema, test_cli_smoke]
+    return [test_validate_does_not_apply, test_simulate_agrees_with_reality, test_simulate_details, test_groups, test_preview, test_schema, test_cli_smoke]

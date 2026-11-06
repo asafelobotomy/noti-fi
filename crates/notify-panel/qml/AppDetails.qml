@@ -25,8 +25,8 @@ ColumnLayout {
             Layout.fillWidth: true
             wrapMode: Text.Wrap
             opacity: 0.8
-            text: app.zone !== "" ? "Popups from " + app.name + " appear in the “" + root.host.zoneLabel(app.zone) + "” zone."
-                                  : "No zone set for " + app.name + ": your rules decide, otherwise the default zone."
+            text: app.zone !== "" ? app.name + " is in the “" + root.host.zoneLabel(app.zone) + "” group; its popups appear where that group is placed."
+                                  : "No group set for " + app.name + ": your rules decide, otherwise the default group."
         }
     }
 
@@ -57,8 +57,8 @@ ColumnLayout {
     LookEditor {
         Layout.fillWidth: true
         showGroup: true
-        inheritFrom: "its zone and the theme"
-        levels: ["Theme", app.zone !== "" ? "Zone: " + root.host.zoneLabel(app.zone) : "Its zone", app.name]
+        inheritFrom: "its group and the theme"
+        levels: ["Theme", app.zone !== "" ? "Group: " + root.host.zoneLabel(app.zone) : "Its group", app.name]
         model: root.host.model
         accent: root.host.zoneAccent(app.zone)
         timeoutMs: app.timeout !== "" ? Number(app.timeout) : -1
@@ -80,7 +80,7 @@ ColumnLayout {
         wrapMode: Text.Wrap
         opacity: 0.7
         text: app.kindCount > 0
-            ? "Each type can go to its own zone, be muted, be grouped, or look different from the app's other notifications."
+            ? "Each type can go to its own group, be muted, or look different from the app's other notifications."
             : "None yet. A kind (for example email.arrived or a web page's notification) is listed as soon as the app sends one."
     }
     Repeater {
@@ -133,7 +133,7 @@ ColumnLayout {
                     Layout.fillWidth: true
                     showGroup: true
                     inheritFrom: "the app's settings"
-                    levels: ["Theme", "Zone", app.name, kindCard.kind.category !== "" ? kindCard.kind.category : "General"]
+                    levels: ["Theme", "Group", app.name, kindCard.kind.category !== "" ? kindCard.kind.category : "General"]
                     model: root.host.model
                     accent: root.host.zoneAccent(kindCard.kind.routing.zone || app.zone)
                     timeoutMs: app.timeout !== "" ? Number(app.timeout) : -1

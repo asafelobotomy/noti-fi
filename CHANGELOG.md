@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+- **Groups:**
+  - **Zones are now Groups.** Apps and websites belong to a group (Business, Personal, any you create), and the old zone map is now the "Where groups appear on screen" section of the Groups page.
+  - **What a group shows:** each group lists its apps and websites as chips. Remove one with ×; add one with "Add app…" (any app, searchable) or "Add website…" (the sites seen in your notifications, or type one).
+- **System is locked:**
+  - **Always there:** the System group always exists. notifd adds it if the config leaves it out, and it cannot be deleted or renamed.
+  - **The system's own notifications always land in System:** the kernel, systemd, power, disks, network, polkit and KWin. No rule can move or silence them, and muting System or a focus mode does not hide them; only Do Not Disturb holds them, and critical ones still pass.
+  - **Stock system apps:** they can be taken out of System by adding them to another group, and other apps can be added to it.
+- **Rules can apply to a group:**
+  - **New condition:** "In group" means every notification in that group (the group decided by the rules that do not test the group). A rule like that changes how the group looks and behaves; it cannot move them to another group.
+  - **New template:** "Change how a whole group looks".
+  - **Rules still apply to single apps** as before.
+- **History, add to a group:**
+  - **One click:** opening an entry now offers its group directly.
+  - **Keywords:** alongside "from this app", "from this website" and "of this type", you can pick words from the notification ("And mentions: invoice"); title words must be in the title, text words in the text.
+  - **Preview:** the preview shows how many recent notifications that would catch.
+- **Wording:** "zone" is now "group" across the panel and the tray menu ("Mute a group"). The config file keeps the key `zones`.
+- **Daemon:** routing (decide) moved from `shell.qml` into `Route.qml`; a rule's `match` accepts `group`; `notify rules` checks it too.
+
 ## 0.15.0
 
 - **Look settings are part of the page:** the "Change how it looks and behaves…" buttons are gone; the look editor sits directly in a rule, an app, a notification type and a zone, under "How it looks and behaves".

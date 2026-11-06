@@ -149,7 +149,7 @@ ColumnLayout {
             wrapMode: Text.Wrap
             opacity: 0.7
             font: Kirigami.Theme.smallFont
-            text: "The preview's indicator runs at the real speed. How long a popup stays is set where the zone, app or rule is chosen."
+            text: "The preview's indicator runs at the real speed. How long a popup stays is set where the group, app or rule is chosen."
         }
     }
 

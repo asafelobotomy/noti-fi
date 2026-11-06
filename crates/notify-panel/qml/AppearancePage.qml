@@ -93,7 +93,7 @@ Kirigami.Page {
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
                     opacity: 0.7
-                    text: "The default look and behaviour of every popup. Zones, apps and rules can override any of it."
+                    text: "The default look and behaviour of every popup. Groups, apps and rules can override any of it."
                 }
 
                 // a sample card drawn with the draft colours, so changes are visible before anything is saved

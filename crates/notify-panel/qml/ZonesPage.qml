@@ -6,7 +6,7 @@ import org.kde.kirigami as Kirigami
 // Where popups appear: the zones (a name, a corner, an accent colour) and the layout numbers. Edits a draft; Save writes it.
 Kirigami.Page {
     id: page
-    title: "Zones & layout"
+    title: "Groups"
     property var model
     property var ui
     signal openTab(string name)
@@ -104,7 +104,7 @@ Kirigami.Page {
                     Layout.preferredWidth: 1
                     spacing: Kirigami.Units.largeSpacing
 
-                // ---- pick the zone to edit (the map and the card below follow it)
+                // ---- pick the group to edit (its card below and its place on the map follow it)
                 Flow {
                     Layout.fillWidth: true
                     Layout.margins: Kirigami.Units.largeSpacing
@@ -123,12 +123,90 @@ Kirigami.Page {
                                 Rectangle { implicitWidth: 10; implicitHeight: 10; radius: 5; color: pick.modelData.accent !== "" ? pick.modelData.accent : Kirigami.Theme.disabledTextColor }
                                 QQC2.Label { text: pick.modelData.label || pick.modelData.id; textFormat: Text.PlainText }
                             }
-                            Accessible.name: "Edit zone " + (modelData.label || modelData.id)
+                            Accessible.name: "Edit group " + (modelData.label || modelData.id)
                         }
                     }
-                    QQC2.Button { icon.name: "list-add"; text: "Add zone"; flat: true; onClicked: page.selectedId = page.model.zoneAdd(); Accessible.name: "Add a zone" }
+                    QQC2.Button { icon.name: "list-add"; text: "Add group"; flat: true; onClicked: page.selectedId = page.model.zoneAdd(); Accessible.name: "Add a group" }
                 }
 
+                // ---- the selected zone
+                Repeater {
+                    model: page.selectedZone ? [page.selectedZone] : []
+                    delegate: Kirigami.AbstractCard {
+                        id: card
+                        required property var modelData
+                        Layout.fillWidth: true
+                        Layout.leftMargin: Kirigami.Units.largeSpacing
+                        Layout.rightMargin: Kirigami.Units.largeSpacing
+                        contentItem: ColumnLayout {
+                            spacing: Kirigami.Units.smallSpacing
+                            Kirigami.Heading { level: 4; text: "Group: " + (card.modelData.label || card.modelData.id) }
+                            Kirigami.FormLayout {
+                                QQC2.TextField {
+                                    id: labelField
+                                    enabled: card.modelData.id !== "system"        // System is locked: it always exists, under its own name
+                                    Kirigami.FormData.label: card.modelData.id === "system" ? "Name 🔒:" : "Name:"
+                                    Layout.fillWidth: true
+                                    placeholderText: card.modelData.id
+                                    Binding on text { when: !labelField.activeFocus; value: card.modelData.label }
+                                    onTextEdited: page.model.zoneSet(card.modelData.id, "label", text)
+                                    onActiveFocusChanged: if (activeFocus) page.selectedId = card.modelData.id
+                                    Accessible.name: "Zone name " + card.modelData.id
+                                }
+                                QQC2.Label {
+                                    visible: card.modelData.anchor === "free"
+                                    Kirigami.FormData.label: "Position:"
+                                    text: Math.round(card.modelData.x * 100) + "% from the left, " + Math.round(card.modelData.y * 100) + "% from the top"
+                                    opacity: 0.8
+                                }
+                                SwatchPicker {
+                                    Kirigami.FormData.label: "Colour:"
+                                    accessibleName: "Group colour"
+                                    value: card.modelData.accent
+                                    onEdited: text => page.model.zoneSet(card.modelData.id, "accent", text)
+                                }
+                                RowLayout {
+                                    Kirigami.FormData.label: ""
+                                    QQC2.Label { visible: page.vals.defaultZone === card.modelData.id; text: "Default group: notifications no rule places go here"; color: Kirigami.Theme.positiveTextColor; Layout.fillWidth: true }
+                                    QQC2.Label { visible: card.modelData.id === "system"; text: "🔒 System always stays"; opacity: 0.7; Layout.fillWidth: page.vals.defaultZone !== card.modelData.id }
+                                    QQC2.Button {
+                                        visible: card.modelData.id !== "system"
+                                        icon.name: "edit-delete"; text: "Delete group"
+                                        onClicked: page.model.zoneDelete(card.modelData.id)
+                                        Accessible.name: "Delete group " + card.modelData.id
+                                    }
+                                }
+                            }
+                            GroupMembers {
+                                Layout.fillWidth: true
+                                model: page.model
+                                groupId: card.modelData.id
+                                groupLabel: card.modelData.label || card.modelData.id
+                                onOpenRules: page.openTab("rules")
+                            }
+                            Kirigami.Heading { level: 4; text: "How this group's popups look and behave" }
+                            LookEditor {
+                                id: look
+                                Layout.fillWidth: true
+                                showGroup: false
+                                inheritFrom: "the theme"
+                                levels: ["Theme", "Group: " + (card.modelData.label || card.modelData.id)]
+                                values: card.modelData.style
+                                model: page.model
+                                accent: card.modelData.accent
+                                onEdited: (key, text) => page.model.zoneStyle(card.modelData.id, key, text)
+                            }
+                        }
+                    }
+                }
+
+                }
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignTop
+                    Layout.preferredWidth: 1
+                    spacing: Kirigami.Units.largeSpacing
+                Kirigami.Heading { Layout.leftMargin: Kirigami.Units.largeSpacing; Layout.topMargin: Kirigami.Units.largeSpacing; level: 3; text: "Where groups appear on screen" }
                 // ---- the mini screen: nine places on a grid, or drag a zone anywhere ("free")
                 QQC2.Label {
                     Layout.margins: Kirigami.Units.largeSpacing
@@ -136,7 +214,7 @@ Kirigami.Page {
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
                     opacity: 0.7
-                    text: page.selectedZone === null ? "Add a zone to place it on the screen."
+                    text: page.selectedZone === null ? "Add a group to place it on the screen."
                         : page.selectedFree ? "Freeform: drag “" + (page.selectedZone.label || page.selectedZone.id) + "” anywhere on the screen."
                         : "Snap to grid: click a square, or drag “" + (page.selectedZone.label || page.selectedZone.id) + "”, and it lands on the nearest of nine places."
                 }
@@ -159,80 +237,12 @@ Kirigami.Page {
                 }
                 ZoneMap { page: page }
 
-                }
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignTop
-                    Layout.preferredWidth: 1
-                    spacing: Kirigami.Units.largeSpacing
-                // ---- the selected zone
-                Repeater {
-                    model: page.selectedZone ? [page.selectedZone] : []
-                    delegate: Kirigami.AbstractCard {
-                        id: card
-                        required property var modelData
-                        Layout.fillWidth: true
-                        Layout.leftMargin: Kirigami.Units.largeSpacing
-                        Layout.rightMargin: Kirigami.Units.largeSpacing
-                        contentItem: ColumnLayout {
-                            spacing: Kirigami.Units.smallSpacing
-                            Kirigami.Heading { level: 4; text: "Zone: " + (card.modelData.label || card.modelData.id) }
-                            Kirigami.FormLayout {
-                                QQC2.TextField {
-                                    id: labelField
-                                    Kirigami.FormData.label: "Name:"
-                                    Layout.fillWidth: true
-                                    placeholderText: card.modelData.id
-                                    Binding on text { when: !labelField.activeFocus; value: card.modelData.label }
-                                    onTextEdited: page.model.zoneSet(card.modelData.id, "label", text)
-                                    onActiveFocusChanged: if (activeFocus) page.selectedId = card.modelData.id
-                                    Accessible.name: "Zone name " + card.modelData.id
-                                }
-                                QQC2.Label {
-                                    visible: card.modelData.anchor === "free"
-                                    Kirigami.FormData.label: "Position:"
-                                    text: Math.round(card.modelData.x * 100) + "% from the left, " + Math.round(card.modelData.y * 100) + "% from the top"
-                                    opacity: 0.8
-                                }
-                                SwatchPicker {
-                                    Kirigami.FormData.label: "Colour:"
-                                    accessibleName: "Zone colour"
-                                    value: card.modelData.accent
-                                    onEdited: text => page.model.zoneSet(card.modelData.id, "accent", text)
-                                }
-                                RowLayout {
-                                    Kirigami.FormData.label: "Used by:"
-                                    QQC2.Label { text: card.modelData.rules === 1 ? "1 rule" : card.modelData.rules + " rules"; Layout.fillWidth: true }
-                                    QQC2.Label { visible: page.vals.defaultZone === card.modelData.id; text: "default zone"; color: Kirigami.Theme.positiveTextColor }
-                                    QQC2.Button {
-                                        icon.name: "edit-delete"; text: "Delete zone"
-                                        onClicked: page.model.zoneDelete(card.modelData.id)
-                                        Accessible.name: "Delete zone " + card.modelData.id
-                                    }
-                                }
-                            }
-                            Kirigami.Heading { level: 4; text: "How this zone's popups look and behave" }
-                            LookEditor {
-                                id: look
-                                Layout.fillWidth: true
-                                showGroup: false
-                                inheritFrom: "the theme"
-                                levels: ["Theme", "Zone: " + (card.modelData.label || card.modelData.id)]
-                                values: card.modelData.style
-                                model: page.model
-                                accent: card.modelData.accent
-                                onEdited: (key, text) => page.model.zoneStyle(card.modelData.id, key, text)
-                            }
-                        }
-                    }
-                }
-
                 // ---- layout numbers
                 Kirigami.FormLayout {
                     Layout.fillWidth: true
                     Layout.margins: Kirigami.Units.largeSpacing
                     Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
-                    Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "All zones" }
+                    Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "All groups" }
                     QQC2.ComboBox {
                         Kirigami.FormData.label: "Show popups on:"
                         model: page.screenNames()
@@ -241,7 +251,7 @@ Kirigami.Page {
                         Accessible.name: "Screen"
                     }
                     QQC2.ComboBox {
-                        Kirigami.FormData.label: "Default zone:"
+                        Kirigami.FormData.label: "Default group:"
                         model: page.zones.map(z => z.label || z.id)
                         displayText: { const z = page.zones.find(x => x.id === page.vals.defaultZone); return z ? (z.label || z.id) : "" }
                         currentIndex: Math.max(0, page.zones.findIndex(z => z.id === page.vals.defaultZone))
@@ -263,7 +273,7 @@ Kirigami.Page {
                     }
                     Repeater {
                         model: !page.sizesOpen ? [] : [
-                            { path: "maxVisible", label: "Popups per zone:", note: "0 = no limit; extras wait" },
+                            { path: "maxVisible", label: "Popups per group:", note: "0 = no limit; extras wait" },
                             { path: "width", label: "Popup width (px):", note: "" },
                             { path: "margin", label: "Gap from the screen edge (px):", note: "" },
                             { path: "spacing", label: "Gap between popups (px):", note: "" }

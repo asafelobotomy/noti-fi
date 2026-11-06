@@ -13,7 +13,8 @@ use serde::Serialize;
 use serde_json::{Map, Value, json};
 
 /// The fields a rule can match on, in the order the editor shows them.
-pub const MATCH_FIELDS: [&str; 8] = ["appName", "desktopEntry", "origin", "summary", "body", "urgency", "category", "channel"];
+/// What a rule can test. `group` is the group (zone) a notification is in, decided by the rules that do not test it.
+pub const MATCH_FIELDS: [&str; 9] = ["appName", "desktopEntry", "origin", "summary", "body", "urgency", "category", "channel", "group"];
 
 /// How a popup looks and behaves: settable on a rule, on a zone, and (opacity, fontFamily, fontSize) on the theme. `group` is for rules only.
 pub const STYLE_KEYS: [&str; 11] = ["opacity", "clickThrough", "noFocus", "width", "fontFamily", "fontSize", "group", "priority", "media", "stack", "timerStyle"];

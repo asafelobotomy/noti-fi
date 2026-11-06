@@ -5,7 +5,8 @@ use serde_json::Value;
 
 use crate::payload;
 
-pub const MATCH_FIELDS: [&str; 8] = ["appName", "desktopEntry", "origin", "summary", "body", "urgency", "category", "channel"];
+/// What a rule can test; `group` is the group (zone) a notification is in, decided by the rules that do not test it.
+pub const MATCH_FIELDS: [&str; 9] = ["appName", "desktopEntry", "origin", "summary", "body", "urgency", "category", "channel", "group"];
 /// Patterns run on text that apps control, so the daemon refuses long ones (see `maxPattern` in shell.qml).
 pub const MAX_PATTERN: usize = 500;
 pub const PRIORITIES: [&str; 4] = ["low", "normal", "high", "urgent"];
@@ -225,7 +226,8 @@ pub fn lint_config(cfg: &Value) -> Vec<String> {
         };
         let name = ro.get("name").and_then(Value::as_str).map(str::to_string).unwrap_or_else(|| format!("#{}", i + 1));
         if let Some(z) = ro.get("zone") {
-            if !z.as_str().map(|s| zones.contains_key(s)).unwrap_or(false) {
+            // the System group always exists (notifd adds it when the file leaves it out)
+            if !z.as_str().map(|s| s == "system" || zones.contains_key(s)).unwrap_or(false) {
                 errs.push(format!("rule '{name}': unknown zone '{}'", z.as_str().unwrap_or("?")));
             }
         }
@@ -240,6 +242,9 @@ pub fn lint_config(cfg: &Value) -> Vec<String> {
             errs.push(format!("rule '{name}': match must be an object"));
             continue;
         };
+        if m.contains_key("group") && ro.contains_key("zone") {
+            errs.push(format!("rule '{name}': a rule for a group cannot move it to another group"));
+        }
         for (k, pat) in m {
             if !MATCH_FIELDS.contains(&k.as_str()) {
                 errs.push(format!("rule '{name}': unknown match field '{k}' (use {})", MATCH_FIELDS.join(", ")));

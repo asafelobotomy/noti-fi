@@ -180,7 +180,7 @@ Kirigami.ApplicationWindow {
             Kirigami.Action { text: "Focus modes"; icon.name: "face-glasses"; checked: root.currentPage === "focus"; onTriggered: root.go("focus") },
             Kirigami.Action { separator: true },
             Kirigami.Action { text: "Apps"; icon.name: "preferences-desktop-notification-bell"; checked: root.currentPage === "routing" && root.routingTab === "apps"; onTriggered: root.go("apps") },
-            Kirigami.Action { text: "Zones"; icon.name: "view-grid"; checked: root.currentPage === "routing" && root.routingTab === "zones"; onTriggered: root.go("zones") },
+            Kirigami.Action { text: "Groups"; icon.name: "view-group"; checked: root.currentPage === "routing" && root.routingTab === "zones"; onTriggered: root.go("zones") },
             Kirigami.Action { text: "Rules"; icon.name: "view-filter"; checked: root.currentPage === "routing" && root.routingTab === "rules"; onTriggered: root.go("rules") },
             Kirigami.Action { separator: true },
             Kirigami.Action { text: "General"; icon.name: "configure"; checked: root.currentPage === "general"; onTriggered: root.go("general") },

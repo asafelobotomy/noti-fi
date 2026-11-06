@@ -29,7 +29,7 @@ Kirigami.AbstractCard {
             opacity: 0.7
             font: Kirigami.Theme.smallFont
             textFormat: Text.PlainText
-            text: tile.app.muted ? "Muted" : tile.app.zone !== "" ? "Zone: " + tile.host.zoneLabel(tile.app.zone) : tile.app.sent ? tile.app.count + " sent" : "Never sent"
+            text: tile.app.muted ? "Muted" : tile.app.zone !== "" ? "Group: " + tile.host.zoneLabel(tile.app.zone) : tile.app.sent ? tile.app.count + " sent" : "Never sent"
             color: tile.app.muted ? Kirigami.Theme.neutralTextColor : Kirigami.Theme.textColor
         }
     }

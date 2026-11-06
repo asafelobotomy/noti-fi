@@ -19,6 +19,9 @@ impl Draft {
 
     /// Remove a zone. Refused for the last zone and for the default zone; rules that sent popups there stop choosing a zone.
     pub fn delete_zone(&mut self, id: &str) -> Result<usize, String> {
+        if id == "system" {
+            return Err("System is the one group that always stays: it is how the system reaches you".into());
+        }
         if self.zones_mut().len() <= 1 {
             return Err("there must be at least one zone".into());
         }

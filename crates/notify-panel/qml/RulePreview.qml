@@ -13,7 +13,8 @@ Kirigami.AbstractCard {
     readonly property var tests: [
         { role: "mAppName", field: "app", label: "App" }, { role: "mOrigin", field: "origin", label: "Website" },
         { role: "mSummary", field: "summary", label: "Title" }, { role: "mBody", field: "body", label: "Text" }, { role: "mUrgency", field: "urgency", label: "Urgency" },
-        { role: "mDesktopEntry", field: "desktopEntry", label: "Desktop entry" }, { role: "mCategory", field: "category", label: "Kind" }, { role: "mChannel", field: "channel", label: "Arrives as" }
+        { role: "mDesktopEntry", field: "desktopEntry", label: "Desktop entry" }, { role: "mCategory", field: "category", label: "Kind" }, { role: "mChannel", field: "channel", label: "Arrives as" },
+        { role: "mGroup", field: "zone", label: "Group" }
     ]
     // notifications recorded before 0.15 did not keep the desktop entry, kind or channel, so they cannot match those conditions
     readonly property var blind: root.rule && root.recent.some(e => e.desktopEntry === undefined || (e.desktopEntry === "" && e.channel === ""))
