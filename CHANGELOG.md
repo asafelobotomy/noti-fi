@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.13.1
 
 - **Audit fixes:**
   - **Wide windows:** Overview, History, General, System, Focus, Apps and Appearance keep a readable width, centred, instead of stretching labels and their switches across the whole window.

@@ -784,7 +784,7 @@ ShellRoot {
     //   - the control socket          (JSON lines, request/response plus pushed events)
     // The api* functions return plain objects and throw Error(message) on failure.
     // =====================================================================
-    readonly property string daemonVersion: "0.13.0"
+    readonly property string daemonVersion: "0.13.1"
     readonly property int protocolVersion: 1
     property string rawConfig: ""
 

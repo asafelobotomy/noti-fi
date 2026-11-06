@@ -3,7 +3,7 @@
 # panel from the release archive works only on a matching Qt). Use:   cd packaging && makepkg -si
 # After a Qt upgrade the panel may stop starting; run makepkg -si again to rebuild it.
 pkgname=noti-fi
-pkgver=0.13.0
+pkgver=0.13.1
 pkgrel=1
 pkgdesc="Notification daemon (notifd), command line (notify) and control panel for KDE Plasma on Wayland"
 arch=('x86_64')
