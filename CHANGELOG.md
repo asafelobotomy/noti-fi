@@ -8,6 +8,11 @@
 - **Rule editor order:** name, then how it looks and behaves (so the preview is in view first), then "When a notification matches" and "Then". In a full-screen window "When" and "Then" sit side by side and the rule list takes a third of the width.
 - **One sidebar, grouped:** Overview, History · Appearance, Focus modes · Apps, Zones, Rules · General, System. Apps, Zones and Rules are entries of their own (the second side panel is gone). In a medium window the sidebar shows icons only; in a small one it hides behind the menu button.
 - Fixed: a zone drop-down could show "(leave to later rules)" or the wrong zone after its list refreshed.
+- **Change a notification from History:** click an entry to open it.
+  - **Choose what "like this" means:** from this app, from this website, of this type; the box shows how many recent notifications that would match.
+  - **Then pick** the zone (with the mini screen), how long they stay, whether to show them at all, and the full look editor.
+  - **Its own rule:** the first change creates a rule just for these notifications, at the top of the list so it wins over broader rules; later changes edit the same rule. Save and Revert are right there, and "Open in Rules" shows the rule.
+- **History records more:** each entry now keeps the sender's desktop entry, the notification's type (category) and how it arrived, so a rule can match exactly; the rule preview counts these too (entries recorded before this version lack them, which it says).
 
 ## 0.14.0
 

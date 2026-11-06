@@ -103,7 +103,7 @@ Kirigami.ApplicationWindow {
 
     // pages are declared as components, so Kirigami places them in the scene itself
     Component { id: overviewPage; OverviewPage { model: panelModel; ui: uiSettings; onOpenPage: name => root.go(name) } }
-    Component { id: historyPage; HistoryPage { model: panelModel; ui: uiSettings } }
+    Component { id: historyPage; HistoryPage { model: panelModel; ui: uiSettings; onOpenPage: name => root.go(name) } }
     Component { id: appearancePage; AppearancePage { model: panelModel; ui: uiSettings } }
     Component { id: generalPage; GeneralPage { model: panelModel; ui: uiSettings; trayAvailable: panelModel.trayAvailable; onHideRequested: root.hide() } }
     Component { id: focusPage; FocusPage { model: panelModel; ui: uiSettings } }

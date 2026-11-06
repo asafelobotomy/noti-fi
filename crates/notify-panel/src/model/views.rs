@@ -186,7 +186,8 @@ impl qobject::PanelModel {
         let list: Vec<Value> = rows
             .into_iter()
             .take(150)
-            .map(|e| json!({ "app": e.app, "summary": e.summary, "body": e.body, "origin": e.origin, "urgency": e.urgency, "zone": e.zone, "shown": e.shown }))
+            .map(|e| json!({ "app": e.app, "summary": e.summary, "body": e.body, "origin": e.origin, "urgency": e.urgency, "zone": e.zone, "shown": e.shown,
+                             "desktopEntry": e.desktop_entry, "category": e.category, "channel": e.channel }))
             .collect();
         QString::from(&json!(list).to_string())
     }

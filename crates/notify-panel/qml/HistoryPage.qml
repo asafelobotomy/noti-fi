@@ -12,6 +12,13 @@ Kirigami.ScrollablePage {
     property var model
     readonly property bool online: model !== undefined && model !== null && model.connected === true
     property var ui
+    signal openPage(string name)
+    // the entry opened for changing how notifications like it are shown (one at a time), and what rules are tried against
+    property int expandedId: -1
+    property var recent: []
+    // test/screenshot hook: --open-details opens the newest entry
+    onItemsChanged: if (page.expandedId < 0 && page.items.length && Qt.application.arguments.indexOf("--open-details") >= 0) page.expandedId = page.items[0].id
+    onExpandedIdChanged: if (expandedId >= 0 && page.model) { try { page.recent = JSON.parse(page.model.recentNotifications()) } catch (e) { page.recent = [] } }
     readonly property bool showText: ui ? ui.showText : false
     readonly property bool missedOnly: ui ? ui.missedOnly : false
 
@@ -69,14 +76,19 @@ Kirigami.ScrollablePage {
         id: list
         model: page.items
         clip: true
-        reuseItems: true
         delegate: QQC2.ItemDelegate {
+            id: row
             required property var modelData
+            readonly property bool expanded: page.expandedId === modelData.id
             width: ListView.view.width
+            Accessible.name: (expanded ? "Close " : "Open ") + modelData.app + ": " + modelData.summary
             contentItem: ColumnLayout {
                 spacing: 2
                 RowLayout {
                     Layout.fillWidth: true
+                    // only the entry's own line opens and closes it, so clicks inside the opened editor never close it
+                    TapHandler { onTapped: page.expandedId = row.expanded ? -1 : row.modelData.id }
+                    Kirigami.Icon { source: row.expanded ? "arrow-down" : "arrow-right"; Layout.preferredWidth: Kirigami.Units.iconSizes.small; Layout.preferredHeight: Layout.preferredWidth; opacity: 0.6 }
                     QQC2.Label {
                         Layout.fillWidth: true
                         elide: Text.ElideRight
@@ -93,12 +105,27 @@ Kirigami.ScrollablePage {
                     QQC2.Label { opacity: 0.7; text: Qt.formatTime(new Date(modelData.t), "hh:mm:ss") }
                 }
                 QQC2.Label {
-                    visible: page.showText && modelData.body !== ""
+                    visible: (page.showText || row.expanded) && modelData.body !== ""
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
                     opacity: 0.8
                     text: modelData.body
                     textFormat: Text.PlainText
+                }
+                // opened: change how notifications like this one are shown, as a rule of their own
+                Loader {
+                    Layout.fillWidth: true
+                    Layout.topMargin: Kirigami.Units.smallSpacing
+                    active: row.expanded
+                    visible: active
+                    sourceComponent: Kirigami.AbstractCard {
+                        contentItem: HistoryTweak {
+                            entry: row.modelData
+                            model: page.model
+                            recent: page.recent
+                            onOpenRules: page.openPage("rules")
+                        }
+                    }
                 }
             }
         }

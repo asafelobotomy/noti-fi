@@ -15,6 +15,11 @@ fn choice_controls_and_look_styles() {
 }
 
 #[test]
+fn history_rule_from_a_notification() {
+    run_qml("tst_historytweak.qml");
+}
+
+#[test]
 fn rule_match_tags() {
     run_qml("tst_matchtags.qml");
 }

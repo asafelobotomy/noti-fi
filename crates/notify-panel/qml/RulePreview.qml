@@ -4,7 +4,7 @@ import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 
 // "Would have matched": the selected rule tried against your recent notifications, so what a condition does is visible before saving.
-// History keeps the app, title, text, website and urgency; conditions on other fields cannot be tried and are said so.
+// History keeps every field a rule can test (older entries lack the desktop entry, kind and channel, which is said).
 Kirigami.AbstractCard {
     id: root
     property var rule                 // the selected rule as the Rules page holds it (mAppName, mOrigin, ...), or null
@@ -12,9 +12,12 @@ Kirigami.AbstractCard {
 
     readonly property var tests: [
         { role: "mAppName", field: "app", label: "App" }, { role: "mOrigin", field: "origin", label: "Website" },
-        { role: "mSummary", field: "summary", label: "Title" }, { role: "mBody", field: "body", label: "Text" }, { role: "mUrgency", field: "urgency", label: "Urgency" }
+        { role: "mSummary", field: "summary", label: "Title" }, { role: "mBody", field: "body", label: "Text" }, { role: "mUrgency", field: "urgency", label: "Urgency" },
+        { role: "mDesktopEntry", field: "desktopEntry", label: "Desktop entry" }, { role: "mCategory", field: "category", label: "Kind" }, { role: "mChannel", field: "channel", label: "Arrives as" }
     ]
-    readonly property var blind: root.rule ? [["mDesktopEntry", "Desktop entry"], ["mCategory", "Kind"], ["mChannel", "Arrives as"]].filter(b => root.rule[b[0]] !== "").map(b => b[1]) : []
+    // notifications recorded before 0.15 did not keep the desktop entry, kind or channel, so they cannot match those conditions
+    readonly property var blind: root.rule && root.recent.some(e => e.desktopEntry === undefined || (e.desktopEntry === "" && e.channel === ""))
+        ? [["mDesktopEntry", "Desktop entry"], ["mCategory", "Kind"], ["mChannel", "Arrives as"]].filter(b => root.rule[b[0]] !== "").map(b => b[1]) : []
     readonly property var active: root.rule ? root.tests.filter(t => root.rule[t.role] !== "").map(t => ({ field: t.field, re: root.compile(root.rule[t.role]) })) : []
     function compile(p) { try { return new RegExp(p, "i") } catch (e) { return null } }
     readonly property var hits: root.rule ? root.recent.filter(e => root.active.every(a => a.re !== null && a.re.test(String(e[a.field] === undefined ? "" : e[a.field])))) : []
@@ -58,7 +61,7 @@ Kirigami.AbstractCard {
             wrapMode: Text.Wrap
             opacity: 0.7
             font: Kirigami.Theme.smallFont
-            text: "History does not record " + root.blind.join(", ").toLowerCase() + ", so " + (root.blind.length === 1 ? "that condition is" : "those conditions are") + " not part of this check."
+            text: "Older notifications in History did not record the " + root.blind.join(", ").toLowerCase() + ", so they are not counted for " + (root.blind.length === 1 ? "that condition." : "those conditions.")
         }
     }
 }

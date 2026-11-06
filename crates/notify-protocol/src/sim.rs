@@ -124,6 +124,14 @@ pub struct HistoryEntry {
     /// How many times the app replaced it.
     #[serde(default)]
     pub updates: Option<u32>,
+    /// The sender's desktop entry, the freedesktop category and how it arrived (`app`, `portal`, `web`).
+    /// Empty in entries recorded before 0.15.
+    #[serde(default, rename = "desktopEntry")]
+    pub desktop_entry: String,
+    #[serde(default)]
+    pub category: String,
+    #[serde(default)]
+    pub channel: String,
 }
 
 /// One kind of notification an app sends (see `seenApps`).

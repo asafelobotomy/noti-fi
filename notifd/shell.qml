@@ -203,7 +203,7 @@ ShellRoot {
         const h = history.slice(0, limit - 1)
         h.unshift({
             t: Date.now(), id: n.id, app: f.appName, summary: f.summary, body: (f.body || "").slice(0, 300),
-            zone: r.zone, origin: f.origin, urgency: f.urgency, shown: why === "", why: why
+            zone: r.zone, origin: f.origin, urgency: f.urgency, shown: why === "", why: why, desktopEntry: f.desktopEntry || "", category: f.category || "", channel: f.channel || "app"
         })
         history = h
         noteSeen(f, n)
