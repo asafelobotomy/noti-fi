@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+Release 1 of the panel redesign (see `docs/design/ui-redesign-combined.html`): choose, don't type.
+
+- **New look editor** for zones, apps, notification types and rules:
+  - **Styles:** pick a ready-made style first (As inherited, Compact, Glass, Loud, Minimal), each shown as a thumbnail.
+  - **Tabs:** then adjust under three tabs: Look (text size, width, font, background), Timing (which time-left indicators) and Behaviour (priority, stacking, pictures and players, clicks, keyboard focus, group).
+  - **Choices:** every setting is a set of choices.
+  - **Inheritance:** an unchanged setting says what it inherits ("from the theme: 380 px"), a changed one has an undo button, and "Reset this level" clears everything changed here. A breadcrumb (Theme › Zone › App › Rule) shows the levels a popup's look passes through.
+  - **Live preview:** click a part of the popup (title, edge, timer bar) to jump to its setting; "Hold to compare" shows it without this level's changes.
+- **Timeouts are named choices in seconds** (App's own, Glance 3 s, Read 6 s, Long 15 s, Until closed, or Custom with a slider) for rules, apps and the default for all zones; no more milliseconds to type.
+- **Zone colours** are picked from swatches (Plasma's accent first) or any colour from the colour dialog.
+- **Appearance:**
+  - **Font:** a searchable list where each font is drawn in its own face.
+  - **Text size:** Small to Largest.
+  - **Time left:** Nothing, Footer line, Circle or Frame, in any mix.
+  - **Sound:** chosen from the installed sound themes, with a play button.
+  - **History:** keeps 50 to 1000 notifications.
+
 ## 0.13.1
 
 - **Audit fixes:**

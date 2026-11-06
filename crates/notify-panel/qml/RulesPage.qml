@@ -306,23 +306,13 @@ Kirigami.Page {
                             Accessible.name: "Show in zone"
                           }
                         }
-                        QQC2.Label { Layout.topMargin: Kirigami.Units.smallSpacing; text: "Timeout (ms)"; font.bold: true }
-                        QQC2.TextField {
-                            id: timeoutField
+                        QQC2.Label { Layout.topMargin: Kirigami.Units.smallSpacing; text: "Stays on screen"; font.bold: true }
+                        DurationChips {
                             Layout.fillWidth: true
-                            placeholderText: "the app's own, or the default"
-                            inputMethodHints: Qt.ImhDigitsOnly
-                            validator: IntValidator { bottom: 0 }
-                            Binding on text { when: !timeoutField.activeFocus; value: page.current ? page.current.timeout : "" }
-                            onTextEdited: page.model.ruleSetTimeout(page.selected, text)
-                            Accessible.name: "Timeout in milliseconds"
-                        }
-                        QQC2.Label {
-                            Layout.fillWidth: true
-                            wrapMode: Text.Wrap
-                            opacity: 0.7
-                            font: Kirigami.Theme.smallFont
-                            text: "0 keeps the popup until you dismiss it."
+                            unsetLabel: "Not set here"
+                            unsetTip: "Later rules, the app or the default decide"
+                            value: page.current ? page.current.timeout : ""
+                            onEdited: text => page.model.ruleSetTimeout(page.selected, text)
                         }
                         QQC2.CheckBox {
                             Layout.topMargin: Kirigami.Units.smallSpacing
@@ -343,13 +333,15 @@ Kirigami.Page {
                         onClicked: page.lookOpen = !page.lookOpen
                         Accessible.name: "Look and behavior of this rule"
                     }
-                    StyleFields {
+                    LookEditor {
                         visible: page.lookOpen
                         Layout.fillWidth: true
                         Layout.leftMargin: Kirigami.Units.largeSpacing
                         Layout.rightMargin: Kirigami.Units.largeSpacing
                         enabled: page.current !== null
                         inheritFrom: "later rules, the zone and the theme"
+                        levels: ["Theme", page.current && page.current.zone !== "" ? "Zone: " + page.zoneLabel(page.current.zone) : "Its zone", "Rule: " + (page.current ? page.current.title : "")]
+                        groups: { const g = []; for (let i = 0; i < rules.count; i++) { const v = rules.get(i).sGroup; if (v && g.indexOf(v) < 0) g.push(v) } return g }
                         model: page.model
                         accent: page.zoneAccent(page.current ? page.current.zone : "")
                         timeoutMs: page.current && page.current.timeout !== "" ? Number(page.current.timeout) : -1

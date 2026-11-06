@@ -169,6 +169,11 @@ pub mod qobject {
         /// Look again (reads launchers on disk and asks the daemon which apps have sent).
         #[qinvokable]
         fn apps_rescan(self: Pin<&mut PanelModel>);
+        /// The installed event sounds (JSON array of names), and playing one so it can be heard before it is picked.
+        #[qinvokable]
+        fn sound_names(self: Pin<&mut PanelModel>) -> QString;
+        #[qinvokable]
+        fn play_sound(self: Pin<&mut PanelModel>, name: &QString);
         #[qinvokable]
         fn system_doctor(self: Pin<&mut PanelModel>);
         #[qinvokable]
@@ -237,6 +242,7 @@ pub use state::PanelModelRust;
 mod edit;
 mod glue;
 mod handlers;
+mod sound;
 mod state;
 mod system;
 mod update;

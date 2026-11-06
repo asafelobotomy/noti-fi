@@ -33,18 +33,15 @@ ColumnLayout {
 
     GridLayout {
         columns: 4
+        Layout.fillWidth: true
         columnSpacing: Kirigami.Units.largeSpacing
         rowSpacing: Kirigami.Units.smallSpacing
-        QQC2.Label { text: "Hide after (ms):" }
-        QQC2.TextField {
-            id: timeoutField
-            Layout.preferredWidth: Kirigami.Units.gridUnit * 6
-            placeholderText: "default"
-            inputMethodHints: Qt.ImhDigitsOnly
-            validator: IntValidator { bottom: 0 }
-            Binding on text { when: !timeoutField.activeFocus; value: app.timeout }
-            onTextEdited: root.host.model.appSet(app.matchField, app.matchValue, app.name, "timeout", text)
-            Accessible.name: "Timeout for " + app.name
+        QQC2.Label { text: "Stays on screen:"; Layout.alignment: Qt.AlignTop }
+        DurationChips {
+            Layout.columnSpan: 3
+            Layout.fillWidth: true
+            value: app.timeout
+            onEdited: text => root.host.model.appSet(app.matchField, app.matchValue, app.name, "timeout", text)
         }
         QQC2.Label { visible: app.flatpak; text: "Flatpak permission:" }
         QQC2.ComboBox {
@@ -65,11 +62,12 @@ ColumnLayout {
         onClicked: root.lookOpen = !root.lookOpen
         Accessible.name: "Look and behavior of " + app.name
     }
-    StyleFields {
+    LookEditor {
         visible: root.lookOpen
         Layout.fillWidth: true
         showGroup: true
         inheritFrom: "its zone and the theme"
+        levels: ["Theme", app.zone !== "" ? "Zone: " + root.host.zoneLabel(app.zone) : "Its zone", app.name]
         model: root.host.model
         accent: root.host.zoneAccent(app.zone)
         timeoutMs: app.timeout !== "" ? Number(app.timeout) : -1
@@ -145,11 +143,12 @@ ColumnLayout {
                         onClicked: kindCard.lookOpen = !kindCard.lookOpen
                     }
                 }
-                StyleFields {
+                LookEditor {
                     visible: kindCard.lookOpen
                     Layout.fillWidth: true
                     showGroup: true
                     inheritFrom: "the app's settings"
+                    levels: ["Theme", "Zone", app.name, kindCard.kind.category !== "" ? kindCard.kind.category : "General"]
                     model: root.host.model
                     accent: root.host.zoneAccent(kindCard.kind.routing.zone || app.zone)
                     timeoutMs: app.timeout !== "" ? Number(app.timeout) : -1

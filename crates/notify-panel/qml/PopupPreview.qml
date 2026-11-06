@@ -13,6 +13,20 @@ Item {
     property int timeoutMs: 6000                // 0 = stays until dismissed
     property string title: "Sample notification"
     property string body: "This is how a popup looks with these settings."
+    // when interactive, hovering a part outlines it and clicking it says which: "font", "width", "timer" or "card"
+    property bool interactive: false
+    property bool onDark: false                 // drawn on a dark backdrop: the caption is light
+    signal partClicked(string part)
+    property string hoverPart: ""
+    component Part: MouseArea {
+        property string part
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onEntered: root.hoverPart = part
+        onExited: if (root.hoverPart === part) root.hoverPart = ""
+        onClicked: root.partClicked(part)
+        Rectangle { anchors.fill: parent; color: "transparent"; radius: 3; border.width: 1; border.color: Kirigami.Theme.highlightColor; visible: root.hoverPart === parent.part }
+    }
 
     function pick(key, fallback) {
         const o = root.over ? root.over[key] : undefined
@@ -114,11 +128,18 @@ Item {
                 c.stroke()
             }
         }
+
+        // the clickable parts (on top of everything in the card)
+        Part { visible: root.interactive; part: "card"; anchors.fill: parent }
+        Part { visible: root.interactive; part: "font"; x: col.x; y: col.y; width: col.width; height: Math.max(12, col.implicitHeight - 30) }
+        Part { visible: root.interactive; part: "width"; anchors { right: parent.right; top: parent.top; bottom: parent.bottom } width: 10 }
+        Part { visible: root.interactive; part: "timer"; anchors { left: parent.left; right: parent.right; bottom: parent.bottom; rightMargin: 10 } height: 10 }
     }
     QQC2.Label {
         id: caption
         anchors { top: card.bottom; topMargin: Kirigami.Units.smallSpacing; left: card.left }
-        opacity: 0.7
+        opacity: 0.75
+        color: root.onDark ? "#d8dbe2" : Kirigami.Theme.textColor
         font: Kirigami.Theme.smallFont
         text: (root.timeoutMs > 0 ? "Hides after " + (root.timeoutMs / 1000) + " s" : "Stays until dismissed") + " · " + Math.round(root.widthV) + " px wide" + (root.opacityV < 1 ? " · " + Math.round(root.opacityV * 100) + "% opaque" : "")
     }

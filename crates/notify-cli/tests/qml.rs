@@ -10,6 +10,11 @@ fn popup_interactions() {
 }
 
 #[test]
+fn choice_controls_and_look_styles() {
+    run_qml("tst_controls.qml");
+}
+
+#[test]
 fn rule_match_tags() {
     run_qml("tst_matchtags.qml");
 }

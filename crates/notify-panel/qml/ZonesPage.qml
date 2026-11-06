@@ -194,10 +194,10 @@ Kirigami.Page {
                                     text: Math.round(card.modelData.x * 100) + "% from the left, " + Math.round(card.modelData.y * 100) + "% from the top"
                                     opacity: 0.8
                                 }
-                                ColorField {
-                                    Kirigami.FormData.label: "Accent colour:"
+                                SwatchPicker {
+                                    Kirigami.FormData.label: "Colour:"
+                                    accessibleName: "Zone colour"
                                     value: card.modelData.accent
-                                    hint: "#60a5fa"
                                     onEdited: text => page.model.zoneSet(card.modelData.id, "accent", text)
                                 }
                                 RowLayout {
@@ -217,12 +217,13 @@ Kirigami.Page {
                                 icon.name: look.visible ? "go-up" : "go-down"
                                 onClicked: look.visible = !look.visible
                             }
-                            StyleFields {
+                            LookEditor {
                                 id: look
                                 visible: Qt.application.arguments.indexOf("--open-details") >= 0
                                 Layout.fillWidth: true
                                 showGroup: false
                                 inheritFrom: "the theme"
+                                levels: ["Theme", "Zone: " + (card.modelData.label || card.modelData.id)]
                                 values: card.modelData.style
                                 model: page.model
                                 accent: card.modelData.accent
@@ -252,6 +253,13 @@ Kirigami.Page {
                         onActivated: index => page.model.settingSet("defaultZone", page.zones[index].id)
                         Accessible.name: "Default zone"
                     }
+                    DurationChips {
+                        Kirigami.FormData.label: "Popups stay:"
+                        Layout.fillWidth: true
+                        allowUnset: false
+                        value: page.vals.defaultTimeout !== undefined ? String(page.vals.defaultTimeout) : "6000"
+                        onEdited: text => page.model.settingSet("defaultTimeout", text)
+                    }
                     QQC2.Button {
                         Kirigami.FormData.label: ""
                         icon.name: page.sizesOpen ? "go-up" : "go-down"
@@ -263,8 +271,8 @@ Kirigami.Page {
                             { path: "maxVisible", label: "Popups per zone:", note: "0 = no limit; extras wait" },
                             { path: "width", label: "Popup width (px):", note: "" },
                             { path: "margin", label: "Gap from the screen edge (px):", note: "" },
-                            { path: "spacing", label: "Gap between popups (px):", note: "" },
-                            { path: "defaultTimeout", label: "Default timeout (ms):", note: "0 = stays until dismissed" }
+                            { path: "spacing", label: "Gap between popups (px):", note: "" }
+
                         ]
                         delegate: RowLayout {
                             id: numRow

@@ -136,35 +136,44 @@ Kirigami.Page {
                         }
                         QQC2.Label { text: Math.round(opacitySlider.value) + "%"; opacity: 0.8 }
                     }
-                    QQC2.ComboBox {
-                        Kirigami.FormData.label: "Show time left:"
-                        readonly property var choices: [["none", "No indicator"], ["line", "Footer line (shortens)"], ["circle", "Circle (empties)"], ["frame", "Frame (shrinks)"],
-                                                        ["line,circle", "Footer line and circle"], ["line,frame", "Footer line and frame"], ["circle,frame", "Circle and frame"], ["line,circle,frame", "All three"]]
-                        model: choices.map(c => c[1])
-                        currentIndex: { const v = String(page.vals["theme.timerStyle"] !== undefined ? page.vals["theme.timerStyle"] : "none"); const k = ["line", "circle", "frame"].filter(t => v.indexOf(t) >= 0).join(",") || "none"; return Math.max(0, choices.findIndex(c => c[0] === k)) }
-                        onActivated: index => page.model.settingSet("theme.timerStyle", choices[index][0])
-                        Accessible.name: "Show the time left on popups"
-                    }
-                    QQC2.TextField {
-                        id: fontFamily
-                        Kirigami.FormData.label: "Font:"
-                        placeholderText: "empty = the system font"
-                        Binding on text { when: !fontFamily.activeFocus; value: page.vals["theme.fontFamily"] !== undefined ? page.vals["theme.fontFamily"] : "" }
-                        onTextEdited: page.model.settingSet("theme.fontFamily", text)
-                        Accessible.name: "Popup font"
-                    }
                     RowLayout {
-                        Kirigami.FormData.label: "Text size:"
-                        QQC2.TextField {
-                            id: fontSize
-                            Layout.preferredWidth: Kirigami.Units.gridUnit * 4
-                            inputMethodHints: Qt.ImhDigitsOnly
-                            validator: IntValidator { bottom: 0; top: 48 }
-                            Binding on text { when: !fontSize.activeFocus; value: page.vals["theme.fontSize"] !== undefined ? String(page.vals["theme.fontSize"]) : "" }
-                            onTextEdited: page.model.settingSet("theme.fontSize", text)
-                            Accessible.name: "Popup text size"
+                        Kirigami.FormData.label: "Show time left:"
+                        readonly property string cur: String(page.vals["theme.timerStyle"] !== undefined ? page.vals["theme.timerStyle"] : "none")
+                        readonly property var on: cur.split(",").filter(x => x === "line" || x === "circle" || x === "frame")
+                        id: timerRow
+                        QQC2.Button {
+                            text: "Nothing"; checkable: true; checked: timerRow.on.length === 0
+                            onToggled: { page.model.settingSet("theme.timerStyle", "none"); checked = Qt.binding(() => timerRow.on.length === 0) }
                         }
-                        QQC2.Label { text: "px (titles are 2 larger)"; opacity: 0.7 }
+                        Repeater {
+                            model: [{ id: "line", label: "Footer line" }, { id: "circle", label: "Circle" }, { id: "frame", label: "Frame" }]
+                            delegate: QQC2.Button {
+                                id: tb
+                                required property var modelData
+                                text: modelData.label; checkable: true
+                                checked: timerRow.on.indexOf(modelData.id) >= 0
+                                onToggled: {
+                                    const set = ["line", "circle", "frame"].filter(x => x === modelData.id ? checked : timerRow.on.indexOf(x) >= 0)
+                                    page.model.settingSet("theme.timerStyle", set.length ? set.join(",") : "none")
+                                    checked = Qt.binding(() => timerRow.on.indexOf(tb.modelData.id) >= 0)
+                                }
+                                Accessible.name: "Time left: " + modelData.label
+                            }
+                        }
+                    }
+                    FontPicker {
+                        Kirigami.FormData.label: "Font:"
+                        Layout.preferredWidth: Kirigami.Units.gridUnit * 16
+                        value: page.vals["theme.fontFamily"] !== undefined ? page.vals["theme.fontFamily"] : ""
+                        onEdited: text => page.model.settingSet("theme.fontFamily", text)
+                    }
+                    Segmented {
+                        Kirigami.FormData.label: "Text size:"
+                        accessibleName: "Text size"
+                        readonly property string cur: page.vals["theme.fontSize"] !== undefined ? String(page.vals["theme.fontSize"]) : "12"
+                        options: [{ value: "11", label: "Small" }, { value: "12", label: "Normal" }, { value: "14", label: "Large" }, { value: "16", label: "Larger" }, { value: "18", label: "Largest" }]
+                        value: cur
+                        onPicked: v => page.model.settingSet("theme.fontSize", v)
                     }
 
                     Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
@@ -181,6 +190,7 @@ Kirigami.Page {
                         Kirigami.FormData.label: ""
                         wrapMode: Text.Wrap
                         Layout.fillWidth: true
+                        Layout.maximumWidth: Kirigami.Units.gridUnit * 28
                         opacity: 0.7
                         text: "A popup with a progress value (or a speed such as 3.2 MB/s in its text) can be expanded to show its rate over time. Each popup can switch between line, bars and heatmap."
                     }
@@ -189,13 +199,11 @@ Kirigami.Page {
 
                     Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Sound" }
                     Toggle { Kirigami.FormData.label: "Play a sound:"; text: "when a popup appears"; path: "sound.enabled" }
-                    QQC2.TextField {
-                        id: soundName
-                        Kirigami.FormData.label: "Sound name:"
-                        placeholderText: "empty = the system default"
-                        Binding on text { when: !soundName.activeFocus; value: page.vals["sound.defaultName"] !== undefined ? page.vals["sound.defaultName"] : "" }
-                        onTextEdited: page.model.settingSet("sound.defaultName", text)
-                        Accessible.name: "Sound name"
+                    SoundPicker {
+                        Kirigami.FormData.label: "Sound:"
+                        model: page.model
+                        value: page.vals["sound.defaultName"] !== undefined ? page.vals["sound.defaultName"] : ""
+                        onEdited: text => page.model.settingSet("sound.defaultName", text)
                     }
 
                     Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
@@ -209,18 +217,13 @@ Kirigami.Page {
 
                     Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "History" }
                     Toggle { Kirigami.FormData.label: "Keep:"; text: "history across restarts"; path: "history.persist" }
-                    RowLayout {
+                    Segmented {
                         Kirigami.FormData.label: "Remember at most:"
-                        QQC2.TextField {
-                            id: histLimit
-                            Layout.preferredWidth: Kirigami.Units.gridUnit * 6
-                            inputMethodHints: Qt.ImhDigitsOnly
-                            validator: IntValidator { bottom: 0 }
-                            Binding on text { when: !histLimit.activeFocus; value: page.vals["history.limit"] !== undefined ? String(page.vals["history.limit"]) : "" }
-                            onTextEdited: page.model.settingSet("history.limit", text)
-                            Accessible.name: "History limit"
-                        }
-                        QQC2.Label { text: "notifications"; opacity: 0.7 }
+                        accessibleName: "History size"
+                        readonly property string cur: page.vals["history.limit"] !== undefined ? String(page.vals["history.limit"]) : "200"
+                        options: [{ value: "50", label: "50" }, { value: "100", label: "100" }, { value: "200", label: "200" }, { value: "500", label: "500" }, { value: "1000", label: "1000" }]
+                        value: cur
+                        onPicked: v => page.model.settingSet("history.limit", v)
                     }
                 }
             }
