@@ -37,8 +37,8 @@ RowLayout {
     }
     QQC2.ComboBox {
         Layout.preferredWidth: Kirigami.Units.gridUnit * 8
-        model: root.host.zoneChoices
-        displayText: root.app.zone === "" ? "Zone: by rules" : "Zone: " + root.app.zone
+        model: root.host.zoneChoiceLabels
+        displayText: root.app.zone === "" ? "Zone: by rules" : "Zone: " + root.host.zoneLabel(root.app.zone)
         currentIndex: root.app.zone === "" ? 0 : Math.max(0, root.host.zoneChoices.indexOf(root.app.zone))
         onActivated: index => root.host.model.appSet(root.app.matchField, root.app.matchValue, root.app.name, "zone", index === 0 ? "" : root.host.zoneChoices[index])
         Accessible.name: "Zone for " + root.app.name

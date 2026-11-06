@@ -98,7 +98,9 @@ enum Cmd {
     },
     /// What would the daemon do with this notification? (the daemon decides, with its own rule engine)
     Simulate {
+        /// The notification's title
         summary: Option<String>,
+        /// The sending app's name
         #[arg(long, default_value = "")]
         app: String,
         /// Desktop entry
@@ -107,8 +109,10 @@ enum Cmd {
         /// Site name, like a browser sends
         #[arg(long, default_value = "")]
         origin: String,
+        /// The notification's text
         #[arg(long)]
         body: Option<String>,
+        /// How urgent the app says it is
         #[arg(short, long, value_enum, default_value = "normal")]
         urgency: Urg,
         /// The app's requested timeout in ms (-1 none, 0 never)
@@ -123,8 +127,10 @@ enum Cmd {
     },
     /// Show real sample popups on screen (optionally with a draft config)
     Preview {
+        /// Show the popups as this draft rules.json would place them
         #[arg(long)]
         config: Option<PathBuf>,
+        /// How long the sample popups stay
         #[arg(long, default_value_t = 6)]
         seconds: u32,
         /// Stop a running preview
@@ -133,6 +139,7 @@ enum Cmd {
     },
     /// Make notifd the notification owner (reversible)
     Takeover {
+        /// Show what would change without changing it
         #[arg(long)]
         dry_run: bool,
         /// Also switch the running session (restarts plasmashell briefly)
@@ -155,6 +162,7 @@ enum Cmd {
     Update,
     /// Hand notifications back to Plasma
     Restore {
+        /// Show what would change without changing it
         #[arg(long)]
         dry_run: bool,
         /// Also delete the installed daemon files
@@ -165,8 +173,10 @@ enum Cmd {
     },
     /// Route Flatpak/portal notifications through notifd
     Portal {
+        /// Stop routing portal notifications through notifd
         #[arg(long)]
         remove: bool,
+        /// Show what would change without changing it
         #[arg(long)]
         dry_run: bool,
     },
@@ -184,25 +194,31 @@ enum Cmd {
     },
     /// Global shortcut that toggles Do Not Disturb
     Hotkey {
+        /// The key combination, in KDE's notation
         #[arg(default_value = "Meta+Shift+N")]
         keys: String,
+        /// Remove the shortcut
         #[arg(long)]
         remove: bool,
+        /// Show what would change without changing it
         #[arg(long)]
         dry_run: bool,
     },
     /// Automatic Do Not Disturb for full-screen windows (KWin script)
     Autodnd {
+        /// Show whether it is installed, install it, or remove it
         #[arg(value_enum, default_value = "status")]
         action: Toggle,
     },
     /// Show or hide Plasma's (now inert) notification icon in the system tray
     Tray {
+        /// Show whether the icon is hidden, hide it, or show it again
         #[arg(value_enum, default_value = "status")]
         action: TrayAction,
     },
     /// Do Not Disturb: on, off, toggle or status
     Dnd {
+        /// Turn it on, off, flip it, or show whether it is on
         #[arg(value_enum, default_value = "status")]
         mode: Mode,
     },
@@ -212,13 +228,21 @@ enum Cmd {
         mode: Option<String>,
     },
     /// Silence one zone (still kept in history)
-    Mute { zone: String },
+    Mute {
+        /// The zone's id (see `notify status`)
+        zone: String,
+    },
     /// Restore a muted zone
-    Unmute { zone: String },
+    Unmute {
+        /// The zone's id (see `notify status`)
+        zone: String,
+    },
     /// Recent notifications
     History {
+        /// How many to show, newest first
         #[arg(short, default_value_t = 20)]
         n: usize,
+        /// Only this zone
         #[arg(long)]
         zone: Option<String>,
         /// Regex on the app name
@@ -237,13 +261,22 @@ enum Cmd {
     /// Close every popup on screen
     Dismiss,
     /// Answer a notification that has a reply box (id from `notify history --json`)
-    Reply { id: i64, text: String },
+    Reply {
+        /// The notification's id
+        id: i64,
+        /// What to answer
+        text: String,
+    },
     /// Send a notification (for testing rules)
     Send {
+        /// The title
         summary: String,
+        /// The text
         body: Option<String>,
+        /// The app name to send it as
         #[arg(short, long, default_value = "notify")]
         app: String,
+        /// How urgent it is
         #[arg(short, long, value_enum, default_value = "normal")]
         urgency: Urg,
         /// ms (0 = never expires)
@@ -252,11 +285,13 @@ enum Cmd {
         /// Site name, like a browser sends
         #[arg(long)]
         origin: Option<String>,
+        /// The desktop entry to send it as (for rules that match on it)
         #[arg(long)]
         desktop_entry: Option<String>,
     },
     /// Send sample notifications to every zone
     Test {
+        /// How long each sample stays, in ms (0 = until dismissed)
         #[arg(short, long, default_value_t = 6000)]
         timeout: i64,
     },

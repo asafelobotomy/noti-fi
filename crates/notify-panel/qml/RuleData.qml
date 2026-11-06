@@ -8,9 +8,9 @@ readonly property var matchFields: [
         { field: "origin", label: "Website:", menu: "Website (from a browser)", role: "mOrigin", kind: "word", hint: "example.com" },
         { field: "summary", label: "Title has:", menu: "Title contains", role: "mSummary", kind: "contains", hint: "message" },
         { field: "body", label: "Text has:", menu: "Text contains", role: "mBody", kind: "contains", hint: "" },
-        { field: "urgency", label: "Urgency:", menu: "Urgency", role: "mUrgency", kind: "exact", hint: "critical" },
+        { field: "urgency", label: "Urgency:", menu: "Urgency", role: "mUrgency", kind: "choice", hint: "critical" },
         { field: "category", label: "Kind:", menu: "Kind of notification", role: "mCategory", kind: "start", hint: "email" },
-        { field: "channel", label: "Arrives as:", menu: "How it arrives", role: "mChannel", kind: "exact", hint: "web" }
+        { field: "channel", label: "Arrives as:", menu: "How it arrives", role: "mChannel", kind: "choice", hint: "web" }
     ]
 
     // a name, the tags to match and what the rule does (zone "$first" = the first zone)

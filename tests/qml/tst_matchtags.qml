@@ -31,6 +31,12 @@ Item {
             compare(t.parse("a(b", "contains"), null)
             compare(t.parse("^Steam$", "contains"), null)   // an anchored pattern is not a plain "contains" list
         }
+        function test_a_closed_set_accepts_a_bare_word() {
+            compare(JSON.stringify(t.parse("critical", "choice")), '["critical"]')
+            compare(JSON.stringify(t.parse("^(low|critical)$", "choice")), '["low","critical"]')
+            compare(t.build(["critical"], "choice"), "^critical$")
+            compare(t.parse("critical", "exact"), null)
+        }
         function test_empty_means_no_tags() {
             compare(JSON.stringify(t.parse("", "exact")), "[]")
             compare(t.build([], "exact"), "")

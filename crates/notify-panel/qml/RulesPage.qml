@@ -57,6 +57,8 @@ Kirigami.Page {
 
     readonly property var zoneObjs: { try { return JSON.parse(page.model ? page.model.settingsJson : "{}").zones || [] } catch (e) { return [] } }
     function zoneInfo(id) { return page.zoneObjs.find(z => z.id === id) || null }
+    function zoneLabel(id) { const z = page.zoneInfo(id); return z && z.label ? z.label : id }
+    readonly property var zoneChoiceLabels: page.zoneChoices.map((z, i) => i === 0 ? z : page.zoneLabel(z))
     function zoneAccent(id) { const z = page.zoneInfo(id); return z && z.accent ? z.accent : "" }
     readonly property var zones: {
         try { return JSON.parse(page.model ? page.model.draftZonesJson : "[]") } catch (e) { return [] }
@@ -298,7 +300,7 @@ Kirigami.Page {
                           QQC2.ComboBox {
                             id: zoneBox
                             Layout.fillWidth: true
-                            model: page.zoneChoices
+                            model: page.zoneChoiceLabels
                             currentIndex: page.current && page.current.zone !== "" ? Math.max(0, page.zoneChoices.indexOf(page.current.zone)) : 0
                             onActivated: index => page.model.ruleSetZone(page.selected, index === 0 ? "" : page.zoneChoices[index])
                             Accessible.name: "Show in zone"

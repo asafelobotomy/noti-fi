@@ -9,7 +9,7 @@ pub struct RuleView {
     /// The name, or "(unnamed rule)".
     pub title: String,
     pub name: String,
-    /// "origin ~ example-shop|example-chat  →  business"
+    /// "website is example-shop or example-chat  →  business"; a real regex is shown as "origin ~ pattern"
     pub summary: String,
     /// Pattern per match field (empty string when the rule does not test that field).
     #[serde(rename = "match")]
@@ -30,6 +30,58 @@ pub(super) fn number_text(v: &Value) -> String {
     }
 }
 
+/// The words a pattern stands for when it is a plain list (written the way the editor's tags write it), or None when it is a real regex.
+fn plain_words(field: &str, p: &str) -> Option<Vec<String>> {
+    const META: &str = ".^$*+?()[]{}|\\";
+    let inner = match field {
+        "appName" | "desktopEntry" => p.strip_prefix("^(").and_then(|x| x.strip_suffix(")$")).or_else(|| p.strip_prefix('^').and_then(|x| x.strip_suffix('$'))),
+        // a closed set of values: a bare word means the same as the anchored one
+        "urgency" | "channel" => p.strip_prefix("^(").and_then(|x| x.strip_suffix(")$")).or_else(|| p.strip_prefix('^').and_then(|x| x.strip_suffix('$'))).or(Some(p)),
+        "origin" => p.strip_prefix("\\b(").and_then(|x| x.strip_suffix(")\\b")).or_else(|| p.strip_prefix("\\b").and_then(|x| x.strip_suffix("\\b"))),
+        "category" => p.strip_prefix("^(").and_then(|x| x.strip_suffix(')')).or_else(|| p.strip_prefix('^')),
+        _ => Some(p),
+    }?;
+    let (mut out, mut cur, mut chars) = (Vec::new(), String::new(), inner.chars());
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => match chars.next() {
+                Some(n) if META.contains(n) => cur.push(n),
+                _ => return None,
+            },
+            '|' if !cur.is_empty() => out.push(std::mem::take(&mut cur)),
+            c if META.contains(c) => return None,
+            c => cur.push(c),
+        }
+    }
+    if cur.is_empty() {
+        return None;
+    }
+    out.push(cur);
+    Some(out)
+}
+
+/// One condition in plain words: "website is a or b", "title has “x”"; a real regex stays as "field ~ pattern".
+fn condition_text(field: &str, p: &str) -> String {
+    let Some(words) = plain_words(field, p) else { return format!("{field} ~ {p}") };
+    let (what, has) = match field {
+        "appName" => ("app", false),
+        "desktopEntry" => ("desktop entry", false),
+        "origin" => ("website", false),
+        "summary" => ("title", true),
+        "body" => ("text", true),
+        "urgency" => ("urgency", false),
+        "category" => ("kind", false),
+        _ => ("arrives as", false),
+    };
+    if has {
+        format!("{what} has {}", words.iter().map(|w| format!("“{w}”")).collect::<Vec<_>>().join(" or "))
+    } else if field == "category" {
+        format!("{what} starts with {}", words.join(" or "))
+    } else {
+        format!("{what} is {}", words.join(" or "))
+    }
+}
+
 pub(super) fn rule_view(index: usize, r: &Value) -> RuleView {
     let name = r.get("name").and_then(Value::as_str).unwrap_or("").to_string();
     let mut matches = Map::new();
@@ -38,7 +90,7 @@ pub(super) fn rule_view(index: usize, r: &Value) -> RuleView {
         let p = r.get("match").and_then(|m| m.get(f)).and_then(Value::as_str).unwrap_or("");
         matches.insert(f.into(), json!(p));
         if !p.is_empty() {
-            tests.push(format!("{f} ~ {p}"));
+            tests.push(condition_text(f, p));
         }
     }
     let zone = r.get("zone").and_then(Value::as_str).unwrap_or("").to_string();

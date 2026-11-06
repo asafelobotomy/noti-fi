@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- **Audit fixes:**
+  - **Wide windows:** Overview, History, General, System, Focus, Apps and Appearance keep a readable width, centred, instead of stretching labels and their switches across the whole window.
+  - **Zone names:** zones are shown by name ("Business") everywhere they are picked (Rules, Apps, an app's notification types, the default zone), not by their id ("business").
+  - **Rules list:** a rule reads as words when its conditions are plain lists ("website is shop or chat → business", "urgency is critical"); real regular expressions still show as patterns.
+  - **Urgency and how a notification arrives** accept a bare word ("critical") as a tag; before, it was treated as a regular expression.
+  - **Apps:** an app's details show where its popups appear (the mini screen was missing).
+  - **Overview:** the zone switch reads "Mute", the action, rather than "Muted".
+  - **`notify --help`:** every argument and option has a description.
+
 ## 0.13.0
 
 - **Show, don't tell:**

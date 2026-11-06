@@ -7,6 +7,9 @@ import org.kde.kirigami as Kirigami
 // change how long its popups stay (all saved as a rule), and for Flatpak apps change the app's own notification permission.
 Kirigami.Page {
     id: page
+    // in a wide window the content keeps a readable width, centred, instead of stretching labels and their controls apart
+    leftPadding: Math.max(Kirigami.Units.largeSpacing, (width - Kirigami.Units.gridUnit * 64) / 2)
+    rightPadding: leftPadding
     title: "Apps"
     property var model
     property var ui
@@ -49,6 +52,8 @@ Kirigami.Page {
     readonly property var zoneNames: { try { return JSON.parse(page.model ? page.model.draftZonesJson : "[]") } catch (e) { return [] } }
     readonly property var zoneObjs: { try { return JSON.parse(page.model ? page.model.settingsJson : "{}").zones || [] } catch (e) { return [] } }
     function zoneInfo(id) { return page.zoneObjs.find(z => z.id === id) || null }
+    function zoneLabel(id) { const z = page.zoneInfo(id); return z && z.label ? z.label : id }
+    readonly property var zoneChoiceLabels: page.zoneChoices.map((z, i) => i === 0 ? z : page.zoneLabel(z))
     function zoneAccent(id) { const z = page.zoneInfo(id); return z && z.accent ? z.accent : "" }
     readonly property var zoneChoices: ["(by rules)"].concat(page.zoneNames)
 

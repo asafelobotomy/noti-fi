@@ -9,7 +9,7 @@ import org.kde.kirigami as Kirigami
 ColumnLayout {
     id: root
     property string value: ""
-    property string kind: "contains"       // exact | word | start | contains: how the tags are wrapped into a pattern
+    property string kind: "contains"       // exact | choice (exact, bare words accepted) | word | start | contains: how the tags are wrapped into a pattern
     property string placeholder: ""
     property var suggestions: []
     property string label: ""
@@ -40,6 +40,7 @@ ColumnLayout {
         if (v === "") return []
         let inner = null, m
         if (kind === "exact") { m = /^\^\(([^()]*)\)\$$/.exec(v) || /^\^([^()]*)\$$/.exec(v) }
+        else if (kind === "choice") { m = /^\^\(([^()]*)\)\$$/.exec(v) || /^\^([^()]*)\$$/.exec(v) || /^([^()^$]*)$/.exec(v) }   // a closed set: a bare word means the same
         else if (kind === "word") { m = /^\\b\(([^()]*)\)\\b$/.exec(v) || /^\\b([^()]*)\\b$/.exec(v) }
         else if (kind === "start") { m = /^\^\(([^()]*)\)$/.exec(v) || /^\^([^()]*)$/.exec(v) }
         else { m = /^([^()^$]*)$/.exec(v) }
@@ -50,7 +51,7 @@ ColumnLayout {
         if (tags.length === 0) return ""
         const body = tags.map(esc).join("|")
         const many = tags.length > 1
-        if (kind === "exact") return many ? "^(" + body + ")$" : "^" + body + "$"
+        if (kind === "exact" || kind === "choice") return many ? "^(" + body + ")$" : "^" + body + "$"
         if (kind === "word") return many ? "\\b(" + body + ")\\b" : "\\b" + body + "\\b"
         if (kind === "start") return many ? "^(" + body + ")" : "^" + body
         return body

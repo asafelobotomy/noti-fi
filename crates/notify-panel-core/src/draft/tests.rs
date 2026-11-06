@@ -330,3 +330,14 @@ fn the_path_can_be_overridden_for_tests() {
         assert!(rules_path().ends_with("notifd/rules.json"));
     }
 }
+
+#[test]
+fn rule_summaries_read_as_words_when_the_patterns_are_plain_lists() {
+    use super::rule_view::*;
+    let r = serde_json::json!({ "match": { "origin": "\\b(shop|chat)\\b", "summary": "invoice" }, "zone": "business" });
+    assert_eq!(rule_view(0, &r).summary, "website is shop or chat and title has “invoice”  →  business");
+    let r = serde_json::json!({ "match": { "appName": "^(kernel|linux.*)$" }, "timeout": 0 });
+    assert_eq!(rule_view(0, &r).summary, "appName ~ ^(kernel|linux.*)$  →  stays until dismissed");
+    let r = serde_json::json!({ "match": { "urgency": "critical" } });
+    assert_eq!(rule_view(0, &r).summary, "urgency is critical  (no effect yet)");
+}

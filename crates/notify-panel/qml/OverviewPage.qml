@@ -5,6 +5,9 @@ import org.kde.kirigami as Kirigami
 
 Kirigami.ScrollablePage {
     id: page
+    // in a wide window the content keeps a readable width, centred, instead of stretching labels and their controls apart
+    leftPadding: Math.max(Kirigami.Units.largeSpacing, (width - Kirigami.Units.gridUnit * 48) / 2)
+    rightPadding: leftPadding
     title: "Overview"
     property var model
     readonly property bool online: model !== undefined && model !== null && model.connected === true
@@ -146,7 +149,7 @@ Kirigami.ScrollablePage {
                         text: modelData.count === 1 ? "1 popup" : modelData.count + " popups"
                         visible: modelData.count > 0
                     }
-                    QQC2.Label { text: "Muted"; opacity: 0.7 }
+                    QQC2.Label { text: "Mute"; opacity: 0.7 }
                     QQC2.Switch {
                         enabled: page.online
                         checked: modelData.muted

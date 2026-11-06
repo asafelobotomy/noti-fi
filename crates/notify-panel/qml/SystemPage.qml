@@ -6,6 +6,9 @@ import org.kde.kirigami as Kirigami
 // Health checks (what `notify doctor` prints) and the install actions. Every action shows its plan first and only runs after a second, explicit click.
 Kirigami.ScrollablePage {
     id: page
+    // in a wide window the content keeps a readable width, centred, instead of stretching labels and their controls apart
+    leftPadding: Math.max(Kirigami.Units.largeSpacing, (width - Kirigami.Units.gridUnit * 56) / 2)
+    rightPadding: leftPadding
     title: "System"
     property var model
     property var ui

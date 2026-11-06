@@ -5,6 +5,9 @@ import org.kde.kirigami as Kirigami
 
 Kirigami.ScrollablePage {
     id: page
+    // in a wide window the content keeps a readable width, centred, instead of stretching labels and their controls apart
+    leftPadding: Math.max(Kirigami.Units.largeSpacing, (width - Kirigami.Units.gridUnit * 64) / 2)
+    rightPadding: leftPadding
     title: "History"
     property var model
     readonly property bool online: model !== undefined && model !== null && model.connected === true

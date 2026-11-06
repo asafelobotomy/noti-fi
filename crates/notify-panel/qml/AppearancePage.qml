@@ -6,6 +6,9 @@ import org.kde.kirigami as Kirigami
 // Colours, sound and the "hold popups while..." behaviour. Edits the same draft as the other editor pages.
 Kirigami.Page {
     id: page
+    // in a wide window the content keeps a readable width, centred, instead of stretching labels and their controls apart
+    leftPadding: Math.max(Kirigami.Units.largeSpacing, (width - Kirigami.Units.gridUnit * 60) / 2)
+    rightPadding: leftPadding
     title: "Appearance & behavior"
     property var model
     property var ui

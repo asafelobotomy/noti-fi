@@ -10,10 +10,28 @@ ColumnLayout {
     property var app          // the app as the list rows hold it (name, matchField, timeout, kinds, ...)
     property bool lookOpen: root.host.openAll
     property bool kindsOpen: root.host.openAll
-        Layout.fillWidth: true
     spacing: Kirigami.Units.largeSpacing
 
-GridLayout {
+    // where its popups appear
+    RowLayout {
+        spacing: Kirigami.Units.largeSpacing
+        MiniScreen {
+            readonly property var zn: root.host.zoneInfo(app.zone)
+            dim: zn === null
+            anchorName: zn ? zn.anchor : "top-right"
+            fx: zn ? Number(zn.x) : 0.5; fy: zn ? Number(zn.y) : 0.1
+            accent: zn && zn.accent ? zn.accent : ""
+        }
+        QQC2.Label {
+            Layout.fillWidth: true
+            wrapMode: Text.Wrap
+            opacity: 0.8
+            text: app.zone !== "" ? "Popups from " + app.name + " appear in the “" + root.host.zoneLabel(app.zone) + "” zone."
+                                  : "No zone set for " + app.name + ": your rules decide, otherwise the default zone."
+        }
+    }
+
+    GridLayout {
         columns: 4
         columnSpacing: Kirigami.Units.largeSpacing
         rowSpacing: Kirigami.Units.smallSpacing
@@ -115,7 +133,7 @@ GridLayout {
                     QQC2.Label { text: "Show in:" }
                     QQC2.ComboBox {
                         Layout.preferredWidth: Kirigami.Units.gridUnit * 9
-                        model: root.host.zoneChoices
+                        model: root.host.zoneChoiceLabels
                         currentIndex: kindCard.kind.routing.zone === "" ? 0 : Math.max(0, root.host.zoneChoices.indexOf(kindCard.kind.routing.zone))
                         onActivated: i => root.host.model.appSetKind(JSON.stringify(kindCard.kind.matches), app.name + ": " + (kindCard.kind.category || "general") + " " + kindCard.kind.channel, "zone", i === 0 ? "" : root.host.zoneChoices[i])
                         Accessible.name: "Zone for this kind"

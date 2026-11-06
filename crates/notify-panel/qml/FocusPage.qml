@@ -7,6 +7,9 @@ import org.kde.kirigami as Kirigami
 // (Turning a mode on is on the Overview page; this page edits the modes themselves.)
 Kirigami.Page {
     id: page
+    // in a wide window the content keeps a readable width, centred, instead of stretching labels and their controls apart
+    leftPadding: Math.max(Kirigami.Units.largeSpacing, (width - Kirigami.Units.gridUnit * 48) / 2)
+    rightPadding: leftPadding
     title: "Focus modes"
     property var model
     property var ui

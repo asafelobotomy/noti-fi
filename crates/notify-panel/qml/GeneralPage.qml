@@ -6,6 +6,9 @@ import org.kde.kirigami as Kirigami
 // How the panel itself behaves: the system tray icon and starting at login.
 Kirigami.ScrollablePage {
     id: page
+    // in a wide window the content keeps a readable width, centred, instead of stretching labels and their controls apart
+    leftPadding: Math.max(Kirigami.Units.largeSpacing, (width - Kirigami.Units.gridUnit * 56) / 2)
+    rightPadding: leftPadding
     title: "General"
     property var model
     property var ui
