@@ -16,6 +16,7 @@
   <categories><category>Settings</category></categories>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.16.0" date="2026-11-06"/>
     <release version="0.15.0" date="2026-11-06"/>
     <release version="0.14.0" date="2026-11-06"/>
     <release version="0.13.1" date="2026-11-06"/>

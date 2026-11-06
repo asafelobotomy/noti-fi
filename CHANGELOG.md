@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.16.0
 
 - **Groups:**
   - **Zones are now Groups.** Apps and websites belong to a group (Business, Personal, any you create), and the old zone map is now the "Where groups appear on screen" section of the Groups page.
