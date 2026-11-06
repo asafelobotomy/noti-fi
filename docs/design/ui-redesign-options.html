@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>noti-fi panel: redesign options</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1d2129; --mute:#6b7280; --line:#d7dbe2; --acc:#3b82f6; --acc2:#c084fc; --ok:#16a34a; --warn:#d97706; --wf:#eef1f5; --wf2:#dde3ec; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16181d; --card:#1f2229; --ink:#e7e9ee; --mute:#9aa1ad; --line:#343844; --wf:#262a33; --wf2:#323845; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 system-ui, "Noto Sans", sans-serif; background:var(--bg); color:var(--ink); }
+  main { max-width: 1180px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 28px; margin: 0 0 6px; } h2 { font-size: 21px; margin: 48px 0 6px; padding-top: 12px; border-top: 1px solid var(--line); }
+  h3 { font-size: 15px; margin: 0 0 4px; } p.lead { color: var(--mute); margin: 0 0 16px; max-width: 70ch; }
+  nav.toc { columns: 3; font-size: 14px; margin: 16px 0 8px; } nav.toc a { color: var(--acc); text-decoration: none; display: block; }
+  .opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 900px) { .opts { grid-template-columns: 1fr; } nav.toc { columns: 1; } }
+  .opt { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .opt.rec { border: 2px solid var(--acc); }
+  .tag { display:inline-block; font-size:11px; font-weight:600; padding:1px 7px; border-radius:99px; background:var(--acc); color:#fff; margin-left:6px; vertical-align: 2px; }
+  .opt p { margin: 0; font-size: 13.5px; } .pros, .cons { font-size: 13px; margin: 0; padding-left: 18px; } .pros li::marker { content: "+ "; color: var(--ok); } .cons li::marker { content: "– "; color: var(--warn); }
+  /* wireframe pieces */
+  .wf { background: var(--wf); border: 1px solid var(--line); border-radius: 8px; height: 190px; position: relative; overflow: hidden; font-size: 10px; color: var(--mute); }
+  .wf .b { position: absolute; background: var(--wf2); border-radius: 4px; }
+  .wf .t { position: absolute; font-size: 10px; color: var(--ink); white-space: nowrap; }
+  .wf .acc { background: var(--acc); opacity: .85; } .wf .acc2 { background: var(--acc2); } .wf .line { height: 6px; }
+  .wf .chip { position: absolute; height: 14px; border-radius: 7px; background: var(--acc); opacity: .35; }
+  .wf .pop { position: absolute; background: #1d1f27; border-radius: 4px; border-left: 3px solid var(--acc2); }
+  .wf .ring { position: absolute; border: 2px solid var(--acc); border-radius: 50%; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; } th { background: var(--wf); }
+  .note { background: var(--card); border-left: 4px solid var(--acc); padding: 10px 14px; border-radius: 6px; font-size: 14px; margin: 12px 0; }
+  code { font-size: 12.5px; background: var(--wf); padding: 1px 4px; border-radius: 3px; }
+</style>
+</head>
+<body><main>
+
+<h1>noti-fi panel: three ways to redesign each part</h1>
+<p class="lead">The goal: almost nothing is typed. Every setting that expects a known kind of value becomes a choice (chips, swatches, pickers, sliders with
+named stops), free text is only for names and genuine search, and every change shows its effect at once. Each section below has three structures;
+the one marked <b>Recommended</b> is my pick, and they mix and match (an option from one section does not force one in another).</p>
+
+<nav class="toc">
+  <a href="#inventory">1. What is typed today</a>
+  <a href="#shell">2. App shell and navigation</a>
+  <a href="#overview">3. Overview</a>
+  <a href="#history">4. History</a>
+  <a href="#apps">5. Apps</a>
+  <a href="#zones">6. Zones</a>
+  <a href="#rules">7. Rules</a>
+  <a href="#look">8. "How it looks and behaves"</a>
+  <a href="#timing">9. Timeouts and timing</a>
+  <a href="#focus">10. Focus modes</a>
+  <a href="#appearance">11. Appearance (theme)</a>
+  <a href="#settings">12. General and System</a>
+  <a href="#stack">13. UI stack</a>
+  <a href="#plan">14. Suggested order of work</a>
+</nav>
+
+<h2 id="inventory">1. What is typed today, and what it becomes</h2>
+<p class="lead">Every free-text field in the panel, with the control that replaces it. Names (rule, zone, focus mode) and search boxes stay as text.</p>
+<table>
+<tr><th>Where</th><th>Field today</th><th>Becomes</th></tr>
+<tr><td>Look editor, Appearance</td><td>Font family (text)</td><td>Font picker: searchable list of installed fonts, each drawn in its own face, plus "System font"</td></tr>
+<tr><td>Look editor, Appearance</td><td>Font size (number)</td><td>Segmented: Small · Normal · Large · Larger, with "Custom" slider</td></tr>
+<tr><td>Look editor, Zones</td><td>Width in px (number)</td><td>Segmented: Narrow · Normal · Wide, plus a drag handle on the live preview</td></tr>
+<tr><td>Look editor</td><td>Group name (text)</td><td>Picker of existing groups + "New group…"</td></tr>
+<tr><td>Look editor (all levels)</td><td>Inherit/Yes/No drop-downs ×6</td><td>Three-state switches with an "inherited from Zone/Theme" badge and a reset</td></tr>
+<tr><td>Rules, Apps, Zones</td><td>Timeout in ms (number)</td><td>Chips: App's own · 3 s · 5 s · 10 s · 30 s · Until dismissed · Custom (slider in seconds)</td></tr>
+<tr><td>Zones</td><td>Popups per zone, width, edge gap, spacing (numbers)</td><td>Steppers and sliders bound to handles on the map (drag the gap, drag the width)</td></tr>
+<tr><td>Focus modes</td><td>"Always allow" (regex lines)</td><td>App picker (icons, from the app list) + the same condition chips as Rules</td></tr>
+<tr><td>Rules</td><td>Match fields (tags, regex fallback)</td><td>Already tags; becomes "pick from History" first, typing second, regex only in an Advanced drawer</td></tr>
+<tr><td>Rules tester</td><td>Six text fields</td><td>"Try with…" list of recent notifications; editing a copy is optional</td></tr>
+<tr><td>Appearance</td><td>Colours (hex)</td><td>Theme presets (Dark, Light, Follow Plasma, High contrast) + swatch grid; hex only under "Custom"</td></tr>
+<tr><td>Appearance</td><td>Sound name (text)</td><td>Sound list from the installed sound themes, each with ▶ play</td></tr>
+<tr><td>Appearance</td><td>History size (number)</td><td>Chips: 50 · 200 · 1000 · Unlimited</td></tr>
+<tr><td>Accent colours</td><td>Hex + swatch</td><td>Swatch palette (Plasma accent first) + "Custom…" colour dialog</td></tr>
+</table>
+
+<!-- ============================== SHELL ============================== -->
+<h2 id="shell">2. App shell and navigation</h2>
+<p class="lead">Today: a Kirigami drawer with nine pages, and Routing with its own side panel inside it (two levels of side navigation).</p>
+<div class="opts">
+  <div class="opt rec"><h3>A. One sidebar, grouped<span class="tag">Recommended</span></h3>
+    <div class="wf">
+      <div class="b" style="left:6px;top:6px;width:70px;bottom:6px"></div>
+      <div class="t" style="left:12px;top:12px">Now</div><div class="b acc line" style="left:12px;top:26px;width:56px"></div>
+      <div class="b line" style="left:12px;top:38px;width:50px"></div>
+      <div class="t" style="left:12px;top:54px">Where it goes</div><div class="b line" style="left:12px;top:68px;width:50px"></div><div class="b line" style="left:12px;top:80px;width:50px"></div><div class="b line" style="left:12px;top:92px;width:50px"></div>
+      <div class="t" style="left:12px;top:108px">Look &amp; quiet</div><div class="b line" style="left:12px;top:122px;width:50px"></div><div class="b line" style="left:12px;top:134px;width:50px"></div>
+      <div class="t" style="left:12px;top:150px">App</div><div class="b line" style="left:12px;top:164px;width:50px"></div>
+      <div class="b" style="left:84px;top:6px;right:6px;bottom:6px;background:var(--card)"></div>
+    </div>
+    <p>One sidebar with headed groups: <b>Now</b> (Overview, History) · <b>Where it goes</b> (Apps, Zones, Rules) · <b>Look &amp; quiet</b> (Appearance, Focus) · <b>App</b> (Settings, System). Routing's inner panel goes away.</p>
+    <ul class="pros"><li>One level of navigation; everything one click away</li><li>Groups explain what each page is for</li></ul>
+    <ul class="cons"><li>Apps/Zones/Rules lose the shared "Routing" toolbar (Save moves to a global bar)</li></ul>
+  </div>
+  <div class="opt"><h3>B. Task home screen</h3>
+    <div class="wf">
+      <div class="b" style="left:8px;top:8px;right:8px;height:22px"></div><div class="t" style="left:14px;top:13px">What do you want to do?</div>
+      <div class="b" style="left:8px;top:38px;width:31%;height:64px"></div><div class="b" style="left:35%;top:38px;width:31%;height:64px"></div><div class="b" style="left:68%;top:38px;width:30%;height:64px"></div>
+      <div class="t" style="left:14px;top:46px">Quiet an app</div><div class="t" style="left:37%;top:46px">Move popups</div><div class="t" style="left:70%;top:46px">Change the look</div>
+      <div class="b" style="left:8px;top:110px;width:31%;height:64px"></div><div class="b" style="left:35%;top:110px;width:31%;height:64px"></div><div class="b" style="left:68%;top:110px;width:30%;height:64px"></div>
+      <div class="t" style="left:14px;top:118px">Focus time</div><div class="t" style="left:37%;top:118px">Find a missed one</div><div class="t" style="left:70%;top:118px">Make a rule</div>
+    </div>
+    <p>The first screen is a grid of tasks in plain words; each opens the page already in the right state (e.g. "Quiet an app" opens Apps with search focused).</p>
+    <ul class="pros"><li>Easiest for a first-time user</li><li>Pages can stay as they are behind it</li></ul>
+    <ul class="cons"><li>An extra click for regular users</li><li>Overview's live status needs a home elsewhere</li></ul>
+  </div>
+  <div class="opt"><h3>C. Top tabs + contextual side panel</h3>
+    <div class="wf">
+      <div class="b" style="left:8px;top:8px;right:8px;height:20px"></div>
+      <div class="b acc" style="left:12px;top:12px;width:44px;height:12px"></div><div class="b" style="left:60px;top:12px;width:44px;height:12px;background:var(--card)"></div><div class="b" style="left:108px;top:12px;width:44px;height:12px;background:var(--card)"></div><div class="b" style="left:156px;top:12px;width:44px;height:12px;background:var(--card)"></div>
+      <div class="b" style="left:8px;top:36px;width:60px;bottom:8px"></div>
+      <div class="b" style="left:76px;top:36px;right:8px;bottom:8px;background:var(--card)"></div>
+    </div>
+    <p>Four top tabs (Status · Routing · Look · Settings); each tab has its own short side list (Routing: Apps, Zones, Rules).</p>
+    <ul class="pros"><li>Matches System Settings-style apps; scales if pages are added</li></ul>
+    <ul class="cons"><li>Two levels again; the problem we are trying to remove</li></ul>
+  </div>
+</div>
+
+<!-- ============================== OVERVIEW ============================== -->
+<h2 id="overview">3. Overview</h2>
+<p class="lead">Today: three cards (DND switch, focus drop-down, zone mute switches) and a status line.</p>
+<div class="opts">
+  <div class="opt rec"><h3>A. Live screen + quick controls<span class="tag">Recommended</span></h3>
+    <div class="wf">
+      <div class="b" style="left:8px;top:8px;width:58%;height:110px;background:var(--card);border:1px solid var(--line)"></div>
+      <div class="pop" style="left:12px;top:14px;width:42px;height:10px"></div><div class="pop" style="left:12px;top:27px;width:42px;height:10px;opacity:.5"></div>
+      <div class="pop" style="left:44%;top:14px;width:42px;height:10px;border-left-color:var(--acc)"></div>
+      <div class="pop" style="left:44%;top:100px;width:42px;height:10px;border-left-color:#fbbf24"></div>
+      <div class="b" style="left:63%;top:8px;right:8px;height:34px"></div><div class="t" style="left:65%;top:14px">Do Not Disturb</div><div class="b acc" style="right:14px;top:15px;width:20px;height:10px;border-radius:5px"></div>
+      <div class="b" style="left:63%;top:48px;right:8px;height:34px"></div><div class="t" style="left:65%;top:54px">Focus: Off · Work · Urgent</div>
+      <div class="b" style="left:63%;top:88px;right:8px;height:30px"></div><div class="t" style="left:65%;top:94px">2 on screen · 1 waiting</div>
+      <div class="b" style="left:8px;top:126px;right:8px;height:56px"></div><div class="t" style="left:14px;top:132px">Last 5 notifications (click = open, ⋯ = mute app / make rule)</div>
+    </div>
+    <p>A mini screen shows each zone with the popups that are on screen <i>right now</i> (click a zone to mute it). Focus becomes one-tap chips. The last five notifications sit below with quick actions.</p>
+    <ul class="pros"><li>Status is seen, not read</li><li>"Mute this app" / "Make a rule from this" where the user notices the problem</li></ul>
+    <ul class="cons"><li>Needs live popup positions from the daemon (already has counts per zone)</li></ul>
+  </div>
+  <div class="opt"><h3>B. Big toggles dashboard</h3>
+    <div class="wf">
+      <div class="b" style="left:8px;top:8px;width:46%;height:80px"></div><div class="t" style="left:14px;top:14px">🔕 Do Not Disturb</div><div class="b acc" style="left:14px;top:60px;width:30px;height:14px;border-radius:7px"></div>
+      <div class="b" style="left:52%;top:8px;right:8px;height:80px"></div><div class="t" style="left:54%;top:14px">🎯 Focus</div><div class="chip" style="left:54%;top:60px;width:30px"></div><div class="chip" style="left:72%;top:60px;width:30px"></div>
+      <div class="b" style="left:8px;top:96px;width:30%;height:80px"></div><div class="b" style="left:35%;top:96px;width:30%;height:80px"></div><div class="b" style="left:68%;top:96px;width:30%;height:80px"></div>
+      <div class="t" style="left:14px;top:102px">Business</div><div class="t" style="left:37%;top:102px">Personal</div><div class="t" style="left:70%;top:102px">System</div>
+    </div>
+    <p>Large tiles like a phone's quick settings: DND, Focus (chips), one tile per zone with its accent and a mute toggle.</p>
+    <ul class="pros"><li>Very obvious; touch-friendly</li></ul>
+    <ul class="cons"><li>Uses space without adding information</li></ul>
+  </div>
+  <div class="opt"><h3>C. Status sentence</h3>
+    <div class="wf">
+      <div class="b" style="left:8px;top:16px;right:8px;height:46px"></div>
+      <div class="t" style="left:14px;top:22px;font-size:12px">Notifications are <b>on</b>. Focus is <b>off</b>. 2 on screen.</div>
+      <div class="t" style="left:14px;top:40px">[ Quiet for 1 h ] [ Until tomorrow ] [ Focus: Work ]</div>
+      <div class="b" style="left:8px;top:74px;right:8px;height:104px"></div><div class="t" style="left:14px;top:80px">Zones: ● Business ● Personal ● System (click to mute)</div>
+    </div>
+    <p>One plain sentence of state plus action buttons for the common cases ("Quiet for 1 hour", "Until tomorrow").</p>
+    <ul class="pros"><li>Adds timed DND, which people want</li><li>Compact</li></ul>
+    <ul class="cons"><li>Timed DND needs a small daemon addition</li></ul>
+  </div>
+</div>
+
+<!-- ============================== HISTORY ============================== -->
+<h2 id="history">4. History</h2>
+<div class="opts">
+  <div class="opt rec"><h3>A. Grouped timeline with actions<span class="tag">Recommended</span></h3>
+    <div class="wf">
+      <div class="b" style="left:8px;top:8px;right:8px;height:18px"></div><div class="t" style="left:14px;top:11px">🔍 search · chips: All · Missed · Today · by app ▾</div>
+      <div class="t" style="left:10px;top:34px"><b>Today</b></div>
+      <div class="b" style="left:8px;top:48px;right:8px;height:24px"></div><div class="t" style="left:14px;top:54px">[icon] Telegram · New message · Personal · 10:42   ⋯</div>
+      <div class="b" style="left:8px;top:76px;right:8px;height:24px"></div><div class="t" style="left:14px;top:82px">[icon] Brave · shop.example · held (DND) · 09:10   ⋯</div>
+      <div class="t" style="left:10px;top:108px"><b>Yesterday</b></div>
+      <div class="b" style="left:8px;top:122px;right:8px;height:24px"></div>
+    </div>
+    <p>Rows grouped by day with app icons, zone dot and a "held" badge. The ⋯ menu offers <i>Mute this app</i>, <i>Send to zone…</i>, <i>Make a rule from this</i> (opens Rules pre-filled).</p>
+    <ul class="pros"><li>History becomes the place you fix things from</li><li>Filter chips instead of a checkbox</li></ul>
+    <ul class="cons"><li>"Make a rule from this" needs a pre-fill entry point in Rules</li></ul>
+  </div>
+  <div class="opt"><h3>B. Grouped by app</h3>
+    <div class="wf">
+      <div class="b" style="left:8px;top:8px;width:40%;bottom:8px"></div>
+      <div class="t" style="left:14px;top:14px">Telegram 14</div><div class="t" style="left:14px;top:30px">Brave 39</div><div class="t" style="left:14px;top:46px">Claude 129</div>
+      <div class="b" style="left:44%;top:8px;right:8px;bottom:8px;background:var(--card)"></div>
+      <div class="t" style="left:46%;top:14px">Brave: 39 notifications, 3 held</div>
+    </div>
+    <p>Apps on the left with counts, that app's notifications on the right with its settings at the top.</p>
+    <ul class="pros"><li>Answers "who is noisy?" immediately</li></ul>
+    <ul class="cons"><li>Loses the "what just happened" timeline</li></ul>
+  </div>
+  <div class="opt"><h3>C. Timeline chart + list</h3>
+    <div class="wf">
+      <div class="b" style="left:8px;top:8px;right:8px;height:60px"></div>
+      <div class="b acc" style="left:20px;top:40px;width:8px;height:22px"></div><div class="b acc" style="left:34px;top:30px;width:8px;height:32px"></div><div class="b acc" style="left:48px;top:50px;width:8px;height:12px"></div><div class="b acc2" style="left:62px;top:20px;width:8px;height:42px"></div>
+      <div class="b" style="left:8px;top:76px;right:8px;bottom:8px;background:var(--card)"></div>
+    </div>
+    <p>A bar chart of notifications per hour (coloured by app or zone) above the list; dragging over the chart filters the list.</p>
+    <ul class="pros"><li>Spot noisy periods at a glance</li></ul>
+    <ul class="cons"><li>More to build; less useful with little history</li></ul>
+  </div>
+</div>
+
+<!-- ============================== APPS ============================== -->
+<h2 id="apps">5. Apps</h2>
+<div class="opts">
+  <div class="opt rec"><h3>A. Master–detail with a "what happens" card<span class="tag">Recommended</span></h3>
+    <div class="wf">
+      <div class="b" style="left:8px;top:8px;width:36%;bottom:8px"></div>
+      <div class="t" style="left:12px;top:12px">🔍 · Messaging ▾</div>
+      <div class="b acc" style="left:12px;top:28px;width:30%;height:16px;opacity:.4"></div><div class="t" style="left:14px;top:31px">[ic] Telegram</div>
+      <div class="t" style="left:14px;top:51px">[ic] Discord</div><div class="t" style="left:14px;top:69px">[ic] Brave</div>
+      <div class="b" style="left:40%;top:8px;right:8px;bottom:8px;background:var(--card)"></div>
+      <div class="t" style="left:42%;top:12px"><b>Telegram</b> · 14 sent</div>
+      <div class="b" style="left:42%;top:30px;width:22%;height:40px"></div><div class="pop" style="left:44%;top:34px;width:18%;height:14px"></div>
+      <div class="t" style="left:66%;top:30px">Shows in: [Personal ▾]</div><div class="t" style="left:66%;top:46px">Stays: [5 s][10 s][Until]</div><div class="t" style="left:66%;top:62px">Sound: [On][Off]</div>
+      <div class="t" style="left:42%;top:80px">Types it sends: chat · call (each: zone, mute)</div>
+      <div class="t" style="left:42%;top:100px">[Mute] [Look…] [Rules that apply: 2 →]</div>
+    </div>
+    <p>A searchable, categorised list on the left; the right shows one app as a sentence-like card: a mini screen with where it lands, choice chips for zone, timeout, sound, and the rules that already affect it (with links).</p>
+    <ul class="pros"><li>No expanding cards; one app in focus</li><li>"Rules that apply" ends the confusion between Apps and Rules</li></ul>
+    <ul class="cons"><li>Narrow windows fall back to list → page</li></ul>
+  </div>
+  <div class="opt"><h3>B. Smart groups ("noisy", "quiet", "never")</h3>
+    <div class="wf">
+      <div class="t" style="left:10px;top:10px"><b>Noisy this week</b></div>
+      <div class="b" style="left:8px;top:24px;right:8px;height:22px"></div><div class="t" style="left:14px;top:29px">Claude 129 · [Mute] [Quieter] [Fine]</div>
+      <div class="t" style="left:10px;top:56px"><b>Normal</b></div>
+      <div class="b" style="left:8px;top:70px;right:8px;height:22px"></div>
+      <div class="t" style="left:10px;top:102px"><b>Never sent (could)</b></div>
+      <div class="b" style="left:8px;top:116px;right:8px;height:22px"></div>
+    </div>
+    <p>Apps grouped by behaviour instead of category, with one-click verdicts (Mute / Quieter = no sound, shorter / Fine).</p>
+    <ul class="pros"><li>Guides the user to the decisions that matter</li></ul>
+    <ul class="cons"><li>Groups shift over time; finding a specific app relies on search</li></ul>
+  </div>
+  <div class="opt"><h3>C. Grid with flip cards</h3>
+    <div class="wf">
+      <div class="b" style="left:8px;top:8px;width:22%;height:70px"></div><div class="b" style="left:27%;top:8px;width:22%;height:70px"></div><div class="b" style="left:51%;top:8px;width:22%;height:70px"></div><div class="b" style="left:75%;top:8px;width:22%;height:70px;background:var(--card);border:1px solid var(--acc)"></div>
+      <div class="t" style="left:76%;top:14px">Zone ▾</div><div class="t" style="left:76%;top:30px">Stays ▾</div><div class="t" style="left:76%;top:46px">Mute ◉</div>
+      <div class="b" style="left:8px;top:86px;width:22%;height:70px"></div><div class="b" style="left:27%;top:86px;width:22%;height:70px"></div>
+    </div>
+    <p>Icon grid; a tile flips over in place to show its three main controls; "More…" opens the full sheet.</p>
+    <ul class="pros"><li>Fast, visual, compact</li></ul>
+    <ul class="cons"><li>Hidden controls; poor for keyboard and screen readers</li></ul>
+  </div>
+</div>
+
+<!-- ============================== ZONES ============================== -->
+<h2 id="zones">6. Zones</h2>
+<div class="opts">
+  <div class="opt rec"><h3>A. Direct manipulation on the screen<span class="tag">Recommended</span></h3>
+    <div class="wf">
+      <div class="b" style="left:8px;top:8px;width:64%;bottom:8px;background:var(--card);border:1px solid var(--line)"></div>
+      <div class="pop" style="left:14px;top:14px;width:50px;height:10px"></div><div class="pop" style="left:14px;top:28px;width:50px;height:10px;opacity:.5"></div>
+      <div class="b acc" style="left:66px;top:14px;width:3px;height:24px"></div><div class="t" style="left:72px;top:18px">↔ width</div>
+      <div class="pop" style="right:38%;top:150px;width:50px;height:10px;border-left-color:#fbbf24"></div>
+      <div class="b" style="left:68%;top:8px;right:8px;bottom:8px"></div>
+      <div class="t" style="left:70%;top:14px">Business ●</div><div class="t" style="left:70%;top:30px">Colour: ● ● ● ● +</div><div class="t" style="left:70%;top:46px">At most: [1][3][5][∞]</div><div class="t" style="left:70%;top:62px">Stack: ↓ from top</div>
+    </div>
+    <p>The map is the editor: drag a zone to move it (snaps to the nine places unless Freeform is on), drag its edge to set the popup width, drag between popups to set the gap. A small inspector shows colour swatches and "at most N" chips.</p>
+    <ul class="pros"><li>No numbers to type at all</li><li>What you drag is exactly what you get</li></ul>
+    <ul class="cons"><li>Needs careful keyboard alternatives (arrow keys move, +/- resize)</li></ul>
+  </div>
+  <div class="opt"><h3>B. Layout presets first</h3>
+    <div class="wf">
+      <div class="b" style="left:8px;top:8px;width:30%;height:60px"></div><div class="b" style="left:35%;top:8px;width:30%;height:60px"></div><div class="b" style="left:68%;top:8px;width:30%;height:60px"></div>
+      <div class="t" style="left:12px;top:52px">One corner</div><div class="t" style="left:37%;top:52px">Work | Life</div><div class="t" style="left:70%;top:52px">Three corners</div>
+      <div class="b" style="left:8px;top:76px;right:8px;bottom:8px;background:var(--card)"></div><div class="t" style="left:14px;top:82px">then fine-tune: map + inspector</div>
+    </div>
+    <p>Start by picking a layout preset (one corner; work vs personal; three corners; centre for urgent); then fine-tune.</p>
+    <ul class="pros"><li>New users are done in one click</li></ul>
+    <ul class="cons"><li>Presets need sensible matching rules to be useful</li></ul>
+  </div>
+  <div class="opt"><h3>C. List of zones with inline mini maps</h3>
+    <div class="wf">
+      <div class="b" style="left:8px;top:8px;right:8px;height:52px"></div><div class="b" style="left:14px;top:14px;width:60px;height:40px;background:var(--card)"></div><div class="pop" style="left:16px;top:16px;width:20px;height:6px"></div><div class="t" style="left:84px;top:18px">Business · top left · 2 rules · ● </div>
+      <div class="b" style="left:8px;top:66px;right:8px;height:52px"></div>
+      <div class="b" style="left:8px;top:124px;right:8px;height:52px"></div>
+    </div>
+    <p>Each zone is a row with its own thumbnail map; click to open a sheet with the map and settings.</p>
+    <ul class="pros"><li>Easy to scan many zones</li></ul>
+    <ul class="cons"><li>Zones' relation to each other on screen is lost</li></ul>
+  </div>
+</div>
+
+<!-- ============================== RULES ============================== -->
+<h2 id="rules">7. Rules</h2>
+<div class="opts">
+  <div class="opt rec"><h3>A. Sentence builder<span class="tag">Recommended</span></h3>
+    <div class="wf">
+      <div class="t" style="left:10px;top:12px;font-size:11px">When a notification</div>
+      <div class="t" style="left:10px;top:30px">comes from <span style="background:var(--wf2);padding:1px 4px;border-radius:6px">[ic] Brave ✕</span> <span style="background:var(--wf2);padding:1px 4px;border-radius:6px">+</span></div>
+      <div class="t" style="left:10px;top:48px">and the website is <span style="background:var(--wf2);padding:1px 4px;border-radius:6px">shop ✕</span> <span style="background:var(--wf2);padding:1px 4px;border-radius:6px">+</span></div>
+      <div class="t" style="left:10px;top:66px">[+ add a condition ▾]</div>
+      <div class="t" style="left:10px;top:90px;font-size:11px">then</div>
+      <div class="t" style="left:10px;top:106px">show it in <span style="background:var(--wf2);padding:1px 4px;border-radius:6px">● Business ▾</span> for <span style="background:var(--wf2);padding:1px 4px;border-radius:6px">10 s ▾</span></div>
+      <div class="b" style="left:8px;top:128px;right:8px;height:52px"></div><div class="t" style="left:14px;top:134px">✓ would match 3 of your last 50 · [preview popup]</div>
+    </div>
+    <p>A rule reads as a sentence; every blank is a chip that opens a picker (apps with icons, websites seen in History, zones with colours, durations). Regex only in an "Advanced" toggle per condition.</p>
+    <ul class="pros"><li>Reads exactly like what it does</li><li>Builds on the tags and match preview already in place</li></ul>
+    <ul class="cons"><li>Rule order still needs explaining (keep the list on the left, with "first match wins" shown by arrows)</li></ul>
+  </div>
+  <div class="opt"><h3>B. Start from a notification</h3>
+    <div class="wf">
+      <div class="b" style="left:8px;top:8px;width:44%;bottom:8px"></div><div class="t" style="left:12px;top:12px">Recent notifications</div>
+      <div class="b acc" style="left:12px;top:28px;width:40%;height:16px;opacity:.4"></div>
+      <div class="b" style="left:50%;top:8px;right:8px;bottom:8px;background:var(--card)"></div>
+      <div class="t" style="left:52%;top:12px">Things like this one:</div><div class="t" style="left:52%;top:30px">☑ from Brave ☑ site shop ☐ title "Sale"</div>
+      <div class="t" style="left:52%;top:60px">should… [go to Business] [be quiet] [stay]</div>
+    </div>
+    <p>Pick a real notification; tick which of its properties define "things like this"; pick what should happen. The rule is created for you.</p>
+    <ul class="pros"><li>Zero typing; impossible to write a bad pattern</li></ul>
+    <ul class="cons"><li>Needs a notification to exist first (fallback: A)</li></ul>
+  </div>
+  <div class="opt"><h3>C. Visual flow</h3>
+    <div class="wf">
+      <div class="b" style="left:8px;top:70px;width:50px;height:40px"></div><div class="t" style="left:12px;top:84px">incoming</div>
+      <div class="b" style="left:80px;top:30px;width:70px;height:30px"></div><div class="t" style="left:84px;top:40px">Brave + shop?</div>
+      <div class="b" style="left:80px;top:120px;width:70px;height:30px"></div><div class="t" style="left:84px;top:130px">urgent?</div>
+      <div class="b acc2" style="left:180px;top:30px;width:60px;height:30px;opacity:.6"></div><div class="t" style="left:184px;top:40px">Business</div>
+      <div class="b acc" style="left:180px;top:120px;width:60px;height:30px;opacity:.6"></div><div class="t" style="left:184px;top:130px">stays</div>
+    </div>
+    <p>Rules drawn as a flow chart from "incoming" through each check to a zone/outcome; edit by clicking a box.</p>
+    <ul class="pros"><li>Shows ordering and fall-through clearly</li></ul>
+    <ul class="cons"><li>Gets crowded past ~8 rules; hard to make accessible</li></ul>
+  </div>
+</div>
+
+<!-- ============================== LOOK ============================== -->
+<h2 id="look">8. "How it looks and behaves" (zone, app, rule, notification type)</h2>
+<p class="lead">Today: a form of eleven drop-downs, a slider and four text boxes, each "Inherit (…)", with a static-ish preview on top. This is the one you called rudimentary.</p>
+<div class="opts">
+  <div class="opt rec"><h3>A. Style presets + tweak on the preview<span class="tag">Recommended</span></h3>
+    <div class="wf">
+      <div class="b" style="left:8px;top:8px;width:22%;height:46px"></div><div class="b" style="left:27%;top:8px;width:22%;height:46px;border:2px solid var(--acc)"></div><div class="b" style="left:51%;top:8px;width:22%;height:46px"></div><div class="b" style="left:75%;top:8px;width:22%;height:46px"></div>
+      <div class="t" style="left:12px;top:40px">Theme</div><div class="t" style="left:29%;top:40px">Compact</div><div class="t" style="left:53%;top:40px">Glass</div><div class="t" style="left:77%;top:40px">Loud</div>
+      <div class="pop" style="left:20%;top:66px;width:46%;height:46px"></div>
+      <div class="t" style="left:14px;top:122px">Size [S][M][L]  Width [Narrow][Normal][Wide]  Time left [—][line][○][▢]</div>
+      <div class="t" style="left:14px;top:140px">Clicks pass through ◐ · Takes focus ◐ · Media ◐ · Sound ◐</div>
+      <div class="t" style="left:14px;top:158px">Changed here: width, size · [Reset to Theme]</div>
+    </div>
+    <p>Pick a preset (Theme, Compact, Glass, Loud, Minimal), then adjust with segmented controls under a large live preview. Three-state switches show "from Zone/Theme" until changed; a line lists what this level overrides with one reset.</p>
+    <ul class="pros"><li>One click gets a good result</li><li>Every control is a choice; nothing typed</li><li>Inheritance becomes visible</li></ul>
+    <ul class="cons"><li>Presets need designing (5 sets of values)</li></ul>
+  </div>
+  <div class="opt"><h3>B. Click the preview to edit (WYSIWYG)</h3>
+    <div class="wf">
+      <div class="pop" style="left:18%;top:20px;width:64%;height:80px"></div>
+      <div class="b" style="left:18%;top:20px;width:64%;height:80px;background:transparent;border:1px dashed var(--acc)"></div>
+      <div class="t" style="left:20%;top:106px">click the title → font &amp; size · the edge → width · the bar → time left · the card → colour &amp; opacity</div>
+      <div class="b" style="left:30%;top:128px;width:40%;height:50px;background:var(--card);border:1px solid var(--line)"></div><div class="t" style="left:32%;top:134px">popover for the clicked part</div>
+    </div>
+    <p>A big sample popup; hovering highlights parts; clicking one opens a small popover with just that part's choices.</p>
+    <ul class="pros"><li>Most direct; nothing abstract</li></ul>
+    <ul class="cons"><li>Behaviour settings (focus, click-through) have no visible "part"; discoverability</li></ul>
+  </div>
+  <div class="opt"><h3>C. Sections: Look · Timing · Behaviour</h3>
+    <div class="wf">
+      <div class="b" style="left:8px;top:8px;width:30%;height:16px"></div><div class="b acc" style="left:8px;top:8px;width:10%;height:16px;opacity:.6"></div>
+      <div class="pop" style="left:60%;top:30px;width:36%;height:60px"></div>
+      <div class="t" style="left:10px;top:34px">Colour ● ● ● ● · Opacity ▬▬▬○</div><div class="t" style="left:10px;top:52px">Font [Noto Sans ▾] · Size [M]</div><div class="t" style="left:10px;top:70px">Width [Normal]</div>
+    </div>
+    <p>Three small tabs, each with only visual controls and the preview beside them.</p>
+    <ul class="pros"><li>Calm, predictable</li></ul>
+    <ul class="cons"><li>Still a form, just a nicer one</li></ul>
+  </div>
+</div>
+
+<!-- ============================== TIMING ============================== -->
+<h2 id="timing">9. Timeouts and timing (a shared control)</h2>
+<div class="opts">
+  <div class="opt rec"><h3>A. Duration chips<span class="tag">Recommended</span></h3>
+    <div class="wf">
+      <div class="t" style="left:10px;top:20px">Stays on screen</div>
+      <div class="chip" style="left:10px;top:40px;width:58px;opacity:.7"></div><div class="t" style="left:14px;top:42px;color:#fff">App's own</div>
+      <div class="chip" style="left:74px;top:40px;width:26px"></div><div class="t" style="left:80px;top:42px">5 s</div>
+      <div class="chip" style="left:106px;top:40px;width:30px"></div><div class="t" style="left:110px;top:42px">10 s</div>
+      <div class="chip" style="left:142px;top:40px;width:30px"></div><div class="t" style="left:146px;top:42px">30 s</div>
+      <div class="chip" style="left:178px;top:40px;width:56px"></div><div class="t" style="left:182px;top:42px">Until closed</div>
+      <div class="t" style="left:10px;top:70px">Custom… opens a seconds slider</div>
+      <div class="b acc" style="left:10px;top:100px;width:160px;height:4px"></div><div class="t" style="left:10px;top:110px">the preview's timer bar runs at this speed</div>
+    </div>
+    <p>One component used everywhere a timeout appears (rules, apps, zones' default), in seconds not milliseconds.</p>
+    <ul class="pros"><li>Consistent; no unit confusion</li></ul>
+    <ul class="cons"><li>—</li></ul>
+  </div>
+  <div class="opt"><h3>B. Slider with named stops</h3>
+    <div class="wf"><div class="b" style="left:10px;top:60px;right:10px;height:4px"></div><div class="ring" style="left:40%;top:54px;width:14px;height:14px"></div>
+    <div class="t" style="left:10px;top:76px">3 s · 5 s · 10 s · 30 s · 1 min · ∞</div></div>
+    <p>One slider with magnetic stops and "∞" at the end.</p>
+    <ul class="pros"><li>Compact</li></ul><ul class="cons"><li>"App's own" needs a separate checkbox</li></ul>
+  </div>
+  <div class="opt"><h3>C. "Like…" examples</h3>
+    <div class="wf"><div class="t" style="left:10px;top:30px">○ Quick glance (3 s)</div><div class="t" style="left:10px;top:50px">● Normal read (6 s)</div><div class="t" style="left:10px;top:70px">○ Long read (15 s)</div><div class="t" style="left:10px;top:90px">○ Until I close it</div></div>
+    <p>Radio list described by intent rather than numbers.</p>
+    <ul class="pros"><li>Friendliest wording</li></ul><ul class="cons"><li>Takes more vertical space</li></ul>
+  </div>
+</div>
+
+<!-- ============================== FOCUS ============================== -->
+<h2 id="focus">10. Focus modes</h2>
+<div class="opts">
+  <div class="opt rec"><h3>A. Who can reach me<span class="tag">Recommended</span></h3>
+    <div class="wf">
+      <div class="t" style="left:10px;top:10px"><b>Work</b> [icon picker] </div>
+      <div class="t" style="left:10px;top:30px">Let through: [Everything][Normal+][High+][Urgent only]</div>
+      <div class="t" style="left:10px;top:52px">Always allow apps:</div>
+      <div class="b" style="left:10px;top:66px;width:20px;height:20px;border-radius:50%"></div><div class="b" style="left:36px;top:66px;width:20px;height:20px;border-radius:50%"></div><div class="t" style="left:62px;top:70px">+ add app</div>
+      <div class="t" style="left:10px;top:96px">Also allow: [ + website ] [ + kind ]</div>
+      <div class="t" style="left:10px;top:120px">Turn on: [manually] [9–17 weekdays] [when presenting]</div>
+      <div class="t" style="left:10px;top:146px">Last week this would have let through 12 of 340</div>
+    </div>
+    <p>Allowed apps as icons (picked from the app list), websites and kinds as chips, a level as a segmented control, and an impact line from History.</p>
+    <ul class="pros"><li>No regex; impact is shown</li></ul>
+    <ul class="cons"><li>Schedules are a daemon addition (optional)</li></ul>
+  </div>
+  <div class="opt"><h3>B. Templates</h3>
+    <div class="wf"><div class="b" style="left:8px;top:8px;width:46%;height:80px"></div><div class="b" style="left:52%;top:8px;right:8px;height:80px"></div><div class="t" style="left:14px;top:14px">Work</div><div class="t" style="left:54%;top:14px">Gaming</div>
+    <div class="b" style="left:8px;top:96px;width:46%;height:80px"></div><div class="b" style="left:52%;top:96px;right:8px;height:80px"></div><div class="t" style="left:14px;top:102px">Sleep</div><div class="t" style="left:54%;top:102px">Presenting</div></div>
+    <p>Ready-made modes (Work, Gaming, Sleep, Presenting) to switch on and adjust.</p>
+    <ul class="pros"><li>Fast start</li></ul><ul class="cons"><li>Still needs A's editor for adjusting</li></ul>
+  </div>
+  <div class="opt"><h3>C. Matrix</h3>
+    <div class="wf"><div class="t" style="left:10px;top:10px">app ↓ / mode →   Work  Sleep  Game</div><div class="t" style="left:10px;top:30px">Telegram           ✓      ✗      ✓</div><div class="t" style="left:10px;top:48px">Mail               ✓      ✗      ✗</div></div>
+    <p>A table of apps × modes with ticks.</p>
+    <ul class="pros"><li>Compare modes at once</li></ul><ul class="cons"><li>Unwieldy with many apps</li></ul>
+  </div>
+</div>
+
+<!-- ============================== APPEARANCE ============================== -->
+<h2 id="appearance">11. Appearance (the theme every popup starts from)</h2>
+<div class="opts">
+  <div class="opt rec"><h3>A. Theme gallery + preview stage<span class="tag">Recommended</span></h3>
+    <div class="wf">
+      <div class="b" style="left:8px;top:8px;right:8px;height:76px;background:#2b2f3a"></div>
+      <div class="pop" style="left:30%;top:20px;width:40%;height:50px"></div>
+      <div class="b" style="left:8px;top:92px;width:18%;height:40px"></div><div class="b" style="left:28%;top:92px;width:18%;height:40px;border:2px solid var(--acc)"></div><div class="b" style="left:48%;top:92px;width:18%;height:40px"></div><div class="b" style="left:68%;top:92px;width:18%;height:40px"></div>
+      <div class="t" style="left:10px;top:138px">Follow Plasma · Dark · Light · High contrast · Custom…</div>
+      <div class="t" style="left:10px;top:156px">Accent ● ● ● ● · Corners [Square][Round] · Sound [Plasma default ▾ ▶]</div>
+    </div>
+    <p>A preview "stage" on a dark or light wallpaper strip, theme cards below, then a few swatch rows. Hex codes only under Custom.</p>
+    <ul class="pros"><li>"Follow Plasma" gives a native look in one click</li></ul>
+    <ul class="cons"><li>"Follow Plasma" needs the daemon to read Plasma's colour scheme</li></ul>
+  </div>
+  <div class="opt"><h3>B. Side-by-side before/after</h3>
+    <div class="wf"><div class="pop" style="left:10%;top:30px;width:34%;height:50px;opacity:.6"></div><div class="pop" style="left:56%;top:30px;width:34%;height:50px"></div><div class="t" style="left:10%;top:90px">saved</div><div class="t" style="left:56%;top:90px">your changes</div></div>
+    <p>Compare the saved look to the draft while editing.</p>
+    <ul class="pros"><li>Clear what Save will change</li></ul><ul class="cons"><li>Duplicates preview space</li></ul>
+  </div>
+  <div class="opt"><h3>C. Live on screen</h3>
+    <div class="wf"><div class="t" style="left:10px;top:60px">Edits apply to a real sample popup on your desktop while the page is open</div></div>
+    <p>Uses the existing "Preview on screen" continuously while editing.</p>
+    <ul class="pros"><li>The real thing, on the real wallpaper</li></ul><ul class="cons"><li>Popups cover other windows while editing</li></ul>
+  </div>
+</div>
+
+<!-- ============================== SETTINGS ============================== -->
+<h2 id="settings">12. General and System</h2>
+<div class="opts">
+  <div class="opt rec"><h3>A. One "Settings" page with cards<span class="tag">Recommended</span></h3>
+    <div class="wf">
+      <div class="b" style="left:8px;top:8px;right:8px;height:48px"></div><div class="t" style="left:14px;top:14px">Startup &amp; tray  [Start at login ◉] [Hide to tray]</div>
+      <div class="b" style="left:8px;top:62px;right:8px;height:48px"></div><div class="t" style="left:14px;top:68px">Updates  0.13.1 ✓ up to date · [Check] [Daily ◉]</div>
+      <div class="b" style="left:8px;top:116px;right:8px;height:64px"></div><div class="t" style="left:14px;top:122px">Health  ● 9 OK · ● 1 needs attention [Fix…]</div>
+    </div>
+    <p>General and System merge into one page of cards (Kirigami FormCard style). Health shows a traffic light; "Fix…" runs the right action with its plan shown first.</p>
+    <ul class="pros"><li>Fewer pages; problems surface as "Fix" buttons</li></ul>
+    <ul class="cons"><li>System's detailed check list moves behind "Details"</li></ul>
+  </div>
+  <div class="opt"><h3>B. Keep two pages, restyle as FormCards</h3>
+    <div class="wf"><div class="b" style="left:20%;top:10px;width:60%;height:50px"></div><div class="b" style="left:20%;top:68px;width:60%;height:50px"></div><div class="b" style="left:20%;top:126px;width:60%;height:50px"></div></div>
+    <p>Same content, Plasma System Settings look.</p>
+    <ul class="pros"><li>Least work</li></ul><ul class="cons"><li>Doesn't reduce pages</li></ul>
+  </div>
+  <div class="opt"><h3>C. First-run wizard + slim settings</h3>
+    <div class="wf"><div class="t" style="left:10px;top:20px">Step 2 of 4: Where should popups go?</div><div class="b" style="left:10px;top:40px;width:120px;height:70px"></div><div class="t" style="left:10px;top:150px">[Back] [Next]</div></div>
+    <p>A guided setup on first launch (take over, layout preset, theme, Brave), leaving Settings minimal.</p>
+    <ul class="pros"><li>Best first impression</li></ul><ul class="cons"><li>Extra flow to maintain; pairs with A, not instead of it</li></ul>
+  </div>
+</div>
+
+<!-- ============================== STACK ============================== -->
+<h2 id="stack">13. UI stack</h2>
+<div id="stack-body"><p class="lead"><b>Recommendation: no new stack. Stay on Qt/QML + Kirigami and add Kirigami Addons.</b> Every option above can be built on it, and nothing else matches it on Plasma's look, screen-reader support and the tray. Versions checked on 2026-11-06 from the projects' own release pages.</p>
+<table>
+<tr><th></th><th>Qt/QML + Kirigami (+ Addons)</th><th>Slint 1.18</th><th>iced 0.14 / libcosmic</th><th>GTK4 + libadwaita (Relm4)</th><th>Tauri / Dioxus (web view)</th></tr>
+<tr><td>Looks native on Plasma</td><td>Best: Breeze, colour scheme, dark mode, fonts, scaling all automatic</td><td>Partly: its "qt" style draws Breeze controls; custom pieces need hand theming</td><td>No: its own look, or COSMIC's</td><td>No: GNOME look on KDE</td><td>No: everything styled by hand</td></tr>
+<tr><td>Screen readers</td><td>Mature</td><td>Yes (AccessKit)</td><td>iced: none in mainline; libcosmic: partial</td><td>Mature</td><td>Reasonable</td></tr>
+<tr><td>The controls this redesign needs</td><td>Chip, cards, drawer, Forms; Addons adds FormCard delegates, colour picker row, radio selector (segmented). DnD and live previews are easy</td><td>No colour picker, chips or segmented control: hand-made</td><td>Mostly hand-made</td><td>Rows, segmented toggles, colour dialog</td><td>Anything (web)</td></tr>
+<tr><td>Tray icon</td><td>Already working</td><td>Built in since 1.17</td><td>Needs a separate crate</td><td>Needs a separate crate</td><td>Tauri: built in</td></tr>
+<tr><td>Maturity</td><td>KDE's own stack, monthly releases</td><td>Stable, monthly</td><td>Pre-1.0; libcosmic has no releases</td><td>Stable</td><td>Tauri stable; Dioxus 0.8 in alpha</td></tr>
+<tr><td>Licence</td><td>LGPL (Qt, KDE), MIT/Apache (cxx-qt)</td><td>GPLv3 or a free royalty-free licence</td><td>MIT / MPL-2.0</td><td>MIT + LGPL</td><td>MIT/Apache</td></tr>
+<tr><td>Cost of moving ~3,000 lines of QML</td><td>None</td><td>Full rewrite; lose Kirigami</td><td>Full rewrite; lose accessibility</td><td>Full rewrite; non-native look</td><td>Full rewrite; non-native look</td></tr>
+</table>
+<div class="note">
+<b>How it fits in.</b> Kirigami Addons is a plain QML module (<code>import org.kde.kirigamiaddons.formcard</code>). The panel's existing engine finds it on the system import path, so nothing changes in the Rust code. It is already installed here (kirigami-addons 1.15). It becomes a runtime dependency in <code>PKGBUILD</code> and <code>install.sh</code>. KDE's newer <b>Kirigami Forms</b> module (the API System Settings is moving to) is the long-term target once the minimum Frameworks version ships it; FormCard is not deprecated meanwhile.<br>
+<b>Three small components to build ourselves</b> (none exist in any stack): a chip input with autocomplete (already started as the Rules tags), a segmented control, and the drag-to-place screen map (started on Zones).<br>
+<b>If a rewrite were ever wanted,</b> Slint is the only credible alternative, but it would mean hand-making more controls than today for a less native result.
+</div>
+<p style="font-size:13px;color:var(--mute)">Sources: KDAB/cxx-qt v0.10.0 release; invent.kde.org kirigami (v6.31) and kirigami-addons (v1.16); notmart.org "Kirigami Forms and configurations" (April 2026); develop.kde.org Kirigami Addons introduction; slint.dev 1.18 release post and pricing page; iced 0.14.0 release and its open accessibility PRs; pop-os/libcosmic (a11y feature and open text_input issue); Relm4; gtk4-rs, Tauri and Dioxus release pages.</p></div>
+
+<!-- ============================== PLAN ============================== -->
+<h2 id="plan">14. Suggested order of work (if the recommended options are chosen)</h2>
+<table>
+<tr><th>Step</th><th>What</th><th>Why first</th></tr>
+<tr><td>1</td><td>Shared controls: duration chips, font picker, swatch palette, three-state switch with inheritance badge, app picker, sound picker</td><td>Every page reuses them; removes most typing at once</td></tr>
+<tr><td>2</td><td>Look editor A (presets + segmented controls + preview)</td><td>The part you called rudimentary; used in four places</td></tr>
+<tr><td>3</td><td>Rules A (sentence builder) + "Make a rule from this" entry point</td><td>Biggest ease win for the most complex feature</td></tr>
+<tr><td>4</td><td>Navigation A (one grouped sidebar)</td><td>Small change, removes the nested side panel</td></tr>
+<tr><td>5</td><td>Apps A (master–detail, "rules that apply")</td><td>Ties Apps and Rules together</td></tr>
+<tr><td>6</td><td>Zones A (drag on the map), Focus A, Appearance A, Overview A, History A, Settings A</td><td>Each is independent; can ship one per release</td></tr>
+</table>
+
+</main></body>
+</html>
