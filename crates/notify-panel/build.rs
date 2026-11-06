@@ -65,7 +65,7 @@ fn main() {
         portable_qml(Path::new(&std::env::var("OUT_DIR").expect("OUT_DIR")));
     }
     CxxQtBuilder::new_qml_module(
-        QmlModule::new("org.notify.panel").qml_files(["qml/Main.qml", "qml/OverviewPage.qml", "qml/HistoryPage.qml", "qml/RoutingPage.qml", "qml/MatchTags.qml", "qml/RuleData.qml", "qml/RuleList.qml", "qml/AppDetails.qml", "qml/AppHeader.qml", "qml/AppTile.qml", "qml/RulesPage.qml", "qml/RulesSimulator.qml", "qml/ZonesPage.qml", "qml/AppearancePage.qml", "qml/DraftBanners.qml", "qml/ColorField.qml", "qml/AppsPage.qml", "qml/StyleFields.qml", "qml/FocusPage.qml", "qml/GeneralPage.qml", "qml/SystemPage.qml", "qml/SelfTest.qml"]),
+        QmlModule::new("org.notify.panel").qml_files(["qml/Main.qml", "qml/OverviewPage.qml", "qml/HistoryPage.qml", "qml/RoutingPage.qml", "qml/MatchTags.qml", "qml/RuleData.qml", "qml/RuleList.qml", "qml/AppDetails.qml", "qml/AppHeader.qml", "qml/AppTile.qml", "qml/PopupPreview.qml", "qml/ZoneMap.qml", "qml/RulePreview.qml", "qml/MiniScreen.qml", "qml/RulesPage.qml", "qml/RulesSimulator.qml", "qml/ZonesPage.qml", "qml/AppearancePage.qml", "qml/DraftBanners.qml", "qml/ColorField.qml", "qml/AppsPage.qml", "qml/StyleFields.qml", "qml/FocusPage.qml", "qml/GeneralPage.qml", "qml/SystemPage.qml", "qml/SelfTest.qml"]),
     )
     .qt_module("Quick")
     .qt_module("QuickControls2")

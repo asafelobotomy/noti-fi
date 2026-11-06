@@ -176,3 +176,18 @@ impl qobject::PanelModel {
         )
     }
 }
+
+impl qobject::PanelModel {
+    pub fn recent_notifications(self: Pin<&mut Self>) -> QString {
+        let me = self.as_ref();
+        let r = me.rust();
+        let mut rows: Vec<&notify_protocol::HistoryEntry> = r.history_all.iter().collect();
+        rows.sort_by_key(|e| std::cmp::Reverse(e.t));
+        let list: Vec<Value> = rows
+            .into_iter()
+            .take(150)
+            .map(|e| json!({ "app": e.app, "summary": e.summary, "body": e.body, "origin": e.origin, "urgency": e.urgency, "zone": e.zone, "shown": e.shown }))
+            .collect();
+        QString::from(&json!(list).to_string())
+    }
+}

@@ -11,10 +11,30 @@ Kirigami.FormLayout {
     property bool showGroup: true
     property string inheritFrom: "the zone and theme"
     signal edited(string key, string text)
+    // for the live preview at the top: the panel model (for the theme), the zone's accent colour, and the timeout in ms (-1 = the default)
+    property var model
+    property string accent: ""
+    property int timeoutMs: -1
+    property bool showPreview: true
+    readonly property var settingsValues: { try { return JSON.parse(root.model ? root.model.settingsJson : "{}").values || ({}) } catch (e) { return ({}) } }
+    readonly property var base: ({
+        card: settingsValues["theme.card"], border: settingsValues["theme.border"], text: settingsValues["theme.text"], subtext: settingsValues["theme.subtext"],
+        button: settingsValues["theme.button"], opacity: settingsValues["theme.opacity"], fontFamily: settingsValues["theme.fontFamily"],
+        fontSize: settingsValues["theme.fontSize"], width: settingsValues["width"], timerStyle: settingsValues["theme.timerStyle"]
+    })
 
     function val(k) { return root.values && root.values[k] !== undefined ? String(root.values[k]) : "" }
     function triIndex(k) { const v = val(k); return v === "true" ? 1 : v === "false" ? 2 : 0 }
 
+    PopupPreview {
+        visible: root.showPreview
+        Kirigami.FormData.label: "Preview:"
+        Layout.fillWidth: true
+        base: root.base
+        over: root.values
+        accent: root.accent
+        timeoutMs: root.timeoutMs >= 0 ? root.timeoutMs : (Number(root.settingsValues["defaultTimeout"]) || 0)
+    }
     QQC2.ComboBox {
         Kirigami.FormData.label: "Priority:"
         model: ["Inherit (from the app's urgency)", "Low", "Normal", "High (marked)", "Urgent (passes Do Not Disturb and focus)"]

@@ -157,118 +157,7 @@ Kirigami.Page {
                         Accessible.name: "Place the selected zone freely"
                     }
                 }
-                Rectangle {
-                    id: screenBox
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.preferredWidth: Math.min(parent.width - Kirigami.Units.gridUnit * 2, Kirigami.Units.gridUnit * 30)
-                    Layout.preferredHeight: width * 9 / 16
-                    color: Kirigami.Theme.alternateBackgroundColor
-                    border.color: Kirigami.Theme.disabledTextColor
-                    border.width: 2
-                    radius: 6
-                    readonly property real chipW: Math.min(width * 0.3, Math.max(width * 0.18, width * (Number(page.vals.width) || 380) / 1920))
-                    readonly property real chipH: Kirigami.Units.gridUnit * 1.6
-
-                    // the nine places; click one to move the selected zone there
-                    Repeater {
-                        model: page.cornerIds.slice(0, 9)
-                        delegate: Item {
-                            id: cell
-                            required property string modelData
-                            required property int index
-                            width: screenBox.width / 3
-                            height: screenBox.height / 3
-                            x: (index % 3) * width
-                            y: Math.floor(index / 3) * height
-                            Rectangle {
-                                anchors.fill: parent
-                                anchors.margins: 3
-                                radius: 4
-                                color: cellArea.containsMouse && !page.selectedFree ? Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.18) : "transparent"
-                                border.width: 1
-                                border.color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, page.selectedFree ? 0.07 : 0.22)
-                            }
-                            MouseArea {
-                                id: cellArea
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: page.selectedFree ? Qt.ArrowCursor : Qt.PointingHandCursor
-                                onClicked: if (page.selectedId !== "" && !page.selectedFree) page.model.zoneSet(page.selectedId, "anchor", cell.modelData)
-                                Accessible.role: Accessible.Button
-                                Accessible.name: "Move the selected zone to " + page.anchorNames[cell.modelData]
-                            }
-                        }
-                    }
-
-                    // one draggable chip per zone
-                    Repeater {
-                        model: page.zones
-                        delegate: Rectangle {
-                            id: chip
-                            required property var modelData
-                            required property int index
-                            // where it sits among zones sharing its place (so they do not hide each other)
-                            readonly property int slot: { let n = 0; for (let i = 0; i < index; i++) if (page.zones[i].anchor === modelData.anchor) n++; return n }
-                            readonly property bool isFree: modelData.anchor === "free"
-                            readonly property int cellIdx: Math.max(0, page.cornerIds.indexOf(modelData.anchor))
-                            readonly property int col: isFree ? 0 : cellIdx % 3
-                            readonly property int row: isFree ? 0 : Math.floor(cellIdx / 3)
-                            readonly property real cw: screenBox.width / 3
-                            readonly property real ch: screenBox.height / 3
-                            readonly property real offset: slot * (screenBox.chipH + 3)
-                            readonly property real posX: isFree
-                                ? Number(modelData.x) * (screenBox.width - width)
-                                : col * cw + (col === 0 ? 8 : col === 2 ? cw - width - 8 : (cw - width) / 2)
-                            readonly property real posY: isFree
-                                ? (Number(modelData.y) <= 0.5 ? Number(modelData.y) * screenBox.height : Number(modelData.y) * screenBox.height - height)
-                                : (row === 0 ? 8 + offset : row === 2 ? (row + 1) * ch - height - 8 - offset : row * ch + (ch - height) / 2 + offset)
-                            width: screenBox.chipW
-                            height: screenBox.chipH
-                            x: posX
-                            y: posY
-                            z: modelData.id === page.selectedId ? 2 : 1
-                            radius: 4
-                            color: Kirigami.Theme.backgroundColor
-                            border.width: modelData.id === page.selectedId ? 2 : 1
-                            border.color: modelData.accent !== "" ? modelData.accent : Kirigami.Theme.disabledTextColor
-                            QQC2.Label {
-                                anchors.centerIn: parent
-                                text: chip.modelData.label || chip.modelData.id
-                                elide: Text.ElideRight
-                                width: parent.width - 8
-                                horizontalAlignment: Text.AlignHCenter
-                                textFormat: Text.PlainText
-                            }
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.OpenHandCursor
-                                drag.target: chip
-                                drag.minimumX: 0
-                                drag.maximumX: screenBox.width - chip.width
-                                drag.minimumY: 0
-                                drag.maximumY: screenBox.height - chip.height
-                                onPressed: page.selectedId = chip.modelData.id
-                                onReleased: {
-                                    if (drag.active && !chip.isFree) {
-                                        // snapping: the zone lands on the place under the middle of the chip
-                                        page.model.zoneSet(chip.modelData.id, "anchor", page.cellAt((chip.x + chip.width / 2) / screenBox.width, (chip.y + chip.height / 2) / screenBox.height))
-                                    } else if (drag.active) {
-                                        const span = Math.max(1, screenBox.width - chip.width)
-                                        const x = chip.x / span
-                                        // upper half: the zone's top edge; lower half: its bottom edge (popups stack upward from there)
-                                        const upper = chip.y + chip.height / 2 <= screenBox.height / 2
-                                        const y = upper ? chip.y / screenBox.height : (chip.y + chip.height) / screenBox.height
-                                        page.model.zonePlace(chip.modelData.id, x, y)
-                                    }
-                                    // a drag replaces the bindings; put them back so the chip always follows the draft
-                                    chip.x = Qt.binding(() => chip.posX)
-                                    chip.y = Qt.binding(() => chip.posY)
-                                }
-                                Accessible.name: "Zone " + (chip.modelData.label || chip.modelData.id) + ", drag to place it"
-                            }
-                        }
-                    }
-                }
+                ZoneMap { page: page }
 
                 }
                 ColumnLayout {
@@ -330,11 +219,13 @@ Kirigami.Page {
                             }
                             StyleFields {
                                 id: look
-                                visible: false
+                                visible: Qt.application.arguments.indexOf("--open-details") >= 0
                                 Layout.fillWidth: true
                                 showGroup: false
                                 inheritFrom: "the theme"
                                 values: card.modelData.style
+                                model: page.model
+                                accent: card.modelData.accent
                                 onEdited: (key, text) => page.model.zoneStyle(card.modelData.id, key, text)
                             }
                         }

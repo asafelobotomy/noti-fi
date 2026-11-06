@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **Show, don't tell:**
+  - **Live popup preview:** in the look settings for a zone, an app or a rule, a sample popup is drawn with that level's changes (opacity, width, font, time-left style). The timer runs, so a timeout and an indicator can be seen. On the Appearance page the preview now stays in view while you scroll.
+  - **Rules:** "Would have matched N of your last M notifications" with examples from History as you edit the conditions; a mini screen next to "Show in zone" marks where the popups will appear.
+  - **Apps:** a mini screen shows where an app's popups appear.
+  - **Zones:** each zone on the map is drawn as the stack of popups it would show, to scale (width, gap between popups, distance from the screen edge, popups per zone).
+
 ## 0.12.0
 
 - **Routing side panel:** Apps, Zones and Rules are chosen from a side panel on the left (icons only in a narrow window) instead of tabs along the top.

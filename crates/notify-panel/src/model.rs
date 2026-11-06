@@ -116,6 +116,9 @@ pub mod qobject {
         /// Values seen in history and in the app list, per match field, most used first: what the rule editor offers as suggestions.
         #[qinvokable]
         fn rule_suggestions(self: Pin<&mut PanelModel>) -> QString;
+        /// The most recent notifications (newest first): what the rule editor tests a rule against.
+        #[qinvokable]
+        fn recent_notifications(self: Pin<&mut PanelModel>) -> QString;
         /// An empty pattern removes the test for that field.
         #[qinvokable]
         fn rule_set_match(self: Pin<&mut PanelModel>, index: i32, field: &QString, pattern: &QString);

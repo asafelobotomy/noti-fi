@@ -52,6 +52,9 @@ GridLayout {
         Layout.fillWidth: true
         showGroup: true
         inheritFrom: "its zone and the theme"
+        model: root.host.model
+        accent: root.host.zoneAccent(app.zone)
+        timeoutMs: app.timeout !== "" ? Number(app.timeout) : -1
         values: app.appStyle
         onEdited: (key, text) => root.host.model.appSet(app.matchField, app.matchValue, app.name, key, text)
     }
@@ -129,6 +132,9 @@ GridLayout {
                     Layout.fillWidth: true
                     showGroup: true
                     inheritFrom: "the app's settings"
+                    model: root.host.model
+                    accent: root.host.zoneAccent(kindCard.kind.routing.zone || app.zone)
+                    timeoutMs: app.timeout !== "" ? Number(app.timeout) : -1
                     values: kindCard.kind.routing.style
                     onEdited: (key, text) => root.host.model.appSetKind(JSON.stringify(kindCard.kind.matches), app.name + ": " + (kindCard.kind.category || "general") + " " + kindCard.kind.channel, key, text)
                 }

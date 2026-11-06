@@ -55,6 +55,9 @@ Kirigami.Page {
         if (t.silent) page.model.ruleSetSilent(i, true)
     }
 
+    readonly property var zoneObjs: { try { return JSON.parse(page.model ? page.model.settingsJson : "{}").zones || [] } catch (e) { return [] } }
+    function zoneInfo(id) { return page.zoneObjs.find(z => z.id === id) || null }
+    function zoneAccent(id) { const z = page.zoneInfo(id); return z && z.accent ? z.accent : "" }
     readonly property var zones: {
         try { return JSON.parse(page.model ? page.model.draftZonesJson : "[]") } catch (e) { return [] }
     }
@@ -66,7 +69,7 @@ Kirigami.Page {
     RuleData { id: data }
     readonly property var templates: data.templates
     // the look section opens by itself when the rule already changes something
-    property bool lookOpen: false
+    property bool lookOpen: Qt.application.arguments.indexOf("--open-details") >= 0
     property bool simOpen: false
     function hasLook(r) { return !!r && [r.sOpacity, r.sClickThrough, r.sNoFocus, r.sWidth, r.sFontFamily, r.sFontSize, r.sGroup, r.sPriority, r.sMedia, r.sStack, r.sTimer].some(v => v !== undefined && v !== null && v !== "") }
     onCurrentChanged: lookOpen = hasLook(current)
@@ -76,7 +79,11 @@ Kirigami.Page {
 
     // values seen in history and the app list, offered as tags in the match fields
     property var suggest: ({})
-    function refreshSuggestions() { try { page.suggest = JSON.parse(page.model.ruleSuggestions()) } catch (e) { page.suggest = ({}) } }
+    property var recent: []
+    function refreshSuggestions() {
+        try { page.suggest = JSON.parse(page.model.ruleSuggestions()) } catch (e) { page.suggest = ({}) }
+        try { page.recent = JSON.parse(page.model.recentNotifications()) } catch (e) { page.recent = [] }
+    }
     Connections { target: page.model; function onAppsJsonChanged() { page.refreshSuggestions() } function onHistoryTotalChanged() { page.refreshSuggestions() } }
 
     readonly property var sim: {
@@ -273,15 +280,29 @@ Kirigami.Page {
                             text: "With no conditions the rule matches every notification."
                         }
 
+                        RulePreview { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing; rule: page.current; recent: page.recent }
+
                         Kirigami.Heading { Layout.topMargin: Kirigami.Units.largeSpacing; level: 3; text: "Then" }
                         QQC2.Label { text: "Show in zone"; font.bold: true }
-                        QQC2.ComboBox {
+                        RowLayout {
+                          Layout.fillWidth: true
+                          spacing: Kirigami.Units.largeSpacing
+                          MiniScreen {
+                            readonly property var zn: page.current ? page.zoneInfo(page.current.zone) : null
+                            dim: zn === null
+                            anchorName: zn ? zn.anchor : "top-right"
+                            fx: zn ? Number(zn.x) : 0.5; fy: zn ? Number(zn.y) : 0.1
+                            accent: zn && zn.accent ? zn.accent : ""
+                            Accessible.name: "Where this rule puts popups"
+                          }
+                          QQC2.ComboBox {
                             id: zoneBox
                             Layout.fillWidth: true
                             model: page.zoneChoices
                             currentIndex: page.current && page.current.zone !== "" ? Math.max(0, page.zoneChoices.indexOf(page.current.zone)) : 0
                             onActivated: index => page.model.ruleSetZone(page.selected, index === 0 ? "" : page.zoneChoices[index])
                             Accessible.name: "Show in zone"
+                          }
                         }
                         QQC2.Label { Layout.topMargin: Kirigami.Units.smallSpacing; text: "Timeout (ms)"; font.bold: true }
                         QQC2.TextField {
@@ -327,6 +348,9 @@ Kirigami.Page {
                         Layout.rightMargin: Kirigami.Units.largeSpacing
                         enabled: page.current !== null
                         inheritFrom: "later rules, the zone and the theme"
+                        model: page.model
+                        accent: page.zoneAccent(page.current ? page.current.zone : "")
+                        timeoutMs: page.current && page.current.timeout !== "" ? Number(page.current.timeout) : -1
                         values: page.current ? ({ opacity: page.current.sOpacity, clickThrough: page.current.sClickThrough, noFocus: page.current.sNoFocus, width: page.current.sWidth,
                                                   fontFamily: page.current.sFontFamily, fontSize: page.current.sFontSize, group: page.current.sGroup,
                                                   priority: page.current.sPriority, media: page.current.sMedia, stack: page.current.sStack, timerStyle: page.current.sTimer }) : ({})

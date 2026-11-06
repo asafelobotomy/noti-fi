@@ -47,6 +47,9 @@ Kirigami.Page {
         return null
     }
     readonly property var zoneNames: { try { return JSON.parse(page.model ? page.model.draftZonesJson : "[]") } catch (e) { return [] } }
+    readonly property var zoneObjs: { try { return JSON.parse(page.model ? page.model.settingsJson : "{}").zones || [] } catch (e) { return [] } }
+    function zoneInfo(id) { return page.zoneObjs.find(z => z.id === id) || null }
+    function zoneAccent(id) { const z = page.zoneInfo(id); return z && z.accent ? z.accent : "" }
     readonly property var zoneChoices: ["(by rules)"].concat(page.zoneNames)
 
     function ago(ms) {

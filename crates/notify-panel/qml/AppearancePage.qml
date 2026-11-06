@@ -63,6 +63,19 @@ Kirigami.Page {
         spacing: 0
         DraftBanners { id: banners; Layout.fillWidth: true; model: page.model }
 
+        // stays in view while editing: a sample popup drawn with the draft theme, with the time-left indicator running
+        PopupPreview {
+            Layout.margins: Kirigami.Units.largeSpacing
+            Layout.alignment: Qt.AlignHCenter
+            Layout.preferredWidth: Math.min(Kirigami.Units.gridUnit * 24, parent.width - Kirigami.Units.gridUnit * 2)
+            base: ({ card: page.vals["theme.card"], border: page.vals["theme.border"], text: page.vals["theme.text"], subtext: page.vals["theme.subtext"],
+                     button: page.vals["theme.button"], opacity: page.vals["theme.opacity"], fontFamily: page.vals["theme.fontFamily"],
+                     fontSize: page.vals["theme.fontSize"], width: page.vals["width"], timerStyle: page.vals["theme.timerStyle"] })
+            timeoutMs: Number(page.vals["defaultTimeout"]) || 0
+        }
+
+        Kirigami.Separator { Layout.fillWidth: true }
+
         QQC2.ScrollView {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -81,32 +94,6 @@ Kirigami.Page {
                 }
 
                 // a sample card drawn with the draft colours, so changes are visible before anything is saved
-                Rectangle {
-                    Layout.margins: Kirigami.Units.largeSpacing
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.preferredWidth: Kirigami.Units.gridUnit * 20
-                    Layout.preferredHeight: sample.implicitHeight + Kirigami.Units.largeSpacing * 2
-                    radius: 8
-                    color: { const c = page.colour("theme.card"); return c === "transparent" ? c : Qt.rgba(Qt.color(c).r, Qt.color(c).g, Qt.color(c).b, Number(page.vals["theme.opacity"] !== undefined ? page.vals["theme.opacity"] : 1)) }
-                    border.width: 1
-                    border.color: page.colour("theme.border")
-                    ColumnLayout {
-                        id: sample
-                        anchors.fill: parent
-                        anchors.margins: Kirigami.Units.largeSpacing
-                        spacing: 2
-                        QQC2.Label { text: "Sample notification"; font.bold: true; color: page.colour("theme.text"); font.family: page.vals["theme.fontFamily"] || ""; font.pixelSize: (Number(page.vals["theme.fontSize"]) || 12) + 2 }
-                        QQC2.Label { text: "This is how a popup looks with these colours."; wrapMode: Text.Wrap; Layout.fillWidth: true; color: page.colour("theme.subtext"); font.family: page.vals["theme.fontFamily"] || ""; font.pixelSize: Number(page.vals["theme.fontSize"]) || 12 }
-                        Rectangle {
-                            Layout.topMargin: Kirigami.Units.smallSpacing
-                            implicitWidth: replyLabel.implicitWidth + 16
-                            implicitHeight: replyLabel.implicitHeight + 8
-                            radius: 4
-                            color: page.colour("theme.button")
-                            QQC2.Label { id: replyLabel; anchors.centerIn: parent; text: "Reply"; color: page.colour("theme.text") }
-                        }
-                    }
-                }
 
                 Kirigami.FormLayout {
                     Layout.fillWidth: true
