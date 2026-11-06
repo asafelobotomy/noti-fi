@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.13.0
 
 - **Show, don't tell:**
   - **Live popup preview:** in the look settings for a zone, an app or a rule, a sample popup is drawn with that level's changes (opacity, width, font, time-left style). The timer runs, so a timeout and an indicator can be seen. On the Appearance page the preview now stays in view while you scroll.
