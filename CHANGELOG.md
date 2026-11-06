@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.15.0
 
 - **Look settings are part of the page:** the "Change how it looks and behaves…" buttons are gone; the look editor sits directly in a rule, an app, a notification type and a zone, under "How it looks and behaves".
 - **Preview at the top:** the rule tester is opened with a **Preview** button at the top of the rule editor, and its result shows there, above the rule.
