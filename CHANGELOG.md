@@ -5,6 +5,9 @@
 - **Look settings are part of the page:** the "Change how it looks and behaves…" buttons are gone; the look editor sits directly in a rule, an app, a notification type and a zone, under "How it looks and behaves".
 - **Preview at the top:** the rule tester is opened with a **Preview** button at the top of the rule editor, and its result shows there, above the rule.
 - Fixed a warning: the colour picker's list of swatches clashed with a built-in Qt property.
+- **Rule editor order:** name, then how it looks and behaves (so the preview is in view first), then "When a notification matches" and "Then". In a full-screen window "When" and "Then" sit side by side and the rule list takes a third of the width.
+- **One sidebar, grouped:** Overview, History · Appearance, Focus modes · Apps, Zones, Rules · General, System. Apps, Zones and Rules are entries of their own (the second side panel is gone). In a medium window the sidebar shows icons only; in a small one it hides behind the menu button.
+- Fixed: a zone drop-down could show "(leave to later rules)" or the wrong zone after its list refreshed.
 
 ## 0.14.0
 

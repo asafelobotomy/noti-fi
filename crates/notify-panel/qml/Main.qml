@@ -9,7 +9,7 @@ Kirigami.ApplicationWindow {
     title: "noti-fi"
     // started with --background (start at login): stay in the system tray until asked
     visible: !root.startHidden
-    width: Kirigami.Units.gridUnit * (args.indexOf("--wide") >= 0 ? 100 : 38)   // --wide: a screenshot hook for a big window
+    width: Kirigami.Units.gridUnit * Number(argValue("--width", args.indexOf("--wide") >= 0 ? "100" : "38"))   // --wide / --width=N (grid units): screenshot hooks
     height: Kirigami.Units.gridUnit * (args.indexOf("--tall") >= 0 ? 80 : 34)   // --tall: a screenshot hook that shows a whole page
     minimumWidth: Kirigami.Units.gridUnit * 22
     minimumHeight: Kirigami.Units.gridUnit * 18
@@ -168,50 +168,23 @@ Kirigami.ApplicationWindow {
         isMenu: false
         collapsible: true
         collapseButtonVisible: true
-        modal: false
+        // a small window hides the sidebar behind a button; a medium one shows icons only; a big one shows names too
+        modal: root.width < Kirigami.Units.gridUnit * 30
+        collapsed: !modal && root.width < Kirigami.Units.gridUnit * 48
+        // grouped: now · how popups look · where they go · the app itself (a separator between groups)
         actions: [
-            Kirigami.Action {
-                text: "Overview"
-                icon.name: "view-list-details"
-                checked: root.currentPage === "overview"
-                onTriggered: root.go("overview")
-            },
-            Kirigami.Action {
-                text: "History"
-                icon.name: "view-history"
-                checked: root.currentPage === "history"
-                onTriggered: root.go("history")
-            },
-            Kirigami.Action {
-                text: "General"
-                icon.name: "configure"
-                checked: root.currentPage === "general"
-                onTriggered: root.go("general")
-            },
-            Kirigami.Action {
-                text: "System"
-                icon.name: "system-run"
-                checked: root.currentPage === "system"
-                onTriggered: root.go("system")
-            },
-            Kirigami.Action {
-                text: "Focus modes"
-                icon.name: "face-glasses"
-                checked: root.currentPage === "focus"
-                onTriggered: root.go("focus")
-            },
-            Kirigami.Action {
-                text: "Routing"
-                icon.name: "view-filter"
-                checked: root.currentPage === "routing"
-                onTriggered: root.go(root.routingTab)
-            },
-            Kirigami.Action {
-                text: "Appearance"
-                icon.name: "preferences-desktop-theme"
-                checked: root.currentPage === "appearance"
-                onTriggered: root.go("appearance")
-            }
+            Kirigami.Action { text: "Overview"; icon.name: "view-list-details"; checked: root.currentPage === "overview"; onTriggered: root.go("overview") },
+            Kirigami.Action { text: "History"; icon.name: "view-history"; checked: root.currentPage === "history"; onTriggered: root.go("history") },
+            Kirigami.Action { separator: true },
+            Kirigami.Action { text: "Appearance"; icon.name: "preferences-desktop-theme"; checked: root.currentPage === "appearance"; onTriggered: root.go("appearance") },
+            Kirigami.Action { text: "Focus modes"; icon.name: "face-glasses"; checked: root.currentPage === "focus"; onTriggered: root.go("focus") },
+            Kirigami.Action { separator: true },
+            Kirigami.Action { text: "Apps"; icon.name: "preferences-desktop-notification-bell"; checked: root.currentPage === "routing" && root.routingTab === "apps"; onTriggered: root.go("apps") },
+            Kirigami.Action { text: "Zones"; icon.name: "view-grid"; checked: root.currentPage === "routing" && root.routingTab === "zones"; onTriggered: root.go("zones") },
+            Kirigami.Action { text: "Rules"; icon.name: "view-filter"; checked: root.currentPage === "routing" && root.routingTab === "rules"; onTriggered: root.go("rules") },
+            Kirigami.Action { separator: true },
+            Kirigami.Action { text: "General"; icon.name: "configure"; checked: root.currentPage === "general"; onTriggered: root.go("general") },
+            Kirigami.Action { text: "System"; icon.name: "system-run"; checked: root.currentPage === "system"; onTriggered: root.go("system") }
         ]
     }
 

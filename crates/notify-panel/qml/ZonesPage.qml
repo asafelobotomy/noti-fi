@@ -243,6 +243,7 @@ Kirigami.Page {
                     QQC2.ComboBox {
                         Kirigami.FormData.label: "Default zone:"
                         model: page.zones.map(z => z.label || z.id)
+                        displayText: { const z = page.zones.find(x => x.id === page.vals.defaultZone); return z ? (z.label || z.id) : "" }
                         currentIndex: Math.max(0, page.zones.findIndex(z => z.id === page.vals.defaultZone))
                         onActivated: index => page.model.settingSet("defaultZone", page.zones[index].id)
                         Accessible.name: "Default zone"

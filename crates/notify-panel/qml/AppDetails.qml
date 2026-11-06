@@ -122,6 +122,7 @@ ColumnLayout {
                     QQC2.ComboBox {
                         Layout.preferredWidth: Kirigami.Units.gridUnit * 9
                         model: root.host.zoneChoiceLabels
+                        displayText: kindCard.kind.routing.zone !== "" ? root.host.zoneLabel(kindCard.kind.routing.zone) : root.host.zoneChoiceLabels[0]
                         currentIndex: kindCard.kind.routing.zone === "" ? 0 : Math.max(0, root.host.zoneChoices.indexOf(kindCard.kind.routing.zone))
                         onActivated: i => root.host.model.appSetKind(JSON.stringify(kindCard.kind.matches), app.name + ": " + (kindCard.kind.category || "general") + " " + kindCard.kind.channel, "zone", i === 0 ? "" : root.host.zoneChoices[i])
                         Accessible.name: "Zone for this kind"

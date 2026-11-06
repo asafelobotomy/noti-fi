@@ -189,6 +189,8 @@ Kirigami.Page {
                 page: page
                 rules: rules
                 columns: parent.columns === 3 ? 2 : 1
+                Layout.preferredWidth: parent.columns === 3 ? 1 : -1
+                Layout.maximumWidth: parent.columns === 3 ? Kirigami.Units.gridUnit * 30 : -1
             }
             Kirigami.Separator { Layout.fillHeight: true; visible: parent.columns === 3 }
 
@@ -196,7 +198,7 @@ Kirigami.Page {
             QQC2.ScrollView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                Layout.preferredWidth: 1
+                Layout.preferredWidth: 2
                 contentWidth: availableWidth
 
                 ColumnLayout {
@@ -230,8 +232,8 @@ Kirigami.Page {
                     }
                     Kirigami.Separator { visible: page.simOpen; Layout.fillWidth: true }
 
-                    // ---- the selected rule
-                    // the selected rule: every field has its label above it, so the editor fits any pane width
+                    // ---- the selected rule: its name, then how it looks (first, so the result is in view), then when it applies and what it does.
+                    // Every field has its label above it, so the editor fits any pane; in a wide pane "When" and "Then" sit side by side.
                     ColumnLayout {
                         Layout.fillWidth: true
                         Layout.preferredWidth: 1
@@ -249,104 +251,6 @@ Kirigami.Page {
                             Accessible.name: "Rule name"
                         }
 
-                        Kirigami.Heading { Layout.topMargin: Kirigami.Units.largeSpacing; level: 3; text: "When a notification matches" }
-                        QQC2.Label {
-                            Layout.fillWidth: true
-                            wrapMode: Text.Wrap
-                            opacity: 0.7
-                            font: Kirigami.Theme.smallFont
-                            text: "Every condition must match; any one tag within a condition is enough. Pick from what you have received or type your own and press Enter."
-                        }
-                        Repeater {
-                            model: data.matchFields
-                            delegate: ColumnLayout {
-                                id: cond
-                                required property var modelData
-                                readonly property bool shown: field.value !== "" || page.opened[modelData.field] === true
-                                visible: shown
-                                Layout.fillWidth: true
-                                spacing: 2
-                                QQC2.Label { text: cond.modelData.label.replace(":", ""); font.bold: true }
-                                MatchTags {
-                                    id: field
-                                    Layout.fillWidth: true
-                                    label: cond.modelData.label
-                                    kind: cond.modelData.kind
-                                    placeholder: cond.modelData.hint
-                                    suggestions: page.suggest[cond.modelData.field] || []
-                                    value: page.current ? page.current[cond.modelData.role] : ""
-                                    onEdited: text => page.model.ruleSetMatch(page.selected, cond.modelData.field, text)
-                                }
-                            }
-                        }
-                        QQC2.Button {
-                            visible: page.hiddenFields.length > 0
-                            text: page.hiddenFields.length === data.matchFields.length ? "Add a condition…" : "Add another condition…"
-                            icon.name: "list-add"
-                            onClicked: fieldMenu.popup()
-                            QQC2.Menu {
-                                id: fieldMenu
-                                Repeater {
-                                    model: page.hiddenFields
-                                    delegate: QQC2.MenuItem {
-                                        required property var modelData
-                                        text: modelData.menu
-                                        onTriggered: { const o = Object.assign({}, page.opened); o[modelData.field] = true; page.opened = o }
-                                    }
-                                }
-                            }
-                        }
-                        QQC2.Label {
-                            Layout.fillWidth: true
-                            visible: page.hiddenFields.length === data.matchFields.length
-                            wrapMode: Text.Wrap
-                            opacity: 0.7
-                            font: Kirigami.Theme.smallFont
-                            text: "With no conditions the rule matches every notification."
-                        }
-
-                        RulePreview { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing; rule: page.current; recent: page.recent }
-
-                        Kirigami.Heading { Layout.topMargin: Kirigami.Units.largeSpacing; level: 3; text: "Then" }
-                        QQC2.Label { text: "Show in zone"; font.bold: true }
-                        RowLayout {
-                          Layout.fillWidth: true
-                          spacing: Kirigami.Units.largeSpacing
-                          MiniScreen {
-                            readonly property var zn: page.current ? page.zoneInfo(page.current.zone) : null
-                            dim: zn === null
-                            anchorName: zn ? zn.anchor : "top-right"
-                            fx: zn ? Number(zn.x) : 0.5; fy: zn ? Number(zn.y) : 0.1
-                            accent: zn && zn.accent ? zn.accent : ""
-                            Accessible.name: "Where this rule puts popups"
-                          }
-                          QQC2.ComboBox {
-                            id: zoneBox
-                            Layout.fillWidth: true
-                            model: page.zoneChoiceLabels
-                            currentIndex: page.current && page.current.zone !== "" ? Math.max(0, page.zoneChoices.indexOf(page.current.zone)) : 0
-                            onActivated: index => page.model.ruleSetZone(page.selected, index === 0 ? "" : page.zoneChoices[index])
-                            Accessible.name: "Show in zone"
-                          }
-                        }
-                        QQC2.Label { Layout.topMargin: Kirigami.Units.smallSpacing; text: "Stays on screen"; font.bold: true }
-                        DurationChips {
-                            Layout.fillWidth: true
-                            unsetLabel: "Not set here"
-                            unsetTip: "Later rules, the app or the default decide"
-                            value: page.current ? page.current.timeout : ""
-                            onEdited: text => page.model.ruleSetTimeout(page.selected, text)
-                        }
-                        QQC2.CheckBox {
-                            Layout.topMargin: Kirigami.Units.smallSpacing
-                            text: "Never show it, keep it in history only"
-                            checked: page.current ? page.current.silent : false
-                            onToggled: {
-                                page.model.ruleSetSilent(page.selected, checked)
-                                checked = Qt.binding(() => page.current ? page.current.silent : false)
-                            }
-                            Accessible.name: "Never show, keep in history only"
-                        }
                     }
 
                     Kirigami.Heading { Layout.leftMargin: Kirigami.Units.largeSpacing; level: 3; text: "How it looks and behaves" }
@@ -365,6 +269,126 @@ Kirigami.Page {
                                                   fontFamily: page.current.sFontFamily, fontSize: page.current.sFontSize, group: page.current.sGroup,
                                                   priority: page.current.sPriority, media: page.current.sMedia, stack: page.current.sStack, timerStyle: page.current.sTimer }) : ({})
                         onEdited: (key, text) => page.model.ruleSetStyle(page.selected, key, text)
+                    }
+
+                    GridLayout {
+                        Layout.fillWidth: true
+                        Layout.margins: Kirigami.Units.largeSpacing
+                        enabled: page.current !== null
+                        columns: parent.width > Kirigami.Units.gridUnit * 46 ? 2 : 1   // from the pane, not its own width (no loop)
+                        columnSpacing: Kirigami.Units.largeSpacing * 2
+                        rowSpacing: Kirigami.Units.largeSpacing
+                        ColumnLayout {
+                            Layout.alignment: Qt.AlignTop
+                            Layout.fillWidth: true
+                            Layout.preferredWidth: 1
+                            spacing: Kirigami.Units.smallSpacing
+                            Kirigami.Heading { level: 3; text: "When a notification matches" }
+                            QQC2.Label {
+                                Layout.fillWidth: true
+                                wrapMode: Text.Wrap
+                                opacity: 0.7
+                                font: Kirigami.Theme.smallFont
+                                text: "Every condition must match; any one tag within a condition is enough. Pick from what you have received or type your own and press Enter."
+                            }
+                            Repeater {
+                                model: data.matchFields
+                                delegate: ColumnLayout {
+                                    id: cond
+                                    required property var modelData
+                                    readonly property bool shown: field.value !== "" || page.opened[modelData.field] === true
+                                    visible: shown
+                                    Layout.fillWidth: true
+                                    spacing: 2
+                                    QQC2.Label { text: cond.modelData.label.replace(":", ""); font.bold: true }
+                                    MatchTags {
+                                        id: field
+                                        Layout.fillWidth: true
+                                        label: cond.modelData.label
+                                        kind: cond.modelData.kind
+                                        placeholder: cond.modelData.hint
+                                        suggestions: page.suggest[cond.modelData.field] || []
+                                        value: page.current ? page.current[cond.modelData.role] : ""
+                                        onEdited: text => page.model.ruleSetMatch(page.selected, cond.modelData.field, text)
+                                    }
+                                }
+                            }
+                            QQC2.Button {
+                                visible: page.hiddenFields.length > 0
+                                text: page.hiddenFields.length === data.matchFields.length ? "Add a condition…" : "Add another condition…"
+                                icon.name: "list-add"
+                                onClicked: fieldMenu.popup()
+                                QQC2.Menu {
+                                    id: fieldMenu
+                                    Repeater {
+                                        model: page.hiddenFields
+                                        delegate: QQC2.MenuItem {
+                                            required property var modelData
+                                            text: modelData.menu
+                                            onTriggered: { const o = Object.assign({}, page.opened); o[modelData.field] = true; page.opened = o }
+                                        }
+                                    }
+                                }
+                            }
+                            QQC2.Label {
+                                Layout.fillWidth: true
+                                visible: page.hiddenFields.length === data.matchFields.length
+                                wrapMode: Text.Wrap
+                                opacity: 0.7
+                                font: Kirigami.Theme.smallFont
+                                text: "With no conditions the rule matches every notification."
+                            }
+
+                            RulePreview { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing; rule: page.current; recent: page.recent }
+                        }
+                        ColumnLayout {
+                            Layout.alignment: Qt.AlignTop
+                            Layout.fillWidth: true
+                            Layout.preferredWidth: 1
+                            spacing: Kirigami.Units.smallSpacing
+                            Kirigami.Heading { level: 3; text: "Then" }
+                            QQC2.Label { text: "Show in zone"; font.bold: true }
+                            RowLayout {
+                              Layout.fillWidth: true
+                              spacing: Kirigami.Units.largeSpacing
+                              MiniScreen {
+                                readonly property var zn: page.current ? page.zoneInfo(page.current.zone) : null
+                                dim: zn === null
+                                anchorName: zn ? zn.anchor : "top-right"
+                                fx: zn ? Number(zn.x) : 0.5; fy: zn ? Number(zn.y) : 0.1
+                                accent: zn && zn.accent ? zn.accent : ""
+                                Accessible.name: "Where this rule puts popups"
+                              }
+                              QQC2.ComboBox {
+                                id: zoneBox
+                                Layout.fillWidth: true
+                                model: page.zoneChoiceLabels
+                            // shown from the rule itself: a list refresh can reset a combo box's index
+                            displayText: page.current && page.current.zone !== "" ? page.zoneLabel(page.current.zone) : page.zoneChoiceLabels[0]
+                                currentIndex: page.current && page.current.zone !== "" ? Math.max(0, page.zoneChoices.indexOf(page.current.zone)) : 0
+                                onActivated: index => page.model.ruleSetZone(page.selected, index === 0 ? "" : page.zoneChoices[index])
+                                Accessible.name: "Show in zone"
+                              }
+                            }
+                            QQC2.Label { Layout.topMargin: Kirigami.Units.smallSpacing; text: "Stays on screen"; font.bold: true }
+                            DurationChips {
+                                Layout.fillWidth: true
+                                unsetLabel: "Not set here"
+                                unsetTip: "Later rules, the app or the default decide"
+                                value: page.current ? page.current.timeout : ""
+                                onEdited: text => page.model.ruleSetTimeout(page.selected, text)
+                            }
+                            QQC2.CheckBox {
+                                Layout.topMargin: Kirigami.Units.smallSpacing
+                                text: "Never show it, keep it in history only"
+                                checked: page.current ? page.current.silent : false
+                                onToggled: {
+                                    page.model.ruleSetSilent(page.selected, checked)
+                                    checked = Qt.binding(() => page.current ? page.current.silent : false)
+                                }
+                                Accessible.name: "Never show, keep in history only"
+                            }
+                        }
                     }
 
                 }
