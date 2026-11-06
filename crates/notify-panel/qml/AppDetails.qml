@@ -8,7 +8,6 @@ ColumnLayout {
     id: root
     property var host
     property var app          // the app as the list rows hold it (name, matchField, timeout, kinds, ...)
-    property bool lookOpen: root.host.openAll
     property bool kindsOpen: root.host.openAll
     spacing: Kirigami.Units.largeSpacing
 
@@ -54,16 +53,8 @@ ColumnLayout {
         }
     }
 
-    QQC2.Button {
-        Layout.alignment: Qt.AlignLeft
-        flat: true
-        icon.name: root.lookOpen ? "go-up" : "go-down"
-        text: root.lookOpen ? "Hide look and behavior" : "Change how its popups look and behave…"
-        onClicked: root.lookOpen = !root.lookOpen
-        Accessible.name: "Look and behavior of " + app.name
-    }
+    Kirigami.Heading { level: 4; text: "How its popups look and behave" }
     LookEditor {
-        visible: root.lookOpen
         Layout.fillWidth: true
         showGroup: true
         inheritFrom: "its zone and the theme"
@@ -98,7 +89,6 @@ ColumnLayout {
             id: kindCard
             required property int index
             readonly property var kind: app.kinds[index] !== undefined ? app.kinds[index] : ({ routing: { muted: false, zone: "", style: {} }, caps: [], category: "", channel: "app", count: 0, matches: [], key: "" })
-            property bool lookOpen: root.host.openAll
             Layout.fillWidth: true
             contentItem: ColumnLayout {
                 spacing: Kirigami.Units.smallSpacing
@@ -137,14 +127,8 @@ ColumnLayout {
                         Accessible.name: "Zone for this kind"
                     }
                     Item { Layout.fillWidth: true }
-                    QQC2.Button {
-                        icon.name: kindCard.lookOpen ? "go-up" : "go-down"
-                        text: kindCard.lookOpen ? "Hide look" : "Look, group…"
-                        onClicked: kindCard.lookOpen = !kindCard.lookOpen
-                    }
                 }
                 LookEditor {
-                    visible: kindCard.lookOpen
                     Layout.fillWidth: true
                     showGroup: true
                     inheritFrom: "the app's settings"

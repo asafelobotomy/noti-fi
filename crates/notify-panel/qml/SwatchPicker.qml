@@ -15,8 +15,8 @@ RowLayout {
     spacing: 4
 
     function hex(c) { const h = v => ("0" + Math.round(v * 255).toString(16)).slice(-2); return "#" + h(c.r) + h(c.g) + h(c.b) }
-    readonly property var palette: [hex(Kirigami.Theme.highlightColor), "#60a5fa", "#22c55e", "#fbbf24", "#f97316", "#ef4444", "#ec4899", "#c084fc", "#14b8a6", "#94a3b8"]
-    readonly property bool custom: root.value !== "" && root.palette.indexOf(root.value.toLowerCase()) < 0
+    readonly property var swatches: [hex(Kirigami.Theme.highlightColor), "#60a5fa", "#22c55e", "#fbbf24", "#f97316", "#ef4444", "#ec4899", "#c084fc", "#14b8a6", "#94a3b8"]
+    readonly property bool custom: root.value !== "" && root.swatches.indexOf(root.value.toLowerCase()) < 0
 
     QQC2.ToolButton {
         visible: root.allowUnset
@@ -26,7 +26,7 @@ RowLayout {
         onToggled: { root.edited(""); checked = Qt.binding(() => root.value === "") }
     }
     Repeater {
-        model: root.palette
+        model: root.swatches
         delegate: Rectangle {
             id: sw
             required property string modelData

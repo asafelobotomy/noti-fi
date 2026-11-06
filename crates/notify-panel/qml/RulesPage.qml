@@ -70,11 +70,7 @@ Kirigami.Page {
     }
     RuleData { id: data }
     readonly property var templates: data.templates
-    // the look section opens by itself when the rule already changes something
-    property bool lookOpen: Qt.application.arguments.indexOf("--open-details") >= 0
     property bool simOpen: false
-    function hasLook(r) { return !!r && [r.sOpacity, r.sClickThrough, r.sNoFocus, r.sWidth, r.sFontFamily, r.sFontSize, r.sGroup, r.sPriority, r.sMedia, r.sStack, r.sTimer].some(v => v !== undefined && v !== null && v !== "") }
-    onCurrentChanged: lookOpen = hasLook(current)
     property var opened: ({})                // conditions added by hand for the selected rule
     onSelectedChanged: opened = ({})
     readonly property var hiddenFields: data.matchFields.filter(f => !(page.current && page.current[f.role] !== "") && page.opened[f.field] !== true)
@@ -207,6 +203,33 @@ Kirigami.Page {
                     width: parent.width
                     spacing: Kirigami.Units.largeSpacing
 
+                    // ---- try the rules on a sample notification: at the top, so the result is in view while editing
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: Kirigami.Units.largeSpacing
+                        Layout.rightMargin: Kirigami.Units.largeSpacing
+                        Layout.topMargin: Kirigami.Units.smallSpacing
+                        QQC2.Label { Layout.fillWidth: true; opacity: 0.7; font: Kirigami.Theme.smallFont; wrapMode: Text.Wrap; text: page.simOpen ? "What every rule would do with this sample notification:" : "" }
+                        QQC2.Button {
+                            icon.name: "view-preview"
+                            text: "Preview"
+                            checkable: true
+                            checked: page.simOpen
+                            onToggled: page.simOpen = checked
+                            QQC2.ToolTip.visible: hovered
+                            QQC2.ToolTip.text: "Try the rules with a sample notification"
+                            Accessible.name: "Preview: try the rules with a sample notification"
+                        }
+                    }
+                    RulesSimulator {
+                        visible: page.simOpen
+                        Layout.fillWidth: true
+                        Layout.margins: Kirigami.Units.largeSpacing
+                        model: page.model
+                        result: page.sim
+                    }
+                    Kirigami.Separator { visible: page.simOpen; Layout.fillWidth: true }
+
                     // ---- the selected rule
                     // the selected rule: every field has its label above it, so the editor fits any pane width
                     ColumnLayout {
@@ -326,15 +349,8 @@ Kirigami.Page {
                         }
                     }
 
-                    QQC2.Button {
-                        Layout.leftMargin: Kirigami.Units.largeSpacing
-                        icon.name: page.lookOpen ? "go-up" : "go-down"
-                        text: page.lookOpen ? "Hide look and behavior" : "Change how it looks and behaves…"
-                        onClicked: page.lookOpen = !page.lookOpen
-                        Accessible.name: "Look and behavior of this rule"
-                    }
+                    Kirigami.Heading { Layout.leftMargin: Kirigami.Units.largeSpacing; level: 3; text: "How it looks and behaves" }
                     LookEditor {
-                        visible: page.lookOpen
                         Layout.fillWidth: true
                         Layout.leftMargin: Kirigami.Units.largeSpacing
                         Layout.rightMargin: Kirigami.Units.largeSpacing
@@ -351,23 +367,6 @@ Kirigami.Page {
                         onEdited: (key, text) => page.model.ruleSetStyle(page.selected, key, text)
                     }
 
-                    Kirigami.Separator { Layout.fillWidth: true }
-
-                    // ---- the simulator
-                    QQC2.Button {
-                        Layout.leftMargin: Kirigami.Units.largeSpacing
-                        icon.name: "system-search"
-                        text: page.simOpen ? "Hide the tester" : "Test the rules with a sample notification…"
-                        onClicked: page.simOpen = !page.simOpen
-                        Accessible.name: "Test the rules"
-                    }
-                    RulesSimulator {
-                        visible: page.simOpen
-                        Layout.fillWidth: true
-                        Layout.margins: Kirigami.Units.largeSpacing
-                        model: page.model
-                        result: page.sim
-                    }
                 }
             }
         }

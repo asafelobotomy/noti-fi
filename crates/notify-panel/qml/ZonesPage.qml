@@ -211,15 +211,9 @@ Kirigami.Page {
                                     }
                                 }
                             }
-                            QQC2.Button {
-                                Layout.alignment: Qt.AlignHCenter
-                                text: look.visible ? "Hide look and behavior" : "Change how this zone's popups look…"
-                                icon.name: look.visible ? "go-up" : "go-down"
-                                onClicked: look.visible = !look.visible
-                            }
+                            Kirigami.Heading { level: 4; text: "How this zone's popups look and behave" }
                             LookEditor {
                                 id: look
-                                visible: Qt.application.arguments.indexOf("--open-details") >= 0
                                 Layout.fillWidth: true
                                 showGroup: false
                                 inheritFrom: "the theme"
