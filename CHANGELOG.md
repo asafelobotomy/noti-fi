@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.14.0
 
 Release 1 of the panel redesign (see `docs/design/ui-redesign-combined.html`): choose, don't type.
 
