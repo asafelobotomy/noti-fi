@@ -20,7 +20,7 @@ anyhow.workspace = true
 clap = { version = "4", features = ["derive"] }
 regress = "0.12"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
-rusqlite = { version = "0.37", features = ["bundled"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
 
 [dev-dependencies]
 notify-testkit = { path = "../notify-testkit" }
