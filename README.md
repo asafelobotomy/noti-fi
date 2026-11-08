@@ -57,7 +57,7 @@ The `release` workflow builds on Arch, packages the archive with `packaging/buil
 | `crates/notify-panel-core` | the panel's Qt-free logic: connection worker (reconnects, coalesces events), view data, history filtering |
 | `crates/notify-panel` | the control panel app (Rust + cxx-qt + Kirigami): Overview (with the focus switch), History, Appearance, Focus modes, Apps, Groups, Rules, General and System; `cargo run -p notify-panel` |
 | `crates/notify-panel-smoke` | headless tests of the real panel app (asserts what the UI displays) |
-| `notifd/*.qml` | the daemon (QML on Quickshell): `shell.qml` (state, history, control socket), `Route.qml` (rules), `Validate.qml` (config checks), `ZoneWindows.qml`/`Popup*.qml` (popups), `Transfers.qml`/`TransferChart.qml` (progress graphs), `Osd.qml`; `Media.qml` (audio/video players) needs the optional `qt6-multimedia` |
+| `notifd/*.qml` | the daemon (QML on Quickshell): `shell.qml` (state, history, incoming notifications), `Config.qml` (rules.json), `Route.qml` (rules), `Validate.qml` (config checks), `Rows.qml` (ranking, stacks), `Api.qml` and `Control.qml` (control API, `qs ipc` and the socket), `Preview.qml`, `Sound.qml`, `AutoDnd.qml`, `ZoneWindows.qml`/`Popup*.qml` (popups), `Transfers.qml`/`TransferChart.qml` (progress graphs), `Osd.qml`; `Media.qml` (audio/video players) needs the optional `qt6-multimedia` |
 | `notifd/rules.json`, `rules.schema.json` | default config and its JSON Schema |
 | `tests/test_notifd.py` | daemon regression suite on a private bus; runs `test_rules.py`, `test_features.py`, `test_inputs.py` and `test_socket.py` (socket stress tests); `test_sound.py` separately |
 | `tests/qml` | QML unit tests (`cargo test -p notify-cli --test qml`) |

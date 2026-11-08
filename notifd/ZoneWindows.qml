@@ -28,7 +28,7 @@ Variants {
         readonly property real screenW: screen ? screen.width : 1920
         readonly property real screenH: screen ? screen.height : 1080
         // the window is as wide as the widest popup it shows (popups can have their own width, or be resized by hand)
-        readonly property real zw: { root.topo; return root.zoneWidth(modelData) }
+        readonly property real zw: { root.topo; return root.layout.zoneWidth(modelData) }
         readonly property real baseW: zone.width ?? root.cfg.width
 
         // an edge left unanchored means "centred on that axis"
@@ -45,7 +45,7 @@ Variants {
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "notifd-" + modelData
         // take keyboard focus only when you click into a reply box, never otherwise (and never for popups set to "no focus")
-        readonly property bool wantsKeys: { root.topo; return root.zoneWantsKeys(modelData) }
+        readonly property bool wantsKeys: { root.topo; return root.layout.zoneWantsKeys(modelData) }
         WlrLayershell.keyboardFocus: wantsKeys ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
         color: "transparent"
 
@@ -111,15 +111,15 @@ Variants {
                     required property bool stack
                     required property string stackKey
                     readonly property bool mine: zone === win.modelData
-                    readonly property int rank: { root.topo; return root.rankOf(nid, zone) }
+                    readonly property int rank: { root.topo; return root.layout.rankOf(nid, zone) }
                     // a stack of notifications takes one place; expanded, it shows one list's worth (the rest scroll with the mouse wheel)
-                    readonly property var sinfo: { root.topo; return root.stackInfo(nid) }
+                    readonly property var sinfo: { root.topo; return root.layout.stackInfo(nid) }
                     readonly property bool stacked: stackKey !== "" && sinfo.count > 1
                     readonly property bool expanded: stacked && sinfo.expanded
                     // newest N places per zone are shown; older ones wait their turn
-                    readonly property bool shown: mine && (leaving || (rank < root.cap() && (!stacked
+                    readonly property bool shown: mine && (leaving || (rank < root.layout.cap() && (!stacked
                         || (expanded ? (sinfo.idx >= sinfo.offset && sinfo.idx < sinfo.offset + sinfo.listMax) : sinfo.idx === 0))))
-                    readonly property bool head: { root.topo; return root.isGroupHead(nid, zone, group) }
+                    readonly property bool head: { root.topo; return root.layout.isGroupHead(nid, zone, group) }
                     readonly property real headH: head ? 20 : 0
                     readonly property bool stackFirst: expanded && shown && !leaving && sinfo.idx === sinfo.offset
                     readonly property real stackHeaderH: stackFirst ? 26 : 0
@@ -191,7 +191,7 @@ Variants {
                             font.pixelSize: 11
                             font.weight: Font.DemiBold
                             font.family: slot.fontFamily
-                            TapHandler { onTapped: root.dismissStack(slot.zone, slot.stackKey) }
+                            TapHandler { onTapped: root.layout.dismissStack(slot.zone, slot.stackKey) }
                         }
                         Text {
                             anchors { right: clearTxt.left; rightMargin: 12; verticalCenter: parent.verticalCenter }
@@ -200,14 +200,14 @@ Variants {
                             font.pixelSize: 11
                             font.weight: Font.DemiBold
                             font.family: slot.fontFamily
-                            TapHandler { onTapped: root.toggleStack(slot.zone, slot.stackKey) }
+                            TapHandler { onTapped: root.layout.toggleStack(slot.zone, slot.stackKey) }
                         }
                     }
                     // the mouse wheel over an expanded stack scrolls through its notifications
                     WheelHandler {
                         enabled: slot.expanded
                         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-                        onWheel: event => root.scrollStack(slot.zone, slot.stackKey, event.angleDelta.y > 0 ? -1 : 1)
+                        onWheel: event => root.layout.scrollStack(slot.zone, slot.stackKey, event.angleDelta.y > 0 ? -1 : 1)
                     }
 
                     Popup {
@@ -240,11 +240,11 @@ Variants {
                         chartDefault: root.cfg.transfer.chart
                         stackCount: slot.stacked ? slot.sinfo.count : 1
                         stackExpanded: slot.expanded
-                        onStackToggled: root.toggleStack(slot.zone, slot.stackKey)
+                        onStackToggled: root.layout.toggleStack(slot.zone, slot.stackKey)
                         onDismissed: { const n = root.byId[slot.nid]; if (n && !slot.leaving) n.dismiss() }
                         onExpired:   { const n = root.byId[slot.nid]; if (n && !slot.leaving) n.expire() }
-                        onPinToggled: root.setPinned(slot.nid, !slot.pinned)
-                        onResized: w => root.setUserWidth(slot.nid, w)
+                        onPinToggled: root.layout.setPinned(slot.nid, !slot.pinned)
+                        onResized: w => root.layout.setUserWidth(slot.nid, w)
                     }
                 }
             }
@@ -252,7 +252,7 @@ Variants {
             // "+N more" when a zone has more notifications than it shows
             Item {
                 id: more
-                readonly property int count: { root.topo; return root.waiting(win.modelData) }
+                readonly property int count: { root.topo; return root.layout.waiting(win.modelData) }
                 width: stack.width
                 height: count > 0 ? 30 : 0
                 visible: count > 0

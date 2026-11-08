@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Daemon:** `shell.qml` (1010 lines) is split into `Config.qml`, `Rows.qml`, `Api.qml`, `Control.qml`, `Preview.qml`, `Sound.qml` and `AutoDnd.qml`; it is now 333 lines and the last file exempt from the 400-line limit is gone. No change in behaviour.
+
 ## 0.17.0
 
 - **Dolphin's file operations show again:** copy, move, delete, extract (any KIO job from any KDE app) appear as one notifd popup per job with a live progress bar, speed and time left, **Pause**/**Cancel**, and the result when it ends ("Copied · 10 files, 2.1 GiB · To ~/Downloads", with **Open folder**). Failures stay; cancelled and quick jobs leave nothing. KDE reports these to Plasma's job tracker, not as notifications, so with Plasma's notification applet gone they had nowhere to appear.
