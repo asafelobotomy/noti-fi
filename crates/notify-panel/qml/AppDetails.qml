@@ -25,6 +25,7 @@ ColumnLayout {
             Layout.fillWidth: true
             wrapMode: Text.Wrap
             opacity: 0.8
+            textFormat: Text.PlainText
             text: app.zone !== "" ? app.name + " is in the “" + root.host.zoneLabel(app.zone) + "” group; its popups appear where that group is placed."
                                   : "No group set for " + app.name + ": your rules decide, otherwise the default group."
         }

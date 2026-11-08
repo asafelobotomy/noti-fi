@@ -18,9 +18,18 @@ def make_tests(check, BASE_CONFIG, ROOT, SRC):
         d.send("body", f'<img src="{url("body")}"/> <b>ok</b> <a href="{url("link")}">link</a>', t=2500)
         d.send("icon", "x", t=2500, icon=url("icon.png"))
         d.send("hint icon", "x", t=2500, hints=[f"string:image-path:{url('hint.png')}"])
-        time.sleep(3)
+        # escaped markup (decoded to tags by a careless renderer), in the app name, the title, the text and a button's label
+        esc = lambda n: f'&lt;img src="{url(n)}"/&gt;'
+        d.send(esc("esc-summary") + " title", esc("esc-body"), app=f'<img src="{url("app")}"/>App', t=2500)
+        waiter = subprocess.Popen(["notify-send", "-a", "Steam", "-t", "1500", f'--action=go=<img src="{url("button")}"/>Go', "--wait", "button", "x"],
+                                  env=d.env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        time.sleep(2.5)
+        d.ipc("center", "open")              # the notification list shows all of these again, buttons included
+        time.sleep(1.5)
+        d.ipc("center", "close")
+        waiter.kill()
         srv.shutdown()
-        check("markup in titles, bodies and icons never triggers a network request", not hits, f"requests: {hits}")
+        check("markup in titles, bodies, icons, app names and button labels never triggers a network request, in popups or the notification list", not hits, f"requests: {hits}")
         d.ipc("dismissAll")
 
 

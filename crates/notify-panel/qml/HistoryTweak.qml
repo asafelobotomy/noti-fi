@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 import "Json.js" as Json
+import "Safe.js" as Safe
 
 // Under an expanded History entry: change how notifications like this one are shown, saved as a rule of their own.
 // "Like this" is chosen with switches (from this app, from this website, of this type); the first change creates the rule at the
@@ -75,9 +76,9 @@ ColumnLayout {
         Flow {
             Layout.fillWidth: true
             spacing: Kirigami.Units.smallSpacing
-            QQC2.Button { text: "From " + (root.entry.app || "this app"); checkable: true; checked: root.useApp; onToggled: root.useApp = checked }
-            QQC2.Button { visible: (root.entry.origin || "") !== ""; text: "From " + root.entry.origin; icon.name: "internet-web-browser"; checkable: true; checked: root.useSite; onToggled: root.useSite = checked }
-            QQC2.Button { visible: (root.entry.category || "") !== ""; text: "Of type " + root.entry.category; icon.name: "tag"; checkable: true; checked: root.useType; onToggled: root.useType = checked }
+            QQC2.Button { text: "From " + Safe.label(root.entry.app || "this app"); checkable: true; checked: root.useApp; onToggled: root.useApp = checked }
+            QQC2.Button { visible: (root.entry.origin || "") !== ""; text: "From " + Safe.label(root.entry.origin); icon.name: "internet-web-browser"; checkable: true; checked: root.useSite; onToggled: root.useSite = checked }
+            QQC2.Button { visible: (root.entry.category || "") !== ""; text: "Of type " + Safe.label(root.entry.category); icon.name: "tag"; checkable: true; checked: root.useType; onToggled: root.useType = checked }
         }
     }
     RowLayout {
@@ -165,6 +166,7 @@ ColumnLayout {
         QQC2.Label {
             Layout.fillWidth: true
             wrapMode: Text.Wrap
+            textFormat: Text.PlainText
             text: !root.anything ? "Pick at least one of the switches above."
                 : root.rule ? "Rule “" + root.rule.title + "” (number " + (root.ruleIndex + 1) + " of " + root.rules.length + ")" + (root.model && root.model.dirty ? ", not saved yet" : "")
                 : "Any change here creates a rule just for these notifications."

@@ -66,6 +66,7 @@ Rectangle {
                 width: parent.width - 13
                 elide: Text.ElideRight
                 text: item.entry.app + "  ·  " + item.ago(item.entry.t) + (item.entry.shown === false ? "  ·  held (" + item.entry.why + ")" : "")
+                textFormat: Text.PlainText      // app-supplied text: never rich text (it could load remote images)
                 color: item.theme.subtext ?? "#b9bccb"
                 font.family: item.fontFamily
                 font.pixelSize: Math.max(6, item.fontSize - 1)
@@ -75,6 +76,7 @@ Rectangle {
             width: parent.width
             visible: text !== ""
             text: item.plain(item.entry.summary)
+            textFormat: Text.PlainText      // app-supplied text: never rich text (it could load remote images)
             elide: Text.ElideRight
             color: item.theme.text ?? "#f2f3f7"
             font.family: item.fontFamily

@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 import "Json.js" as Json
+import "Safe.js" as Safe
 
 // The apps, websites and kinds of notification in one group, as chips, with "Add app" and "Add website".
 // Membership is kept as rules (a rule that puts matching notifications in this group): a rule that tests one thing as a plain list
@@ -132,7 +133,7 @@ ColumnLayout {
                 delegate: QQC2.ItemDelegate {
                     required property var modelData
                     width: ListView.view.width
-                    text: modelData.name + (modelData.routing && modelData.routing.zone && modelData.routing.zone !== root.groupId ? "   (now in " + modelData.routing.zone + ")" : "")
+                    text: Safe.label(modelData.name) + (modelData.routing && modelData.routing.zone && modelData.routing.zone !== root.groupId ? "   (now in " + modelData.routing.zone + ")" : "")
                     icon.name: modelData.icon !== "" ? modelData.icon : "application-x-executable"
                     onClicked: { root.model.appSet(modelData.match_field, modelData.match_value, modelData.name, "zone", root.groupId); appPop.close() }
                 }

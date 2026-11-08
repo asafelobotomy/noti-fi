@@ -23,6 +23,7 @@ Rectangle {
         id: label
         anchors.centerIn: parent
         text: btn.text
+        textFormat: Text.PlainText      // app-supplied text: never rich text (it could load remote images)
         color: btn.theme.text ?? "#f2f3f7"
         font.family: btn.theme.fontFamily ?? ""
         font.pixelSize: Math.max(6, (btn.theme.fontSize ?? 12) - 1)

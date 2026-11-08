@@ -143,6 +143,7 @@ Scope {
                                 Rectangle { width: 10; height: 10; radius: 5; color: center.accent(row.modelData.zone); anchors.verticalCenter: parent.verticalCenter }
                                 Text {
                                     text: center.label(row.modelData.zone) + "  " + row.modelData.count + (row.modelData.unread > 0 ? "  (" + row.modelData.unread + " unread)" : "")
+                                    textFormat: Text.PlainText      // app-supplied text: never rich text (it could load remote images)
                                     color: gh.hovered ? (center.theme.text ?? "#f2f3f7") : (center.theme.subtext ?? "#b9bccb")
                                     font.family: center.theme.fontFamily ?? ""
                                     font.pixelSize: center.theme.fontSize ?? 12
