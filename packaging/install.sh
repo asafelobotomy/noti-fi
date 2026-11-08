@@ -40,7 +40,9 @@ if qt_ok; then
 else
     panel_note="notify-panel was NOT installed: it was built for Qt ${built_qt:-?} and this machine has Qt ${host_qt:-?}. Build it for this machine instead: makepkg -si (packaging/PKGBUILD) or cargo build --release -p notify-panel."
 fi
-install -m 644 "$here/share/applications/org.notify.Panel.desktop" "$prefix/share/applications/"
+# the launcher names the program by its full path: a prefix such as ~/.local/bin is not on every launcher's PATH
+sed "s|^Exec=notify-panel|Exec=$prefix/bin/notify-panel|" "$here/share/applications/org.notify.Panel.desktop" > "$prefix/share/applications/org.notify.Panel.desktop"
+chmod 644 "$prefix/share/applications/org.notify.Panel.desktop"
 install -m 644 "$here/share/metainfo/org.notify.Panel.metainfo.xml" "$prefix/share/metainfo/"
 install -m 644 "$here/share/icons/hicolor/scalable/apps/org.notify.Panel.svg" "$prefix/share/icons/hicolor/scalable/apps/"
 gtk-update-icon-cache -q "$prefix/share/icons/hicolor" 2>/dev/null || true

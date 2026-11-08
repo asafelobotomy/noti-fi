@@ -30,7 +30,7 @@ Scope {
         "for o in d:\n" +
         "  if o.get(\"type\")!=\"PipeWire:Interface:Node\": continue\n" +
         "  p=o.get(\"info\",{}).get(\"props\",{})\n" +
-        "  who=(str(p.get(\"application.name\",\"\"))+str(p.get(\"application.process.binary\",\"\"))).lower()\n" +
+        "  who=\" \".join(str(p.get(k,\"\")) for k in (\"application.name\",\"application.process.binary\",\"node.name\",\"media.name\")).lower()\n" +
         "  if \"Video\" in str(p.get(\"media.class\",\"\")) and p.get(\"media.class\",\"\").startswith(\"Stream/Output\") and \"kwin\" in who: hit=1\n" +
         "print(hit)'"
     Process {

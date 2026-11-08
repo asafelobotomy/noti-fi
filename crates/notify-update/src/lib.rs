@@ -227,6 +227,9 @@ pub fn install_archive(archive: &[u8], version: &str, prefix: &Path, work: &Path
     if desktop.is_file() {
         let to = prefix.join("share/applications/org.notify.Panel.desktop");
         replace_file(&desktop, &to, 0o644)?;
+        // name the program by its full path: a prefix such as ~/.local/bin is not on every launcher's PATH
+        let text = fs::read_to_string(&to).map_err(|e| format!("{}: {e}", to.display()))?;
+        fs::write(&to, text.replace("\nExec=notify-panel", &format!("\nExec={}", prefix.join("bin/notify-panel").display()))).map_err(|e| format!("{}: {e}", to.display()))?;
         done.files.push(to);
     }
     Ok(done)

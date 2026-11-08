@@ -107,7 +107,7 @@ Rectangle {
     Accessible.description: notif ? card.safeBody(notif.body).replace(/<[^>]*>/g, "") : ""
     HoverHandler { id: hover }
     TapHandler { enabled: card.active && !card.clickThrough; onTapped: {
-        if (replyBox.hovered || pinHover.hovered || mediaHover.hovered || graphBox.hovered || gripArea.containsMouse || gripArea.pressed) return
+        if (actionsHover.hovered || replyBox.hovered || pinHover.hovered || mediaHover.hovered || graphBox.hovered || gripArea.containsMouse || gripArea.pressed) return
         // a collapsed stack opens when clicked; anything else is dismissed
         if (card.stackCount > 1 && !card.stackExpanded) card.stackToggled(); else card.dismissed()
     } }
@@ -115,8 +115,7 @@ Rectangle {
     // zone accent stripe
     Rectangle {
         anchors { left: parent.left; top: parent.top; bottom: parent.bottom; margins: 1 }
-        width: 4; radius: 2
-        color: card.accent
+        width: 4; radius: 2; color: card.accent
     }
 
     // timeout: counted only while nothing holds it (hover, reply box, pin, player, graph), and started again when the notification is replaced.
@@ -338,6 +337,7 @@ Rectangle {
             visible: card.acts.length > 0
             Layout.fillWidth: true
             spacing: 6
+            HoverHandler { id: actionsHover }      // a tap on a button is the button's, not the card's (a resident notification stays)
             Repeater {
                 model: card.acts
                 delegate: Rectangle {

@@ -33,7 +33,7 @@ fn archive_full(version: &str, marker: &str, with_panel: bool, qt: Option<&str>,
     if with_panel {
         fs::write(root.join("bin/notify-panel"), marker).unwrap();
     }
-    fs::write(root.join("share/applications/org.notify.Panel.desktop"), "[Desktop Entry]\n").unwrap();
+    fs::write(root.join("share/applications/org.notify.Panel.desktop"), "[Desktop Entry]\nName=noti-fi\nExec=notify-panel\n").unwrap();
     if let Some(q) = qt {
         fs::write(root.join("qt-version"), format!("{q}\n")).unwrap();
     }
@@ -124,6 +124,8 @@ fn a_newer_release_is_downloaded_verified_and_installed_over_the_old_one() {
     assert_eq!(fs::read_to_string(prefix.join("bin/notify-panel")).unwrap(), "NEW");
     assert_eq!(fs::metadata(prefix.join("bin/notify")).unwrap().permissions().mode() & 0o777, 0o755);
     assert!(prefix.join("share/applications/org.notify.Panel.desktop").exists());
+    let launcher = fs::read_to_string(prefix.join("share/applications/org.notify.Panel.desktop")).unwrap();
+    assert!(!launcher.contains("\nExec=notify-panel"), "the launcher names the program by its full path: {launcher}");
     assert_eq!(done.files.len(), 3);
     assert!(done.panel_skipped.is_none());
     assert!(fs::read_dir(prefix.join("bin")).unwrap().flatten().all(|e| !e.file_name().to_string_lossy().ends_with(".new")), "no temporary files are left");

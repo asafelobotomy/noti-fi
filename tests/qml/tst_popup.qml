@@ -83,6 +83,29 @@ Item {
             compare(host.dismissed, 0)
         }
 
+        function test_a_button_of_a_resident_notification_keeps_it() {
+            let pressed = 0
+            card.notif = { appName: "Dolphin", summary: "Copying", body: "", hints: {}, image: "", appIcon: "", desktopEntry: "", resident: true,
+                           actions: [{ identifier: "suspend", text: "Pause", invoke: () => pressed++ }] }
+            wait(100)
+            let target = null
+            function walk(it) {
+                for (let i = 0; i < it.children.length; i++) {
+                    const c = it.children[i]
+                    if (c.text === "Pause") { target = c.parent; return }
+                    walk(c)
+                    if (target) return
+                }
+            }
+            walk(card)
+            verify(target !== null, "the Pause button exists")
+            const p = card.mapFromItem(target, target.width / 2, target.height / 2)
+            mouseMove(card, p.x, p.y)       // hover first, as a pointer would
+            mouseClick(card, p.x, p.y)
+            compare(pressed, 1, "the button ran its action")
+            compare(host.dismissed, 0, "and the card around it did not dismiss the notification (a running copy stays up to be resumed)")
+        }
+
         function test_drag_resize() {
             // the handle is the strip on the card's right edge (left edge when handleOnLeft)
             const x0 = card.width - 4, y0 = card.height / 2

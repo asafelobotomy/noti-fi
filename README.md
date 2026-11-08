@@ -172,8 +172,8 @@ notify update --payload notifd   # deploy the checkout's daemon files instead of
   full screen; notifd follows that line from the journal and holds normal popups until it ends (critical ones still
   show; held ones are in `notify history --missed` with the reason). Turn off with `"autoDnd": {"fullscreen": false}`.
 - **Screen sharing:** notifd watches PipeWire for a KWin screen-capture stream and holds popups the same way
-  (`"autoDnd": {"screenShare": false}` to disable). *The detection signature has not been confirmed against a real
-  share yet; see the notes in `notifd/shell.qml` (`shareScript`).*
+  (`"autoDnd": {"screenShare": false}` to disable); checked against a real OBS capture. KDE's screen-share dialog also asks
+  for quiet itself (Inhibit, below), so a share is held either way.
 - **Apps that ask for quiet:** an app can ask for notifications to be held (`Inhibit`, used for presentations, calls and screen recordings).
   notifd holds popups as for Do Not Disturb until the app lifts it or quits (critical ones still show); `notify status` says who asked.
   `notifd.service` runs `notify serve`, which owns the notification name and runs the daemon on a private bus behind it to make this possible.
@@ -197,7 +197,7 @@ notify update --payload notifd   # deploy the checkout's daemon files instead of
 - Plasma's per-app notification settings page no longer applies (notifd has its own rules).
 - Popups appear on one screen (`"screen"` in rules.json picks which).
 - Wayland does not tell applications when their window is minimised, so "minimise to tray" cannot work there; closing the window does go to the tray.
-- Screen-share detection is unconfirmed (above), as is start-up ordering at a real login and Brave web push arriving through notifd; these need a live desktop session to prove.
+- Start-up ordering at a real login and Brave web push arriving through notifd are unconfirmed; these need a live desktop session to prove.
 - The panel is built against one Qt minor version. Release archives record it (`qt-version`) and `notify upgrade` refuses a panel that does not match; a `portable-qml` archive works across Qt versions.
 - Release archives are x86_64 Linux only and are not signed (they are checked against a published sha256).
 - CI runs the unit, CLI, QML, job bridge and offscreen-panel tests, and the daemon and sound suites under a headless labwc compositor (`tests/ci-daemon.sh`).

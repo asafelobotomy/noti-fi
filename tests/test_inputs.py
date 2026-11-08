@@ -1,5 +1,5 @@
 """Input-handling tests: markup, bad config, automatic Do Not Disturb, inline reply. Run through test_notifd.py, which passes in its `check`, BASE_CONFIG and paths."""
-import http.server, json, os, signal, socket, subprocess, sys, threading, time
+import http.server, json, os, re, signal, socket, subprocess, sys, tempfile, threading, time
 
 
 def make_tests(check, BASE_CONFIG, ROOT, SRC):
@@ -125,4 +125,22 @@ def make_tests(check, BASE_CONFIG, ROOT, SRC):
 
     # ------------------------------------------------------------------ simulate / validate / preview / schema
 
-    return [test_markup_cannot_fetch, test_bad_config_never_drops_notifications, test_auto_dnd, test_inline_reply]
+    def test_share_detection(d):
+        """The screen-sharing probe in AutoDnd.qml, run on PipeWire graphs like the ones KWin really makes (recorded during an OBS capture)."""
+        src = (SRC / "AutoDnd.qml").read_text()
+        block = src[src.index("readonly property string shareScript:"):src.index("id: shareProbe")]
+        script = "".join(bytes(p, "utf-8").decode("unicode_escape") for p in re.findall(r'"((?:[^"\\]|\\.)*)"', block))
+        node = lambda props: {"type": "PipeWire:Interface:Node", "info": {"props": props}}
+        kwin = node({"media.class": "Stream/Output/Video", "media.name": "kwin-screencast-eDP-1", "node.name": "kwin_wayland"})
+        obs = node({"media.class": "Stream/Input/Video", "media.name": "OBS Studio", "node.name": "obs"})
+        cam = node({"media.class": "Video/Source", "node.name": "v4l2_input.usb", "node.description": "HD Webcam"})
+        for graph, want, what in (([cam, obs, kwin], "1", "KWin producing a screencast stream"), ([cam, obs], "0", "no KWin stream (a webcam and a reader)"), (None, "0", "pw-dump failing")):
+            with tempfile.TemporaryDirectory() as bin_dir:
+                fake = os.path.join(bin_dir, "pw-dump")
+                with open(fake, "w") as f:
+                    f.write("#!/bin/sh\n" + ("cat <<'EOF'\n" + json.dumps(graph) + "\nEOF\n" if graph is not None else "exit 1\n"))
+                os.chmod(fake, 0o755)
+                r = subprocess.run(["sh", "-c", script], env=dict(os.environ, PATH=bin_dir + ":" + os.environ["PATH"]), capture_output=True, text=True, timeout=20)
+            check(f"screen sharing is {'detected' if want == '1' else 'not detected'}: {what}", r.stdout.strip() == want, r.stdout + r.stderr[-200:])
+
+    return [test_markup_cannot_fetch, test_bad_config_never_drops_notifications, test_auto_dnd, test_inline_reply, test_share_detection]
