@@ -9,7 +9,8 @@ Rectangle {
     required property var theme
     required property real now
     property var live: null
-    property bool hideText: false        // the screen is being shared: no titles, text or buttons              // the Notification while its app still holds it (see Kept.qml), else null
+    property bool hideText: false
+    property bool current: false         // selected with the keyboard        // the screen is being shared: no titles, text or buttons              // the Notification while its app still holds it (see Kept.qml), else null
     signal opened()
     signal removed()
     signal invoked(string key)
@@ -35,8 +36,8 @@ Rectangle {
     implicitHeight: col.implicitHeight + 16
     radius: 8
     color: hover.hovered ? (theme.buttonHover ?? "#323646") : (theme.button ?? "#272a36")
-    border.width: 1
-    border.color: unread ? Qt.rgba(accent.r, accent.g, accent.b, 0.55) : "transparent"
+    border.width: current ? 2 : 1
+    border.color: current ? accent : unread ? Qt.rgba(accent.r, accent.g, accent.b, 0.55) : "transparent"
     Accessible.role: Accessible.Button
     Accessible.name: (unread ? "Unread: " : "") + entry.app + ": " + entry.summary
 

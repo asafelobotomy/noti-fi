@@ -12,8 +12,11 @@ Rectangle {
     radius: 6
     opacity: enabled ? 1 : 0.45
     color: area.containsMouse && enabled ? (theme.buttonHover ?? "#323646") : (theme.button ?? "#272a36")
-    border.width: 1
-    border.color: theme.border ?? "#2c2f3a"
+    border.width: activeFocus ? 2 : 1                   // reached with Tab: Enter or Space presses it
+    border.color: activeFocus ? (theme.text ?? "#f2f3f7") : (theme.border ?? "#2c2f3a")
+    Keys.onReturnPressed: if (enabled) btn.clicked()
+    Keys.onEnterPressed: if (enabled) btn.clicked()
+    Keys.onSpacePressed: if (enabled) btn.clicked()
     Accessible.role: Accessible.Button
     Accessible.name: text
 

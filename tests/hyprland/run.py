@@ -1,6 +1,7 @@
 """notifd on a real Hyprland. tests/hyprland/run.sh runs this in a container, as a nested Hyprland window on the host's
 Wayland session, with notifd from the checkout behind `notify serve`. Checks: the focused monitor, "screen": "focused",
-the level OSD, and unplugging a monitor."""
+the level OSD, unplugging a monitor, holding popups during a screen capture or with a full-screen window, and using the
+notification list from the keyboard."""
 import glob, json, os, shutil, socket, subprocess, sys, time
 
 RUN = "/tmp/run"
@@ -28,7 +29,9 @@ print("Hyprland up:", sig, wl, hc("monitors", "-j") and [m["name"] for m in json
 
 payload = "/tmp/payload"
 shutil.copytree("/src/notifd", payload)
-serve = subprocess.Popen(["dbus-run-session", "--", "/notify", "serve", "--payload", payload], env=henv, stdout=open("/tmp/serve.log", "w"), stderr=subprocess.STDOUT)
+bus = subprocess.Popen(["dbus-daemon", "--session", "--nofork", "--print-address=1"], stdout=subprocess.PIPE, text=True)
+henv["DBUS_SESSION_BUS_ADDRESS"] = bus.stdout.readline().strip()      # the session bus apps (notify-send) and notify serve share
+serve = subprocess.Popen(["/notify", "serve", "--payload", payload], env=henv, stdout=open("/tmp/serve.log", "w"), stderr=subprocess.STDOUT)
 
 def call(m, p=None):
     s = socket.socket(socket.AF_UNIX); s.connect(henv["NOTIFD_SOCKET"]); f = s.makefile("rw")
@@ -75,9 +78,49 @@ check("unplugging that monitor moves the OSD and popups back, and notifd keeps r
 _, r, e = call("osd", {"kind": "brightness", "value": 80})
 check("the OSD still works after the unplug", r == {"ok": True}, str(e))
 
+# a screen capture (wf-recorder copies frame by frame, so Hyprland's screencast event flips with every frame)
+rec = subprocess.Popen(["wf-recorder", "-o", first, "-f", "/tmp/rec.mp4", "-y"], env=henv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+st = wait(lambda s: s.get("sharing") is True)
+check("a screen capture on Hyprland counts as sharing and holds popups", st.get("sharing") is True and st.get("holding") == "screen sharing", f"{st.get('sharing')} {st.get('holding')}")
+time.sleep(2)
+check("...and stays on while frames keep coming", (status().get("sharing") is True), str(status().get("holding")))
+rec.terminate(); rec.wait(5)
+st = wait(lambda s: s.get("sharing") is False, 6)
+check("...and ends shortly after the capture stops", st.get("sharing") is False and st.get("holding") == "", f"{st.get('sharing')} {st.get('holding')}")
+
+# a full-screen window
+term = subprocess.Popen(["foot"], env=henv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+wait(lambda s: json.loads(hc("activewindow", "-j") or "{}").get("class") == "foot", 8)
+hc("dispatch", 'hl.dsp.window.fullscreen({ action = "toggle" })')
+st = wait(lambda s: s["auto"]["fullscreen"] is True)
+check("a full-screen window on Hyprland holds popups", st["auto"]["fullscreen"] is True and st.get("holding") == "fullscreen", f"{st.get('auto')} {st.get('holding')}")
+hc("dispatch", 'hl.dsp.window.fullscreen({ action = "toggle" })')
+st = wait(lambda s: s["auto"]["fullscreen"] is False)
+check("...and lets them through again when it leaves full screen", st["auto"]["fullscreen"] is False and st.get("holding") == "", f"{st.get('auto')} {st.get('holding')}")
+term.terminate()
+
+# the notification list from the keyboard, through Hyprland's virtual keyboard (wtype)
+call("clearHistory")
+for title in ("first", "second", "third"):
+    subprocess.run(["notify-send", "-t", "800", title, "x"], env=henv)
+wait(lambda s: s.get("history") == 3 and s.get("active") == 0, 8)
+call("center", {"action": "open"})
+time.sleep(1)
+key = lambda *names: [subprocess.run(["wtype", "-k", n], env=henv) for n in names] and time.sleep(0.6)
+key("Down", "Down", "Delete")        # the first row is a group heading: Down twice reaches the newest notification
+st = wait(lambda s: s.get("history") == 2, 4)
+newest = (call("history", {"limit": 5})[1] or [{}])[0].get("summary")
+check("Down, Down, Delete removes the selected notification", st.get("history") == 2 and newest == "second", f"{st.get('history')} newest={newest}")
+key("Down", "Return")
+st = wait(lambda s: s.get("unread") == 1, 4)
+check("Enter opens the selected one (it is read)", st.get("unread") == 1, str(st.get("unread")))
+key("Escape")
+st = wait(lambda s: s.get("center") is False, 4)
+check("Escape closes the list", st.get("center") is False, str(st.get("center")))
+
 log = open("/tmp/serve.log").read()
 bad = [l for l in log.splitlines() if ("TypeError" in l or "ReferenceError" in l or "Error:" in l) and "portal" not in l]
 check("no QML errors in notifd's log", not bad, "\n".join(bad[:8]))
-serve.terminate(); hypr.terminate()
+serve.terminate(); hypr.terminate(); bus.terminate()
 print(f"{sum(results)} passed, {len(results) - sum(results)} failed")
 sys.exit(0 if all(results) else 1)

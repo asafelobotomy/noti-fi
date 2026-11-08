@@ -5,6 +5,11 @@ use std::path::Path;
 use std::process::Command;
 
 #[test]
+fn notification_list_keyboard() {
+    run_qml("tst_centernav.qml");
+}
+
+#[test]
 fn popup_interactions() {
     run_qml("tst_popup.qml");
 }

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Hyprland: screen sharing and full screen hold popups.** notifd follows Hyprland's own events (`HyprlandWatch.qml`, which also gives the focused monitor): a screen capture counts as sharing (text hidden, popups held) until 1.5 s after its last frame, and a full-screen window (not a maximised one) holds popups as the KWin script does on Plasma. Tested on a real Hyprland with `wf-recorder` and a full-screen terminal.
+- **The notification list from the keyboard:** arrow keys, Home/End and PageUp/PageDown move; Enter or Space opens a notification or folds a group; Delete removes one; 1-9 press its buttons; Tab reaches the header buttons (Enter presses them). Tested with real key presses on Hyprland (`wtype`) and in `tst_centernav.qml`.
+
 - **Dependencies:** rusqlite 0.40 and sha2 0.11 (the newest that build with Rust 1.85); GitHub Actions checkout 7, cache 6, upload-artifact 7, download-artifact 8 (Dependabot's updates, taken on main in one tested change).
 - **Hygiene:** the command-line definitions moved from `main.rs` (399 lines) to `cli.rs`, and a popup's buttons from `Popup.qml` (400) to `PopupButtons.qml`, so neither sits at the line limit; Python bytecode is no longer committed; the README lists every daemon file, crate and test suite.
 

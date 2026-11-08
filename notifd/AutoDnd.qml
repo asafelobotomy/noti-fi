@@ -3,9 +3,18 @@ import Quickshell
 import Quickshell.Io
 
 // Automatic Do Not Disturb: watches for a full-screen window and for screen sharing, and sets shell.auto through shell.setAuto().
+// On Plasma: a KWin script (full screen) and KWin's capture stream in PipeWire (sharing). On Hyprland: its own events
+// (HyprlandWatch.qml); the PipeWire watch runs there too.
 Scope {
     id: autoDnd
-    required property var shell          // cfg, auto, setAuto()
+    required property var shell          // cfg, auto, setAuto(), screens.hypr
+    readonly property bool watching: shell.cfg.autoDnd.watch !== false      // off in tests, which drive the state by hand
+    readonly property var hypr: shell.screens.hypr
+    property bool pwShare: false
+    readonly property bool shareNow: pwShare || (hypr !== null && hypr.screencast === true)
+    readonly property bool hyprFull: hypr !== null && hypr.fullscreen === true
+    onShareNowChanged: if (watching && shell.cfg.autoDnd.screenShare) shell.setAuto("share", shareNow)
+    onHyprFullChanged: if (watching && shell.cfg.autoDnd.fullscreen) shell.setAuto("fullscreen", hyprFull)
 
     // Full-screen state comes from a small KWin script (installed by `notify autodnd`) that logs
     // "notifd-autodnd: fullscreen=1|0". We follow that line in the journal. journald stamps the
@@ -48,7 +57,7 @@ Scope {
     Process {
         id: shareWatch
         command: ["sh", "-c", autoDnd.shareScript]
-        stdout: SplitParser { onRead: line => autoDnd.shell.setAuto("share", line.trim() === "1") }
+        stdout: SplitParser { onRead: line => autoDnd.pwShare = line.trim() === "1" }
     }
     Timer {
         // keeps the watchers alive (respawns journalctl or pw-dump if one ever exits)
@@ -56,7 +65,7 @@ Scope {
         onTriggered: {
             const s = autoDnd.shell
             if (s.cfg.autoDnd.watch === false) return      // watchers off (tests drive the state by hand)
-            if (s.cfg.autoDnd.fullscreen && !kwinWatch.running) kwinWatch.running = true
+            if (s.cfg.autoDnd.fullscreen && !kwinWatch.running && autoDnd.hypr === null) kwinWatch.running = true
             if (s.cfg.autoDnd.screenShare && !shareWatch.running) shareWatch.running = true
             if (!s.cfg.autoDnd.screenShare && shareWatch.running) shareWatch.running = false
             if (!s.cfg.autoDnd.fullscreen && s.auto.fullscreen) s.setAuto("fullscreen", false)

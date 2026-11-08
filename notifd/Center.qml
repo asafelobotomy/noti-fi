@@ -18,9 +18,29 @@ Scope {
     property var folded: ({})            // group -> true while it is folded into a stack
     property real now: Date.now()
     Timer { interval: 30000; repeat: true; running: center.open; triggeredOnStart: true; onTriggered: center.now = Date.now() }
-    onOpenChanged: if (!open) folded = ({})
+    onOpenChanged: { if (!open) folded = ({}); list.currentIndex = -1; if (open) panel.forceActiveFocus() }
 
     function close() { shell.api.center("close") }
+    // the keyboard (see CenterNav.qml): move the selection, or act on the selected row
+    readonly property CenterNav nav: CenterNav {}
+    function key(event) {
+        const d = nav.moveBy(event.key)
+        if (d !== 0) {
+            list.currentIndex = nav.step(list.count, list.currentIndex, d)
+            list.positionViewAtIndex(list.currentIndex, ListView.Contain)
+            event.accepted = true
+            return
+        }
+        const i = list.currentIndex, row = i >= 0 ? rows[i] : null
+        const card = list.currentItem && list.currentItem.item
+        const a = nav.action(row, event.key)
+        if (a.what === "") return
+        event.accepted = true
+        if (a.what === "fold") toggleFold(row.zone)
+        else if (a.what === "open") open_(row.entry, card ? card.live : null)
+        else if (a.what === "remove") shell.api.removeHistory(row.entry.id, row.entry.t)
+        else if (a.what === "button" && card && a.n < card.buttons.length) { shell.api.invoke(row.entry.id, card.buttons[a.n].identifier); close() }
+    }
     // a click on a notification: what clicking its popup does (the app's default action) while the app still holds it; else just mark it read
     function open_(entry, live) {
         if (live && (live.actions || []).some(a => a.identifier === "default")) { shell.api.invoke(entry.id, "default"); close() }
@@ -77,8 +97,10 @@ Scope {
             color: center.theme.card ?? "#1d1f27"
             border.width: 1
             border.color: center.theme.border ?? "#2c2f3a"
+            id: panel
             focus: true
             Keys.onEscapePressed: center.close()
+            Keys.onPressed: event => center.key(event)
 
             Row {
                 id: head
@@ -104,8 +126,8 @@ Scope {
                         font.pixelSize: Math.max(6, (center.theme.fontSize ?? 12) - 1)
                     }
                 }
-                CenterButton { id: markBtn; anchors.verticalCenter: parent.verticalCenter; theme: center.theme; text: "Mark all read"; enabled: center.unread > 0; onClicked: center.shell.api.markRead(null) }
-                CenterButton { id: clearBtn; anchors.verticalCenter: parent.verticalCenter; theme: center.theme; text: "Clear all"; enabled: center.shell.history.length > 0; onClicked: center.shell.api.clearHistory() }
+                CenterButton { id: markBtn; activeFocusOnTab: true; anchors.verticalCenter: parent.verticalCenter; theme: center.theme; text: "Mark all read"; enabled: center.unread > 0; onClicked: center.shell.api.markRead(null) }
+                CenterButton { id: clearBtn; activeFocusOnTab: true; anchors.verticalCenter: parent.verticalCenter; theme: center.theme; text: "Clear all"; enabled: center.shell.history.length > 0; onClicked: center.shell.api.clearHistory() }
             }
 
             Text {
@@ -126,9 +148,13 @@ Scope {
                 spacing: 6
                 boundsBehavior: Flickable.StopAtBounds
                 model: center.rows
+                currentIndex: -1
+                highlightFollowsCurrentItem: false
                 delegate: Loader {
                     id: row
                     required property var modelData
+                    required property int index
+                    readonly property bool current: ListView.isCurrentItem && panel.activeFocus
                     width: ListView.view.width
                     sourceComponent: modelData.kind === "group" ? groupHead : itemCard
                     Component {
@@ -144,7 +170,7 @@ Scope {
                                 Text {
                                     text: center.label(row.modelData.zone) + "  " + row.modelData.count + (row.modelData.unread > 0 ? "  (" + row.modelData.unread + " unread)" : "")
                                     textFormat: Text.PlainText      // app-supplied text: never rich text (it could load remote images)
-                                    color: gh.hovered ? (center.theme.text ?? "#f2f3f7") : (center.theme.subtext ?? "#b9bccb")
+                                    color: gh.hovered || row.current ? (center.theme.text ?? "#f2f3f7") : (center.theme.subtext ?? "#b9bccb")
                                     font.family: center.theme.fontFamily ?? ""
                                     font.pixelSize: center.theme.fontSize ?? 12
                                     font.weight: Font.DemiBold
@@ -167,6 +193,7 @@ Scope {
                             now: center.now
                             live: { center.shell.kept.rev; return center.shell.kept.live(row.modelData.entry) }
                             hideText: center.shell.sharing
+                            current: row.current
                             onOpened: center.open_(row.modelData.entry, live)
                             onInvoked: key => { center.shell.api.invoke(row.modelData.entry.id, key); center.close() }
                             onRemoved: center.shell.api.removeHistory(row.modelData.entry.id, row.modelData.entry.t)

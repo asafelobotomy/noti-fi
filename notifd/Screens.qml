@@ -8,8 +8,9 @@ Scope {
     id: scr
     required property var shell
     readonly property bool hyprland: (Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") ?? "") !== ""
-    LazyLoader { id: focus; active: scr.hyprland; source: "FocusedMonitor.qml" }
-    readonly property string focusedName: focus.item ? focus.item.name : ""
+    LazyLoader { id: focus; active: scr.hyprland; source: "HyprlandWatch.qml" }
+    readonly property var hypr: focus.item                 // HyprlandWatch on Hyprland (focused monitor, captures, full screen), else null
+    readonly property string focusedName: hypr ? hypr.name : ""
     readonly property var popups: {
         const list = Quickshell.screens, want = scr.shell.cfg.screen
         return (want === "focused" ? list.find(s => s.name === scr.focusedName) : list.find(s => s.name === want)) ?? list[0] ?? null
