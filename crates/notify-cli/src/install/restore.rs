@@ -10,15 +10,15 @@ fn restore_steps(ctx: &Ctx, purge: bool) -> Vec<Step> {
     let mut steps = Vec::new();
     {
         let c = ctx.clone();
-        steps.push(Step::new("systemctl --user disable --now notifd.service", move || {
-            systemctl(&c, &["disable", "--now", "notifd.service"]);
+        steps.push(Step::new("systemctl --user disable --now notifd.service notifd-jobs.service", move || {
+            systemctl(&c, &["disable", "--now", "notifd.service", "notifd-jobs.service"]);
             Ok(())
         }));
     }
     {
-        let (st, up, fp, dp) = (state.clone(), p.unit.clone(), p.fallback_unit.clone(), p.dbus.clone());
-        steps.push(Step::new(format!("remove {}, {} and the D-Bus activation override", file_name(&p.unit), file_name(&p.fallback_unit)), move || {
-            for (recorded, default) in [(&st.unit, &up), (&st.fallback_unit, &fp), (&st.dbus, &dp)] {
+        let (st, up, fp, dp, jp) = (state.clone(), p.unit.clone(), p.fallback_unit.clone(), p.dbus.clone(), p.jobs_unit.clone());
+        steps.push(Step::new(format!("remove {}, {}, {} and the D-Bus activation override", file_name(&p.unit), file_name(&p.fallback_unit), file_name(&p.jobs_unit)), move || {
+            for (recorded, default) in [(&st.unit, &up), (&st.fallback_unit, &fp), (&st.dbus, &dp), (&st.jobs_unit, &jp)] {
                 let f = if recorded.is_empty() { default.clone() } else { PathBuf::from(recorded) };
                 if f.exists() {
                     fs::remove_file(&f)?;
@@ -43,7 +43,7 @@ fn restore_steps(ctx: &Ctx, purge: bool) -> Vec<Step> {
     }
     {
         let (c, ts) = (ctx.clone(), p.takeover_state.clone());
-        steps.push(Step::new("daemon-reload; if nobody owns the name, restart plasmashell so Plasma takes it back", move || {
+        steps.push(Step::new("daemon-reload; if nobody owns the notification or job names, restart plasmashell so Plasma takes them back", move || {
             if !c.no_systemctl {
                 systemctl(&c, &["daemon-reload"]);
                 systemctl(&c, &["reset-failed", "notifd.service"]);
@@ -54,7 +54,8 @@ fn restore_steps(ctx: &Ctx, purge: bool) -> Vec<Step> {
                     }
                     sleep_ms(500);
                 }
-                if owner().is_none() {
+                // Plasma claims the job server only when it starts, so a freed job server also needs a restart
+                if owner().is_none() || owner_of(notify_jobs::JOB_SERVER).is_none() {
                     systemctl(&c, &["restart", "plasma-plasmashell.service"]);
                 }
             }

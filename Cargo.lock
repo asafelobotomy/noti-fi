@@ -963,6 +963,7 @@ dependencies = [
  "chrono",
  "clap",
  "notify-client",
+ "notify-jobs",
  "notify-protocol",
  "notify-testkit",
  "notify-update",
@@ -981,6 +982,15 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.21",
+]
+
+[[package]]
+name = "notify-jobs"
+version = "0.16.0"
+dependencies = [
+ "anyhow",
+ "serde",
+ "zbus",
 ]
 
 [[package]]

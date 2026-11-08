@@ -87,7 +87,12 @@ pub struct Owner {
 
 /// Who owns org.freedesktop.Notifications right now.
 pub fn owner() -> Option<Owner> {
-    let (rc, out) = sh("busctl", &["--user", "status", "org.freedesktop.Notifications"]);
+    owner_of("org.freedesktop.Notifications")
+}
+
+/// Who owns a D-Bus name on the session bus right now.
+pub fn owner_of(name: &str) -> Option<Owner> {
+    let (rc, out) = sh("busctl", &["--user", "status", name]);
     if rc != 0 {
         return None;
     }

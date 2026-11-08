@@ -11,7 +11,7 @@ use crate::install::PORTAL_MARK;
 use crate::integrations;
 use crate::out::{BAD, INFO, OK, WARN};
 use crate::paths::paths;
-use crate::sys::{notifd_owns, owner, sh, which};
+use crate::sys::{notifd_owns, owner, owner_of, sh, which};
 use notify_protocol::{ConfigStatus, Status};
 
 #[derive(Serialize)]
@@ -25,6 +25,8 @@ pub struct OwnerInfo {
 pub struct StatusReport {
     pub owner: Option<OwnerInfo>,
     pub notifd_owns: bool,
+    /// Who shows file operations (org.kde.JobViewServer): notifd's job bridge (`notify`) or Plasma.
+    pub jobs_owner: Option<OwnerInfo>,
     pub daemon: Option<Status>,
     pub config: Option<ConfigStatus>,
 }
@@ -34,6 +36,7 @@ pub fn status_data(ctx: &Ctx) -> StatusReport {
     StatusReport {
         owner: owner().map(|o| OwnerInfo { pid: o.pid, comm: o.comm, unit: o.unit }),
         notifd_owns: notifd_owns(),
+        jobs_owner: owner_of(notify_jobs::JOB_SERVER).map(|o| OwnerInfo { pid: o.pid, comm: o.comm, unit: o.unit }),
         daemon: c.as_mut().and_then(|c| c.status().ok()),
         config: c.as_mut().and_then(|c| c.config_status().ok()),
     }
@@ -47,6 +50,12 @@ fn print_status(ctx: &Ctx, r: &StatusReport) {
             ctx.out.line(if r.notifd_owns { OK } else { INFO }, &format!("owner: {} (pid {}, unit {})", o.comm, o.pid, if o.unit.is_empty() { "none" } else { &o.unit }), None);
             ctx.out.line(INFO, if r.notifd_owns { "notifd is the owner" } else { "stock owner is active (notifd is NOT in control)" }, None);
         }
+    }
+    match &r.jobs_owner {
+        Some(o) if o.comm == "notify" => ctx.out.line(OK, &format!("file operations (Dolphin's copy/move progress): shown by notifd's job bridge (pid {})", o.pid), None),
+        Some(o) if r.notifd_owns => ctx.out.line(WARN, &format!("file operations (Dolphin's copy/move progress): held by {}, so they do not show", o.comm), Some("the job bridge takes over at the next login (or: systemctl --user restart plasma-plasmashell)")),
+        Some(o) => ctx.out.line(INFO, &format!("file operations (Dolphin's copy/move progress): shown by {}", o.comm), None),
+        None => ctx.out.line(if r.notifd_owns { WARN } else { INFO }, "nobody shows file operations (org.kde.JobViewServer has no owner)", r.notifd_owns.then_some("systemctl --user start notifd-jobs")),
     }
     let Some(d) = &r.daemon else {
         ctx.out.line(INFO, "no notifd instance answering", None);
@@ -114,6 +123,8 @@ pub fn doctor(ctx: &Ctx) -> anyhow::Result<bool> {
         add("Install", if enabled == "enabled" { OK } else { WARN }, format!("notifd.service: {}", if enabled.is_empty() { "unknown" } else { &enabled }), None);
         let fb = p.fallback_unit.exists();
         add("Install", if fb { OK } else { WARN }, format!("automatic fallback to Plasma if notifd keeps failing: {}", if fb { "armed" } else { "missing" }), if fb { None } else { Some("run: notify update") });
+        let jobs = p.jobs_unit.exists();
+        add("Install", if jobs { OK } else { WARN }, format!("job bridge for file operations (notifd-jobs.service): {}", if jobs { "installed" } else { "missing" }), if jobs { None } else { Some("run: notify update") });
         let portal_ok = std::fs::read_to_string(&p.portal).map(|t| t.contains(PORTAL_MARK)).unwrap_or(false);
         add("Install", if portal_ok { OK } else { WARN }, format!("Flatpak/portal notifications routed through notifd: {}", if portal_ok { "yes" } else { "NO" }), if portal_ok { None } else { Some("run: notify portal") });
         let loaded = integrations::kwin_loaded();

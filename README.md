@@ -50,6 +50,7 @@ The `release` workflow builds on Arch, packages the archive with `packaging/buil
 | `crates/notify-cli` | the `notify` command (Rust). Embeds the daemon files, so `notify update` needs no project folder |
 | `crates/notify-protocol` | typed messages for the control socket and the `rules.json` model (no I/O) |
 | `crates/notify-client` | blocking Rust client for the control socket (used by the CLI; the future panel will use it too) |
+| `crates/notify-jobs` | the job bridge (`notify jobs`, run by `notifd-jobs.service`): shows KDE file operations (Dolphin's copy, move, delete, extract; any KIO job) as notifd popups with live progress |
 | `crates/notify-testkit` | test harness: a throwaway daemon on a private D-Bus session |
 | `crates/notify-apps` | finds apps that send, or could send, notifications (launchers, KDE events, Plasma's list, Flatpak permissions) and merges them with the daemon's `seenApps` |
 | `crates/notify-panel-core` | the panel's Qt-free logic: connection worker (reconnects, coalesces events), view data, history filtering |
@@ -86,6 +87,15 @@ notify restore              # hand notifications back to Plasma, remove everythi
 `takeover` also routes Flatpak/portal notifications through notifd (`notify portal`), arms an automatic
 fallback (if notifd keeps failing, notifications are handed back to Plasma instead of being lost),
 and records what it created so `restore` removes exactly that.
+
+It also installs the **job bridge** (`notifd-jobs.service`). KDE apps do not send file operations (Dolphin's
+copy, move, delete, extract) as notifications: they report them to Plasma's job tracker
+(`org.kde.JobViewServer`), which only Plasma's own notification applet draws. The bridge takes that name instead
+and shows each job as one notifd popup with a live progress bar, speed and time left, **Pause**/**Cancel**
+buttons, and the result when it ends (**Open folder**). It follows your rules like any notification from the app
+(`desktopEntry` `org.kde.dolphin`, category `transfer`, `transfer.complete` or `transfer.error`). Plasma claims
+that name when it starts and never gives it up, so the bridge starts before plasmashell; on an install that
+predates it, `notify update` adds it and it takes over at the next login (`notify status` shows who holds it).
 
 ### Machine-readable output
 
@@ -165,7 +175,7 @@ notify update --payload notifd   # deploy the checkout's daemon files instead of
   share yet; see the notes in `notifd/shell.qml` (`shareScript`).*
 - **Inline reply:** notifications that offer a reply (chat apps) get a reply box. Click it, type, press Enter
   (Escape dismisses). The popup takes keyboard focus only when you click into the box. `notify reply ID TEXT` does the same from a terminal.
-- **Tray:** `notify tray hide` removes Plasma's own (now inert) notification icon from the system tray; `notify tray show` brings it back.
+- **Tray:** `notify tray hide` removes Plasma's own (now inert: the job bridge shows file operations) notification icon from the system tray; `notify tray show` brings it back.
   Plasma 6 runs its notification service *inside* that icon's applet, so `notify restore` (and the automatic fallback) show it again
   before handing notifications back; otherwise Plasma could not take them over.
 

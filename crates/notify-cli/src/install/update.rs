@@ -43,10 +43,18 @@ pub fn update(ctx: &Ctx) -> Result<()> {
     for (n, _) in &pl.files {
         out.text(&format!("  updated {n}"));
     }
-    for (path, text) in [(&p.unit, unit_text(&p.payload)), (&p.fallback_unit, fallback_unit_text()), (&p.dbus, dbus_text().to_string())] {
+    // installs from before the job bridge existed get it now
+    let jobs_new = !p.jobs_unit.exists();
+    for (path, text) in [(&p.unit, unit_text(&p.payload)), (&p.fallback_unit, fallback_unit_text()), (&p.dbus, dbus_text().to_string()), (&p.jobs_unit, jobs_unit_text())] {
         if fs::read_to_string(path).ok().as_deref() != Some(&text) {
             atomic_write(path, &text)?;
             out.text(&format!("  refreshed {}", path.file_name().and_then(|n| n.to_str()).unwrap_or("")));
+        }
+    }
+    if jobs_new {
+        if let Some(mut st) = read_state(&p) {
+            st.jobs_unit = p.jobs_unit.display().to_string();
+            atomic_write(&p.takeover_state, &serde_json::to_string_pretty(&st)?)?;
         }
     }
     let added = merge_new_defaults(&pl.rules, &p.rules);
@@ -60,6 +68,13 @@ pub fn update(ctx: &Ctx) -> Result<()> {
     systemctl(ctx, &["daemon-reload"]);
     systemctl(ctx, &["restart", "notifd.service"]);
     out.text("  restarted notifd.service (notifications pause for about a second)");
+    if jobs_new {
+        systemctl(ctx, &["enable", "notifd-jobs.service"]);
+    }
+    systemctl(ctx, &["restart", "notifd-jobs.service"]);
+    if owner_of(notify_jobs::JOB_SERVER).is_some_and(|o| o.comm == "plasmashell") {
+        out.text("  the job bridge is waiting for Plasma to let go of file-operation progress: Dolphin's copies and moves show through notifd from the next login (or now, after: systemctl --user restart plasma-plasmashell)");
+    }
     if healthy(Some(&p.takeover_state), Duration::from_secs(15)) {
         out.result(true, "  health check passed");
         return Ok(());

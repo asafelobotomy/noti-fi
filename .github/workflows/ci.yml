@@ -34,7 +34,7 @@ jobs:
         run: cargo build --workspace --locked
       - name: Unit tests and the project's own rules (line limit, version agreement)
         run: |
-          cargo test --locked -p notify-protocol -p notify-apps -p notify-panel-core --lib
+          cargo test --locked -p notify-protocol -p notify-apps -p notify-panel-core -p notify-jobs --lib
           cargo test --locked -p notify-cli --test loc --test version
       - name: Clippy (reported, not blocking)
         run: cargo clippy --workspace --all-targets --locked || true

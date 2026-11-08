@@ -16,6 +16,7 @@ fn xdg(var: &str, default: &str) -> PathBuf {
 pub struct Paths {
     pub unit: PathBuf,
     pub fallback_unit: PathBuf,
+    pub jobs_unit: PathBuf,
     pub dbus: PathBuf,
     pub payload: PathBuf,
     pub prev: PathBuf,
@@ -44,6 +45,7 @@ pub fn paths() -> Paths {
     Paths {
         unit: config.join("systemd/user/notifd.service"),
         fallback_unit: config.join("systemd/user/notifd-fallback.service"),
+        jobs_unit: config.join("systemd/user/notifd-jobs.service"),
         dbus: data.join("dbus-1/services/org.freedesktop.Notifications.service"),
         payload: data.join("notifd"),
         prev: data.join("notifd.prev"),

@@ -297,6 +297,8 @@ enum Cmd {
     },
     /// Run a throwaway daemon on a private bus
     Dev,
+    /// Show Dolphin's (and every KDE app's) copy, move and delete progress through notifd (notifd-jobs.service runs this)
+    Jobs,
     /// Run the regression suite (needs the project checkout)
     Selftest,
 }
@@ -348,6 +350,7 @@ fn run(cli: Cli) -> Result<bool> {
         }
         Cmd::Test { timeout } => controls::test(&ctx, timeout)?,
         Cmd::Dev => dev::dev(&ctx)?,
+        Cmd::Jobs => notify_jobs::run()?,
         Cmd::Selftest => dev::selftest()?,
     }
     Ok(true)

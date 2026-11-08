@@ -5,13 +5,14 @@ Notification daemon for KDE Plasma on Wayland (`notifd`, QML on Quickshell) plus
 ## Commands
 - Build: `cargo build --workspace --locked`; CLI only: `cargo build --release -p notify-cli`.
 - Test (full, as CONTRIBUTING says): `cargo test --workspace --no-fail-fast -- --test-threads=1` (starts a throwaway daemon on a private D-Bus).
-- Test (what CI runs, no desktop needed): `cargo test --locked -p notify-protocol -p notify-apps -p notify-panel-core --lib` and `cargo test --locked -p notify-cli --test loc --test version`.
+- Test (what CI runs, no desktop needed): `cargo test --locked -p notify-protocol -p notify-apps -p notify-panel-core -p notify-jobs --lib` and `cargo test --locked -p notify-cli --test loc --test version`.
+- Job bridge on a private bus (needs `dbus-daemon` only): `cargo test -p notify-jobs --test bridge`.
 - Daemon suites (need Quickshell, `dbus-run-session`, `notify-send`): `python3 tests/test_notifd.py` (includes features and socket suites), `python3 tests/test_sound.py`; `python3 tests/parity.py` compares the Rust CLI with `legacy/notify-py`.
 - Lint: `cargo clippy --workspace --all-targets` (CI reports but does not block). Dependency policy: `cargo deny check` (`deny.toml`).
 - Panel: `cargo run -p notify-panel`.
 
 ## Layout
-- `crates/notify-cli` (`notify`; embeds the `notifd/` files), `notify-protocol` (socket messages and `rules.json` model), `notify-client`, `notify-testkit`, `notify-apps`, `notify-update`, `notify-panel` (cxx-qt + Kirigami), `notify-panel-core` (Qt-free logic), `notify-panel-smoke` (headless panel tests).
+- `crates/notify-cli` (`notify`; embeds the `notifd/` files), `notify-protocol` (socket messages and `rules.json` model), `notify-client`, `notify-testkit`, `notify-apps`, `notify-update`, `notify-jobs` (job bridge: KIO file-operation progress -> notifd, run as `notify jobs` by `notifd-jobs.service`), `notify-panel` (cxx-qt + Kirigami), `notify-panel-core` (Qt-free logic), `notify-panel-smoke` (headless panel tests).
 - `notifd/`: daemon QML (`shell.qml`, `Popup.qml`, ...), `rules.json` and `rules.schema.json`. `tests/`: Python daemon suites, `tests/qml`, `tests/loc-baseline.txt`.
 - `docs/protocol.md` documents the control socket. `packaging/`: PKGBUILD, `install.sh`, `build-tarball.sh`, desktop and metainfo files. `legacy/notify-py`: old Python CLI, kept only for the parity test.
 

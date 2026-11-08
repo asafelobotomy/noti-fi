@@ -14,6 +14,7 @@ path = "src/main.rs"
 notify-client = { path = "../notify-client" }
 notify-protocol = { path = "../notify-protocol" }
 notify-update = { path = "../notify-update" }
+notify-jobs = { path = "../notify-jobs" }
 serde.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true

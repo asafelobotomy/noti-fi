@@ -41,6 +41,37 @@ WantedBy=plasma-core.target
     )
 }
 
+/// The job bridge: KDE file operations (Dolphin's copy/move/delete progress) as notifd notifications.
+/// Plasma takes org.kde.JobViewServer without allowing replacement, so this must hold it before plasmashell starts.
+pub fn jobs_unit_text() -> String {
+    format!(
+        "[Unit]
+Description=noti-fi job bridge (shows file copy/move/delete progress through notifd; owns org.kde.JobViewServer)
+After=plasma-kwin_wayland.service notifd.service
+Before=plasma-plasmashell.service
+PartOf=graphical-session.target
+
+[Service]
+# ready once it holds the names (or is queued behind Plasma), so plasmashell starts after it
+Type=notify
+NotifyAccess=main
+ExecStart={} jobs
+Restart=on-failure
+RestartSec=2
+TimeoutStartSec=12
+Slice=session.slice
+NoNewPrivileges=yes
+UMask=0077
+LockPersonality=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=plasma-core.target
+",
+        exe_path()
+    )
+}
+
 pub fn fallback_unit_text() -> String {
     format!(
         "[Unit]

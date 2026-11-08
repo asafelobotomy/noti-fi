@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Dolphin's file operations show again:** copy, move, delete, extract (any KIO job from any KDE app) appear as one notifd popup per job with a live progress bar, speed and time left, **Pause**/**Cancel**, and the result when it ends ("Copied · 10 files, 2.1 GiB · To ~/Downloads", with **Open folder**). Failures stay; cancelled and quick jobs leave nothing. KDE reports these to Plasma's job tracker, not as notifications, so with Plasma's notification applet gone they had nowhere to appear.
+- **New `notifd-jobs.service`** (`notify jobs`, crate `notify-jobs`): owns `org.kde.JobViewServer` and `org.kde.kuiserver` (JobViewServer V1 and V2, JobView V2 and V3). It starts before plasmashell, which otherwise claims the names for good. `takeover` installs it, `update` adds it to existing installs (active from the next login), `restore` removes it and restarts plasmashell so Plasma takes job progress back. `status` and `doctor` show who holds the job tracker.
+
 ## 0.16.0
 
 - **Groups:**
