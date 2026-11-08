@@ -38,13 +38,14 @@ Scope {
                  focus: s.ctl.focus in s.cfg.focus.modes ? s.ctl.focus : "", perZone: per, stacks: s.layout.stackList(), cap: s.layout.cap(),
                  history: s.history.length, cfgError: s.cfgError, auto: s.auto, holding: s.holdReason(), previewing: s.preview.ids.length > 0,
                  unread: unread.all, unreadPerZone: unread.perZone, center: s.centerOpen, kept: s.kept.count, inhibitors: s.inhibitors,
-                 sharing: s.auto.share === true, latest: latest() }
+                 sharing: s.sharing, latest: latest(),
+                 screens: { popups: s.screens.popups ? s.screens.popups.name : "", osd: s.screens.osd ? s.screens.osd.name : "", focused: s.screens.focusedName } }
     }
     // the newest notification, for a bar or a dock: no title while the screen is being shared
     function latest() {
         const h = api.shell.history[0]
         if (!h) return null
-        return { id: h.id, t: h.t, appName: h.app || h.desktopEntry || "", appIcon: h.icon || "", summary: api.shell.auto.share ? "" : h.summary, read: h.read === true }
+        return { id: h.id, t: h.t, appName: h.app || h.desktopEntry || "", appIcon: h.icon || "", summary: api.shell.sharing ? "" : h.summary, read: h.read === true }
     }
     // history entries not yet read (a popup the user dismissed counts as read; one that timed out does not)
     readonly property var unread: {

@@ -166,7 +166,7 @@ Scope {
                             theme: center.theme
                             now: center.now
                             live: { center.shell.kept.rev; return center.shell.kept.live(row.modelData.entry) }
-                            hideText: center.shell.auto.share
+                            hideText: center.shell.sharing
                             onOpened: center.open_(row.modelData.entry, live)
                             onInvoked: key => { center.shell.api.invoke(row.modelData.entry.id, key); center.close() }
                             onRemoved: center.shell.api.removeHistory(row.modelData.entry.id, row.modelData.entry.t)

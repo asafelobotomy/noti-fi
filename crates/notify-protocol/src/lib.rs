@@ -98,7 +98,7 @@ pub struct EventEnvelope {
 pub enum Event {
     Hello(HelloBody),
     /// Do Not Disturb, mutes, counts and so on changed (coalesced to at most one per 100 ms).
-    State(Status),
+    State(Box<Status>),
     /// A notification arrived (shown or held).
     Notification(NotificationEvent),
     /// An app replaced a notification that is on screen.
@@ -235,6 +235,17 @@ pub struct Status {
     /// The newest notification (its title is empty while the screen is shared); None with an empty history.
     #[serde(default)]
     pub latest: Option<Latest>,
+    /// Where things show: the popups' and the OSD's screen names, and the monitor Hyprland has focused ("" elsewhere).
+    #[serde(default)]
+    pub screens: Screens,
+}
+
+/// Output names, as `wl_output` reports them (e.g. "eDP-1").
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Screens {
+    pub popups: String,
+    pub osd: String,
+    pub focused: String,
 }
 
 /// The newest notification, as a bar shows it.

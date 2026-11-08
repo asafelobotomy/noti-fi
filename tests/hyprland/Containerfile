@@ -1,0 +1,2 @@
+FROM docker.io/library/archlinux:latest
+RUN pacman -Syu --noconfirm --needed hyprland quickshell dbus python libnotify mesa jq procps-ng sqlite qt6-declarative && pacman -Scc --noconfirm

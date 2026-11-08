@@ -20,32 +20,45 @@ Scope {
             }
         }
     }
-    // Screen sharing: a PipeWire video stream produced by KWin means something is capturing the screen.
+    // Screen sharing: a PipeWire video stream produced by KWin means something is capturing the screen. `pw-dump --monitor`
+    // prints the whole graph, then an array of changes whenever something changes (a removed object has "info": null), so a
+    // share is seen the moment its stream appears, not on a poll. Prints 1 or 0 on every change of state (0 if pw-dump fails).
     readonly property string shareScript:
-        "pw-dump 2>/dev/null | python3 -c '" +
+        "pw-dump --monitor 2>/dev/null | python3 -u -c '" +
         "import json,sys\n" +
-        "try: d=json.load(sys.stdin)\n" +
-        "except Exception: print(0); sys.exit()\n" +
-        "hit=0\n" +
-        "for o in d:\n" +
-        "  if o.get(\"type\")!=\"PipeWire:Interface:Node\": continue\n" +
-        "  p=o.get(\"info\",{}).get(\"props\",{})\n" +
-        "  who=\" \".join(str(p.get(k,\"\")) for k in (\"application.name\",\"application.process.binary\",\"node.name\",\"media.name\")).lower()\n" +
-        "  if \"Video\" in str(p.get(\"media.class\",\"\")) and p.get(\"media.class\",\"\").startswith(\"Stream/Output\") and \"kwin\" in who: hit=1\n" +
-        "print(hit)'"
+        "nodes={}; last=None; buf=[]\n" +
+        "def hit():\n" +
+        "  for p in nodes.values():\n" +
+        "    who=\" \".join(str(p.get(k,\"\")) for k in (\"application.name\",\"application.process.binary\",\"node.name\",\"media.name\")).lower()\n" +
+        "    c=str(p.get(\"media.class\",\"\"))\n" +
+        "    if \"Video\" in c and c.startswith(\"Stream/Output\") and \"kwin\" in who: return 1\n" +
+        "  return 0\n" +
+        "for line in sys.stdin:\n" +
+        "  buf.append(line)\n" +
+        "  if line.rstrip() != \"]\": continue\n" +
+        "  try: d=json.loads(\"\".join(buf))\n" +
+        "  except Exception: d=[]\n" +
+        "  buf=[]\n" +
+        "  for o in d:\n" +
+        "    if o.get(\"info\") is None: nodes.pop(o.get(\"id\"),None)\n" +
+        "    elif o.get(\"type\")==\"PipeWire:Interface:Node\": nodes[o.get(\"id\")]=(o[\"info\"].get(\"props\") or nodes.get(o.get(\"id\")) or {})\n" +
+        "  h=hit()\n" +
+        "  if h!=last: last=h; print(h)\n" +
+        "if last is None: print(0)'"
     Process {
-        id: shareProbe
+        id: shareWatch
         command: ["sh", "-c", autoDnd.shareScript]
-        stdout: StdioCollector { onStreamFinished: autoDnd.shell.setAuto("share", text.trim() === "1") }
+        stdout: SplitParser { onRead: line => autoDnd.shell.setAuto("share", line.trim() === "1") }
     }
     Timer {
-        // keeps the watchers alive (respawns journalctl if it ever exits) and polls for screen sharing
+        // keeps the watchers alive (respawns journalctl or pw-dump if one ever exits)
         interval: 4000; running: true; repeat: true; triggeredOnStart: true
         onTriggered: {
             const s = autoDnd.shell
             if (s.cfg.autoDnd.watch === false) return      // watchers off (tests drive the state by hand)
             if (s.cfg.autoDnd.fullscreen && !kwinWatch.running) kwinWatch.running = true
-            if (s.cfg.autoDnd.screenShare && !shareProbe.running) shareProbe.running = true
+            if (s.cfg.autoDnd.screenShare && !shareWatch.running) shareWatch.running = true
+            if (!s.cfg.autoDnd.screenShare && shareWatch.running) shareWatch.running = false
             if (!s.cfg.autoDnd.fullscreen && s.auto.fullscreen) s.setAuto("fullscreen", false)
             if (!s.cfg.autoDnd.screenShare && s.auto.share) s.setAuto("share", false)
         }

@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.18.0
+
+- **Screen sharing is seen at once:** notifd now follows PipeWire as it changes (`pw-dump --monitor`) instead of checking every 4 s, and KDE's screen-share portal's "Screen sharing in progress" inhibition counts as sharing too, so a notification arriving as a share starts no longer shows its text.
+- **One notifd at a time:** `notify serve` refuses to start while another notifd answers on the control socket (a second one used to take the socket's path and leave the running one unreachable).
+- **Hyprland, tested for real:** `tests/hyprland/run.sh` runs notifd behind `notify serve` in a nested Hyprland (0.56) in a container: the focused monitor, `"screen": "focused"`, the level OSD and unplugging a monitor. `status` gains `screens` (`{popups, osd, focused}`).
+- **Fixed:** a binding-loop warning from the OSD window.
 
 - **Notification center:** a left click on the tray icon opens a list of recent notifications next to the tray, under each group's heading in its colour (fold a group into a stack with a click on its heading). **Mark all read** and **Clear all** at the top; click one to mark it read, × to forget it. Escape or a click elsewhere closes it. Its corner is `center.anchor` (default bottom-right), also on the panel's Appearance page.
 - **Hyprland and other desktops:** outside KDE (or with `notify takeover --plain`) notifd installs as a plain user service of the graphical session, with no Plasma takeover, fallback or KWin script; `restore` and `update` follow. `"screen": "focused"` puts popups and the list on Hyprland's focused monitor.

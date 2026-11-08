@@ -180,8 +180,8 @@ notify update --payload notifd   # deploy the checkout's daemon files instead of
   full screen; notifd follows that line from the journal and holds normal popups until it ends (critical ones still
   show; held ones are in `notify history --missed` with the reason). Turn off with `"autoDnd": {"fullscreen": false}`.
 - **Screen sharing:** notifd watches PipeWire for a KWin screen-capture stream and holds popups the same way
-  (`"autoDnd": {"screenShare": false}` to disable); checked against a real OBS capture. KDE's screen-share dialog also asks
-  for quiet itself (Inhibit, below), so a share is held either way.
+  (`"autoDnd": {"screenShare": false}` to disable), following PipeWire as it changes; checked against a real OBS capture.
+  KDE's screen-share dialog also asks for quiet itself (Inhibit, below) as the share starts, which counts as sharing too.
 - **For desktop shells (uQ and others):** the control socket is the integration API (`docs/protocol.md`): a `subscribe`
   stream of `state` events with `unread`, `dnd`, `center`, `sharing` and `latest`; `center`, `dnd` and an `osd` command
   that draws a volume, mic or brightness level (one line per key-repeat step, no process). With `theme.tokens` ("auto"

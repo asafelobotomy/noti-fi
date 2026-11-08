@@ -238,7 +238,7 @@ Variants {
                         players: slot.players
                         samples: { tx.rev; return tx.samplesFor(slot.nid) }
                         chartDefault: root.cfg.transfer.chart
-                        hideText: root.auto.share
+                        hideText: root.sharing
                         stackCount: slot.stacked ? slot.sinfo.count : 1
                         stackExpanded: slot.expanded
                         onStackToggled: root.layout.toggleStack(slot.zone, slot.stackKey)

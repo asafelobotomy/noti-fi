@@ -212,6 +212,7 @@ pub mod fake {
             inhibitors: vec![],
             sharing: false,
             latest: None,
+            screens: Default::default(),
         };
         serde_json::to_value(s).unwrap()
     }

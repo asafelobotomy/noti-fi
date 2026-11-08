@@ -117,6 +117,11 @@ fn alive(c: &mut Child) -> bool {
 
 /// Run notifd from `payload` with Quickshell at `qs`, until either stops.
 pub fn serve(payload: &Path, qs: &Path) -> Result<()> {
+    // a second notifd would take over the control socket's path (Quickshell deletes the file in its way) and leave the
+    // running one unreachable: refuse while one answers there
+    if notify_client::Client::connect_default().and_then(|mut c| c.ping()).is_ok() {
+        bail!("notifd is already running (its control socket at {} answers); stop it first", notify_client::default_socket_path().display());
+    }
     let session = Connection::session().context("connecting to the session bus")?;
     let bus = PrivateBus::start(&runtime_dir())?;
     let inner = zbus::blocking::connection::Builder::address(bus.address.as_str())?.build().context("connecting to the private bus")?;

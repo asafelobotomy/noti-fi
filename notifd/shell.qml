@@ -82,6 +82,9 @@ ShellRoot {
     function liveState() { return { dnd: ctl.dnd, muted: ctl.muted, focus: ctl.focus, auto: auto, inhibited: inhibitors.length > 0 } }
     // apps that asked for notifications to be held (Inhibit, through `notify serve`): [{app, reason}]
     property var inhibitors: []
+    // the screen is being shared: KWin's capture stream (auto.share), or an app's inhibition that says so (KDE's screen-share
+    // portal sends "Screen sharing in progress" as the share starts, before the stream shows in PipeWire)
+    readonly property bool sharing: auto.share === true || inhibitors.some(i => /screen ?shar|screencast|screen ?record/i.test(i.reason))
     onInhibitorsChanged: scheduleState()
     function holdReason() {
         const h = holdFor(cfg, liveState())
@@ -349,7 +352,7 @@ ShellRoot {
     Timer { id: osdTimer; interval: 1600; onTriggered: root.osdShown = false }
 
     // Versions the control socket reports (`notify` checks daemonVersion agrees with its own).
-    readonly property string daemonVersion: "0.17.0"
+    readonly property string daemonVersion: "0.18.0"
     readonly property int protocolVersion: 1
     property string rawConfig: ""          // the text of rules.json as last read (configGet)
 

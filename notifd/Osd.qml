@@ -19,7 +19,9 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "notifd-osd"
     color: "transparent"
-    visible: screen !== null && (root.osdShown || pill.opacity > 0 || bar.opacity > 0)
+    visible: screen !== null && (root.osdShown || fadeOut.running)     // stays up while it fades (not bound to the opacity: a loop)
+    Timer { id: fadeOut; interval: 200 }
+    Connections { target: osd.root; function onOsdShownChanged() { if (!osd.root.osdShown) fadeOut.restart() } }
     mask: Region {}                             // click-through
 
     Rectangle {

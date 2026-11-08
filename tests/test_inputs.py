@@ -137,19 +137,23 @@ def make_tests(check, BASE_CONFIG, ROOT, SRC):
     def test_share_detection(d):
         """The screen-sharing probe in AutoDnd.qml, run on PipeWire graphs like the ones KWin really makes (recorded during an OBS capture)."""
         src = (SRC / "AutoDnd.qml").read_text()
-        block = src[src.index("readonly property string shareScript:"):src.index("id: shareProbe")]
+        block = src[src.index("readonly property string shareScript:"):src.index("id: shareWatch")]
         script = "".join(bytes(p, "utf-8").decode("unicode_escape") for p in re.findall(r'"((?:[^"\\]|\\.)*)"', block))
-        node = lambda props: {"type": "PipeWire:Interface:Node", "info": {"props": props}}
-        kwin = node({"media.class": "Stream/Output/Video", "media.name": "kwin-screencast-eDP-1", "node.name": "kwin_wayland"})
-        obs = node({"media.class": "Stream/Input/Video", "media.name": "OBS Studio", "node.name": "obs"})
-        cam = node({"media.class": "Video/Source", "node.name": "v4l2_input.usb", "node.description": "HD Webcam"})
-        for graph, want, what in (([cam, obs, kwin], "1", "KWin producing a screencast stream"), ([cam, obs], "0", "no KWin stream (a webcam and a reader)"), (None, "0", "pw-dump failing")):
+        node = lambda i, props: {"id": i, "type": "PipeWire:Interface:Node", "info": {"props": props}}
+        kwin = node(3, {"media.class": "Stream/Output/Video", "media.name": "kwin-screencast-eDP-1", "node.name": "kwin_wayland"})
+        obs = node(4, {"media.class": "Stream/Input/Video", "media.name": "OBS Studio", "node.name": "obs"})
+        cam = node(5, {"media.class": "Video/Source", "node.name": "v4l2_input.usb", "node.description": "HD Webcam"})
+        gone = {"id": 3, "info": None}                   # how `pw-dump --monitor` reports a removed object
+        cases = (([[cam, obs, kwin]], "1", "KWin producing a screencast stream"), ([[cam, obs]], "0", "no KWin stream (a webcam and a reader)"),
+                 ([[cam], [kwin], [gone]], "0\n1\n0", "a share starting and ending is reported as it happens"), (None, "0", "pw-dump failing"))
+        for updates, want, what in cases:
             with tempfile.TemporaryDirectory() as bin_dir:
                 fake = os.path.join(bin_dir, "pw-dump")
+                body = "".join("cat <<'EOF'\n" + json.dumps(u, indent=2) + "\nEOF\n" for u in updates) if updates is not None else "exit 1\n"
                 with open(fake, "w") as f:
-                    f.write("#!/bin/sh\n" + ("cat <<'EOF'\n" + json.dumps(graph) + "\nEOF\n" if graph is not None else "exit 1\n"))
+                    f.write("#!/bin/sh\n" + body)
                 os.chmod(fake, 0o755)
                 r = subprocess.run(["sh", "-c", script], env=dict(os.environ, PATH=bin_dir + ":" + os.environ["PATH"]), capture_output=True, text=True, timeout=20)
-            check(f"screen sharing is {'detected' if want == '1' else 'not detected'}: {what}", r.stdout.strip() == want, r.stdout + r.stderr[-200:])
+            check(f"screen sharing: {what}", r.stdout.strip() == want, r.stdout + r.stderr[-200:])
 
     return [test_markup_cannot_fetch, test_bad_config_never_drops_notifications, test_auto_dnd, test_inline_reply, test_share_detection]

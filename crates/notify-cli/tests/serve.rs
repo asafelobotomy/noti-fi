@@ -158,5 +158,16 @@ fn notify_serve_forwards_everything_and_answers_inhibit() {
     wait_until(5, || control(&s, "status", json!({}))["holding"] == "inhibited");
     again.call_method(Some(NAME), PATH, Some(NAME), "UnInhibit", &(c2,)).unwrap();
     k.check("UnInhibit lifts it", wait_until(5, || control(&s, "status", json!({}))["holding"] == ""), || control(&s, "status", json!({})).to_string());
+    // a second notifd must not take the running one's control socket
+    let second = Command::new(env!("CARGO_BIN_EXE_notify"))
+        .args(["serve", "--payload"])
+        .arg(s.dir.join("payload"))
+        .env("DBUS_SESSION_BUS_ADDRESS", &s.address)
+        .env("XDG_RUNTIME_DIR", s.dir.join("run"))
+        .env("NOTIFD_SOCKET", s.dir.join("run/notifd.sock"))
+        .output()
+        .expect("second notify serve");
+    let said = String::from_utf8_lossy(&second.stderr).into_owned();
+    k.check("a second notify serve refuses while one answers, and the first keeps its socket", !second.status.success() && said.contains("already running") && control(&s, "ping", json!({}))["pong"] == true, || said.clone());
     k.finish();
 }

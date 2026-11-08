@@ -20,6 +20,13 @@ def make_tests(check, BASE_CONFIG, Sock):
         st = d.wait_for(lambda: (s := c.call("status")[0]) and s.get("sharing") is True and s, 4) or {}
         check("while the screen is shared, sharing is true and latest has no title", st.get("sharing") is True and (st.get("latest") or {}).get("summary") == "" and (st.get("latest") or {}).get("appName") == "Steam", str(st.get("latest")))
         d.ipc("setAuto", "share", "false")
+        c.call("inhibit", {"by": [{"app": "com.obsproject.Studio", "reason": "Screen sharing in progress"}]})     # what KDE's portal sends
+        st = c.call("status")[0] or {}
+        check("KDE's screen-share inhibition counts as sharing at once (before PipeWire shows the stream)", st.get("sharing") is True and (st.get("latest") or {}).get("summary") == "", str(st.get("latest")))
+        c.call("inhibit", {"by": [{"app": "org.kde.okular", "reason": "Presenting"}]})
+        st = c.call("status")[0] or {}
+        check("...while other inhibitions only hold popups", st.get("sharing") is False and st.get("holding") == "inhibited", str(st.get("holding")))
+        c.call("inhibit", {"by": []})
 
         r, e = c.call("osd", {"kind": "volume", "value": 40, "max": 100, "muted": False})
         check("osd shows a level", r == {"ok": True}, str(e))
