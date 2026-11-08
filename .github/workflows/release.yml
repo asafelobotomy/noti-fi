@@ -21,7 +21,7 @@ jobs:
       version: ${{ steps.v.outputs.version }}
     steps:
       - name: Install build tools and Qt
-        run: pacman -Syu --noconfirm --needed base-devel git rust qt6-base qt6-declarative python
+        run: pacman -Syu --noconfirm --needed base-devel git rust qt6-base qt6-declarative python kirigami qqc2-desktop-style quickshell labwc dbus libnotify
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
@@ -37,9 +37,12 @@ jobs:
       - name: Test the parts that need no desktop
         run: |
           cargo test --locked -p notify-protocol -p notify-apps -p notify-panel-core -p notify-jobs --lib
-          cargo test --locked -p notify-cli --test loc --test version
+          cargo test --locked -p notify-cli --test loc --test version --test qml
+          cargo test --locked -p notify-jobs --test bridge
       - name: Build release binaries
         run: cargo build --release --locked -p notify-cli -p notify-panel
+      - name: Daemon, sound, CLI, client and panel tests (headless Wayland)
+        run: tests/ci-daemon.sh
       - name: Package
         env:
           VERSION: ${{ steps.v.outputs.version }}

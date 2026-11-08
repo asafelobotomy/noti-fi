@@ -189,7 +189,7 @@ notify update --payload notifd   # deploy the checkout's daemon files instead of
 - Screen-share detection is unconfirmed (above), as is start-up ordering at a real login and Brave web push arriving through notifd; these need a live desktop session to prove.
 - The panel is built against one Qt minor version. Release archives record it (`qt-version`) and `notify upgrade` refuses a panel that does not match; a `portable-qml` archive works across Qt versions.
 - Release archives are x86_64 Linux only and are not signed (they are checked against a published sha256).
-- CI runs unit, CLI and offscreen-panel tests; the daemon and popup suites need Quickshell and a compositor and are run locally.
+- CI runs the unit, CLI, QML, job bridge and offscreen-panel tests, and the daemon and sound suites under a headless labwc compositor (`tests/ci-daemon.sh`).
 
 ## Planned
 
