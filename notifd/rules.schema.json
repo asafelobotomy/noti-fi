@@ -434,6 +434,22 @@
           "description": "How the graph of a download or transfer popup is drawn by default."
         }
       }
+    },
+    "center": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The notification center: the list of recent notifications that the tray icon (or `notify center`) opens.",
+      "properties": {
+        "anchor": {
+          "enum": [
+            "top-left",
+            "top-right",
+            "bottom-left",
+            "bottom-right"
+          ],
+          "description": "The corner it opens in; put it next to the system tray."
+        }
+      }
     }
   }
 }

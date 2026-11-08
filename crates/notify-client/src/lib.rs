@@ -308,6 +308,19 @@ impl Client {
         self.call("dismissAll", &json!({}))
     }
 
+    /// Open, close or toggle the notification center.
+    pub fn center(&mut self, action: &str) -> Result<Status> {
+        self.call("center", &json!({ "action": action }))
+    }
+
+    /// Mark these history entries read (by notification id), or all of them with `None`.
+    pub fn mark_read(&mut self, ids: Option<&[i64]>) -> Result<Status> {
+        self.call("markRead", &match ids {
+            Some(ids) => json!({ "ids": ids }),
+            None => json!({}),
+        })
+    }
+
     pub fn reply(&mut self, id: i64, text: &str) -> Result<()> {
         self.call_raw("reply", json!({ "id": id, "text": text })).map(|_| ())
     }

@@ -36,7 +36,42 @@ Scope {
         }
         return { dnd: s.ctl.dnd, muted: s.ctl.muted, zones: Object.keys(s.cfg.zones), active: onScreen, queued: queued,
                  focus: s.ctl.focus in s.cfg.focus.modes ? s.ctl.focus : "", perZone: per, stacks: s.layout.stackList(), cap: s.layout.cap(),
-                 history: s.history.length, cfgError: s.cfgError, auto: s.auto, holding: s.holdReason(), previewing: s.preview.ids.length > 0 }
+                 history: s.history.length, cfgError: s.cfgError, auto: s.auto, holding: s.holdReason(), previewing: s.preview.ids.length > 0,
+                 unread: unread.all, unreadPerZone: unread.perZone, center: s.centerOpen }
+    }
+    // history entries not yet read (a popup the user dismissed counts as read; one that timed out does not)
+    readonly property var unread: {
+        const per = {}
+        let all = 0
+        for (const h of api.shell.history) if (h.read !== true) { all++; per[h.zone] = (per[h.zone] || 0) + 1 }
+        return { all: all, perZone: per }
+    }
+    // the notification center: action is open, close or toggle
+    function center(action) {
+        const s = api.shell
+        const on = action === "open" ? true : action === "close" ? false : action === "toggle" ? !s.centerOpen : null
+        if (on === null) fail("bad_params", "action must be open, close or toggle")
+        s.centerOpen = on
+        s.scheduleState()
+        return status()
+    }
+    // mark these history ids read, or every entry when ids is not a list
+    function markRead(ids) {
+        const s = api.shell
+        const all = !Array.isArray(ids)
+        if (!s.history.some(h => h.read !== true && (all || ids.indexOf(h.id) >= 0))) return status()
+        s.history = s.history.map(h => h.read !== true && (all || ids.indexOf(h.id) >= 0) ? Object.assign({}, h, { read: true }) : h)
+        s.saveSoon()
+        s.scheduleState()
+        return status()
+    }
+    // forget one history entry (id and time together: ids start again at 1 when the daemon restarts)
+    function removeHistory(id, t) {
+        const s = api.shell
+        s.history = s.history.filter(h => !(h.id === id && h.t === t))
+        s.saveSoon()
+        s.scheduleState()
+        return status()
     }
     function configStatus() {
         const c = api.shell.cfg
@@ -178,5 +213,7 @@ Scope {
         function seenApps(): string { return api.json(() => api.seenApps()) }
         function clearHistory(): string { return api.json(() => api.clearHistory()) }
         function dismissAll(): string { return api.json(() => api.dismissAll()) }
+        function center(action: string): string { return api.json(() => api.center(action)) }
+        function markAllRead(): string { return api.json(() => api.markRead(null)) }
     }
 }

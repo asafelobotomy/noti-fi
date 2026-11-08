@@ -179,4 +179,32 @@ def make_tests(check, BASE_CONFIG):
         d.write_config(BASE_CONFIG)
         time.sleep(1.2)
 
-    return [test_style_and_types, test_priority_and_focus, test_stacking]
+    def test_center_and_unread(d):
+        d.ipc("clearHistory")
+        d.send("times out", app="Steam", t=1200)
+        d.send("disk full", app="systemd", t=1200)
+        st = {}
+        ok = d.wait_for(lambda: (st := d.ipc("status") or {}).get("unread") == 2, 5)
+        st = d.ipc("status") or {}
+        check("new notifications are unread, counted per group", ok and st.get("unreadPerZone", {}).get("system") == 1 and sum(st.get("unreadPerZone", {}).values()) == 2, str(st))
+        d.wait_for(lambda: d.active() == 0, 5)
+        d.send("dismissed", app="Steam", t=0)
+        d.wait_for(lambda: d.active() == 1, 4)
+        d.ipc("dismissAll")
+        d.wait_for(lambda: d.active() == 0, 4)
+        hist = {h["summary"]: h for h in (d.ipc("history", 10) or [])}
+        check("closing a popup yourself marks it read; one that timed out stays unread",
+              hist.get("dismissed", {}).get("read") is True and hist.get("times out", {}).get("read") is False, str(hist))
+        check("...so the unread count only has the ones not seen", (d.ipc("status") or {}).get("unread") == 2, str(d.ipc("status")))
+        st = d.ipc("markAllRead") or {}
+        check("mark all read clears the count", st.get("unread") == 0 and all(h.get("read") for h in (d.ipc("history", 10) or [])), str(st))
+        check("the center opens, toggles and closes", (d.ipc("center", "open") or {}).get("center") is True
+              and (d.ipc("center", "toggle") or {}).get("center") is False and (d.ipc("center", "close") or {}).get("center") is False)
+        r = d.ipc("center", "explode")
+        check("an unknown center action is refused", isinstance(r, dict) and "error" in r, str(r))
+        for corner, good in (("top-left", True), ("middle", False)):
+            r = d.ipc("validate", json.dumps({**BASE_CONFIG, "center": {"anchor": corner}}))
+            check(f"center.anchor {corner!r} is {'accepted' if good else 'refused'}", isinstance(r, dict) and r.get("ok") is good, str(r))
+        d.ipc("clearHistory")
+
+    return [test_style_and_types, test_priority_and_focus, test_stacking, test_center_and_unread]

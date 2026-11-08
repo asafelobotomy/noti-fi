@@ -91,6 +91,7 @@ pub fn zones_json(status: &Status, cfg: &Config) -> String {
                 "accent": zc.and_then(|x| x.accent.clone()).unwrap_or_else(|| "#60a5fa".into()),
                 "muted": status.muted.contains(z),
                 "count": status.per_zone.get(z).copied().unwrap_or(0),
+                "unread": status.unread_per_zone.get(z).copied().unwrap_or(0),
             })
         })
         .collect();
@@ -177,11 +178,14 @@ mod tests {
             previewing: false,
             focus: String::new(),
             stacks: Vec::new(),
+            unread: 0,
+            unread_per_zone: Default::default(),
+            center: false,
         }
     }
 
     fn entry(app: &str, summary: &str, zone: &str, shown: bool) -> HistoryEntry {
-        HistoryEntry { t: 0, id: 1, app: app.into(), summary: summary.into(), body: String::new(), zone: zone.into(), origin: String::new(), urgency: Urgency::Normal, shown, why: if shown { String::new() } else { "dnd".into() }, updates: None, desktop_entry: String::new(), category: String::new(), channel: String::new() }
+        HistoryEntry { t: 0, id: 1, app: app.into(), summary: summary.into(), body: String::new(), zone: zone.into(), origin: String::new(), urgency: Urgency::Normal, shown, why: if shown { String::new() } else { "dnd".into() }, updates: None, desktop_entry: String::new(), category: String::new(), channel: String::new(), read: false }
     }
 
     #[test]

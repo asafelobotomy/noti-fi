@@ -42,6 +42,9 @@
   "transfer": {
     "chart": "line"
   },
+  "center": {
+    "anchor": "bottom-right"
+  },
   "zones": {
     "business": {
       "anchor": "top-left",

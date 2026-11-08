@@ -177,6 +177,13 @@ notify update --payload notifd   # deploy the checkout's daemon files instead of
   share yet; see the notes in `notifd/shell.qml` (`shareScript`).*
 - **Inline reply:** notifications that offer a reply (chat apps) get a reply box. Click it, type, press Enter
   (Escape dismisses). The popup takes keyboard focus only when you click into the box. `notify reply ID TEXT` does the same from a terminal.
+- **Notification center:** a left click on the panel's tray icon opens the recent notifications in the corner next to the tray
+  (`"center": {"anchor": "bottom-right"}`; any corner), listed under each group's heading in its colour. Click a heading to fold
+  the group into a stack, a notification to mark it read, × to forget it; **Mark all read** and **Clear all** are at the top.
+  Escape or a click elsewhere closes it (`qs ipc call notifd center toggle` does the same, for a keyboard shortcut).
+  While anything is unread the tray icon is a counter: the number on a disc split into the colours of the groups it comes from
+  (under Do Not Disturb or a focus mode their icon stays, with the counter as a small badge). Closing a popup yourself counts as
+  reading it; one that timed out stays unread.
 - **Tray:** `notify tray hide` removes Plasma's own (now inert: the job bridge shows file operations) notification icon from the system tray; `notify tray show` brings it back.
   Plasma 6 runs its notification service *inside* that icon's applet, so `notify restore` (and the automatic fallback) show it again
   before handing notifications back; otherwise Plasma could not take them over.

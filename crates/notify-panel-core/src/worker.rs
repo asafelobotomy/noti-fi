@@ -24,6 +24,9 @@ pub enum Cmd {
     /// How many history entries each refresh fetches: the full list while the window is open, just the few the tray menu shows while it is not.
     HistoryLimit(u32),
     ClearHistory,
+    /// Open, close or toggle the notification center.
+    Center(String),
+    MarkAllRead,
     /// Ask the daemon whether this draft config is acceptable. `token` comes back with the answer.
     Validate { token: u64, config: Value },
     /// Ask the daemon what it would do with a notification (the request carries the draft config).
@@ -133,6 +136,14 @@ fn handle<F: FnMut(Msg)>(c: &mut Client, cmd: Cmd, rep: &mut Reporter<F>) -> Res
             Err(e) => refused(rep, e),
         },
         Cmd::ClearHistory => match c.clear_history() {
+            Ok(_) => Ok(true),
+            Err(e) => refused(rep, e),
+        },
+        Cmd::Center(action) => match c.center(&action) {
+            Ok(_) => Ok(true),
+            Err(e) => refused(rep, e),
+        },
+        Cmd::MarkAllRead => match c.mark_read(None) {
             Ok(_) => Ok(true),
             Err(e) => refused(rep, e),
         },

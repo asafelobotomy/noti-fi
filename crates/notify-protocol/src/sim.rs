@@ -132,6 +132,9 @@ pub struct HistoryEntry {
     pub category: String,
     #[serde(default)]
     pub channel: String,
+    /// Read in the notification center, or dismissed by the user (entries from before 0.18 are unread).
+    #[serde(default)]
+    pub read: bool,
 }
 
 /// One kind of notification an app sends (see `seenApps`).

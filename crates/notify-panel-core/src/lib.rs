@@ -2,6 +2,7 @@
 //! and filtering history. The Qt bridge (the `notify-panel` crate) only forwards between this and QML, so everything
 //! interesting can be tested without a display.
 
+pub mod badge;
 pub mod draft;
 pub mod shell;
 pub mod tray;

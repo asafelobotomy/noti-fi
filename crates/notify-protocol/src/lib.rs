@@ -210,6 +210,14 @@ pub struct Status {
     /// Stacks of notifications (two or more together).
     #[serde(default)]
     pub stacks: Vec<StackInfo>,
+    /// History entries not yet read, in all and per zone.
+    #[serde(default)]
+    pub unread: u32,
+    #[serde(default)]
+    pub unread_per_zone: BTreeMap<String, u32>,
+    /// The notification center is open.
+    #[serde(default)]
+    pub center: bool,
 }
 
 /// A stack of notifications from one app/site/kind in one zone.

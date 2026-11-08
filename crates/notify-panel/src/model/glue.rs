@@ -73,6 +73,7 @@ impl qobject::PanelModel {
                 focus: me.focus_mode().to_string(),
                 focus_modes: json(me.focus_modes_json()).iter().map(|m| (text(m, "name"), text(m, "label"))).collect(),
                 zones: json(me.zones_json()).iter().map(|z| (text(z, "name"), text(z, "label"), z.get("muted").and_then(Value::as_bool).unwrap_or(false))).collect(),
+                unread: json(me.zones_json()).iter().map(|z| (text(z, "label"), text(z, "accent"), z.get("unread").and_then(Value::as_u64).unwrap_or(0) as u32)).filter(|u| u.2 > 0).collect(),
                 recent: r
                     .history_all
                     .iter()
@@ -88,7 +89,11 @@ impl qobject::PanelModel {
 
     fn on_tray_action(mut self: Pin<&mut Self>, action: TrayAction) {
         match action {
+            // left click: the notification center when notifd is running, otherwise the window
+            TrayAction::Toggle if *self.connected() => self.send(Cmd::Center("toggle".into())),
             TrayAction::Toggle => self.as_mut().toggle_requested(),
+            TrayAction::MarkAllRead => self.send(Cmd::MarkAllRead),
+            TrayAction::ClearAll => self.send(Cmd::ClearHistory),
             TrayAction::Show => self.as_mut().show_requested(),
             TrayAction::OpenPage(p) => self.as_mut().page_requested(&QString::from(&p)),
             TrayAction::SetDnd(on) => self.set_do_not_disturb(on),

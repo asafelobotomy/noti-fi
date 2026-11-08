@@ -235,6 +235,19 @@ impl Default for TransferSettings {
     }
 }
 
+/// The notification center (the list the tray icon opens).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields, default)]
+pub struct CenterSettings {
+    /// The corner it opens in, next to the tray: top-left, top-right, bottom-left or bottom-right.
+    pub anchor: String,
+}
+impl Default for CenterSettings {
+    fn default() -> Self {
+        Self { anchor: "bottom-right".into() }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields, default, rename_all = "camelCase")]
 pub struct Theme {
@@ -295,6 +308,7 @@ pub struct Config {
     pub theme: Theme,
     pub focus: FocusSettings,
     pub transfer: TransferSettings,
+    pub center: CenterSettings,
     pub zones: BTreeMap<String, Zone>,
     pub rules: Vec<Rule>,
 }
@@ -323,6 +337,7 @@ impl Default for Config {
             theme: Theme::default(),
             focus: FocusSettings::default(),
             transfer: TransferSettings::default(),
+            center: CenterSettings::default(),
             zones,
             rules: Vec::new(),
         }

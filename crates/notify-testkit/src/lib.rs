@@ -200,6 +200,9 @@ pub mod fake {
             previewing: false,
             focus: String::new(),
             stacks: Vec::new(),
+            unread: 0,
+            unread_per_zone: Default::default(),
+            center: false,
         };
         serde_json::to_value(s).unwrap()
     }

@@ -106,7 +106,8 @@ ShellRoot {
         const h = history.slice(0, limit - 1)
         h.unshift({
             t: Date.now(), id: n.id, app: f.appName, summary: f.summary, body: (f.body || "").slice(0, 300),
-            zone: r.zone, origin: f.origin, urgency: f.urgency, shown: why === "", why: why, desktopEntry: f.desktopEntry || "", category: f.category || "", channel: f.channel || "app"
+            zone: r.zone, origin: f.origin, urgency: f.urgency, shown: why === "", why: why, desktopEntry: f.desktopEntry || "", category: f.category || "", channel: f.channel || "app",
+            read: false
         })
         history = h
         noteSeen(f, n)
@@ -215,7 +216,8 @@ ShellRoot {
         byId[n.id] = n
         tx.note(n, f)
         layout.addRow(layout.rowFor(n.id, r.zone, r.timeout, r.style))
-        n.closed.connect(() => root.drop(n.id))
+        // closing it yourself (the X, a click, an action) counts as reading it; timing out does not
+        n.closed.connect(reason => { if (reason === NotificationCloseReason.Dismissed) api.markRead([n.id]); root.drop(n.id) })
         watchUpdates(n)
         touch()
         sound.play(n)
@@ -330,6 +332,8 @@ ShellRoot {
         }
     }
 
+    property bool centerOpen: false        // the notification center (Center.qml) is on screen
+    Center { shell: root }
     ZoneWindows { root: root }
     Osd { root: root }
 }

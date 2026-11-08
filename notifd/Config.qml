@@ -22,6 +22,8 @@ Scope {
         focus: { modes: { urgent: { label: "Urgent only", minPriority: "urgent" } } },
         // how the graph of a download / transfer popup is drawn by default: bars, line or heatmap
         transfer: { chart: "line" },
+        // the notification center (the list the tray icon opens) sits in this corner, next to the tray
+        center: { anchor: "bottom-right" },
         zones: { personal: { anchor: "top-right", accent: "#60a5fa", label: "Personal" } },
         rules: []
     })
@@ -29,7 +31,7 @@ Scope {
     function merge(user) {
         const c = Object.assign({}, defaults, user)
         if (!c.zones || !("system" in c.zones)) c.zones = Object.assign({}, c.zones, { system: { anchor: "bottom-right", accent: "#fbbf24", label: "System" } })
-        for (const k of ["dnd", "history", "sound", "autoDnd", "theme", "focus", "transfer"])
+        for (const k of ["dnd", "history", "sound", "autoDnd", "theme", "focus", "transfer", "center"])
             c[k] = Object.assign({}, defaults[k], (user && typeof user[k] === "object" && user[k]) || {})
         return c
     }

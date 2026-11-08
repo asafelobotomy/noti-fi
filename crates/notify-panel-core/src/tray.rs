@@ -17,13 +17,17 @@ pub struct TrayState {
     pub zones: Vec<(String, String, bool)>,
     /// One line per recent notification, already worded for display.
     pub recent: Vec<String>,
+    /// Unread notifications per group: (label, accent colour, count), in the config's order.
+    pub unread: Vec<(String, String, u32)>,
 }
 
 /// What a click asks for.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TrayAction {
-    /// Left click: show the window, or hide it if it is in front.
+    /// Left click: open or close the notification center (or the window, when notifd is not running).
     Toggle,
+    MarkAllRead,
+    ClearAll,
     Show,
     OpenPage(String),
     SetDnd(bool),
@@ -53,7 +57,25 @@ impl Tray {
             parts.push(format!("Focus: {label}"));
         }
         parts.push(format!("{} on screen", s.active));
+        let unread: u32 = s.unread.iter().map(|u| u.2).sum();
+        if unread > 0 {
+            let per: Vec<String> = s.unread.iter().filter(|u| u.2 > 0).map(|(l, _, n)| format!("{l} {n}")).collect();
+            parts.push(format!("{unread} unread ({})", per.join(", ")));
+        }
         format!("noti-fi: {}", parts.join(", "))
+    }
+
+    /// While anything is unread (and neither Do Not Disturb nor a focus mode has its own icon up), the icon is the unread counter,
+    /// as Plasma's own notification icon does: a small overlay would be too small to read.
+    pub fn counter_is_icon(&self) -> bool {
+        let s = &self.state;
+        s.online && !s.dnd && s.focus.is_empty() && s.unread.iter().any(|u| u.2 > 0)
+    }
+
+    /// The unread badge at the sizes a tray asks for (none when everything is read).
+    pub fn badge(&self) -> Vec<ksni::Icon> {
+        let slices: Vec<crate::badge::Slice> = self.state.unread.iter().map(|(_, c, n)| crate::badge::Slice { color: crate::badge::parse_color(c), count: *n }).collect();
+        [16, 22, 32, 48, 64].into_iter().filter_map(|s| crate::badge::render(&slices, s).map(|data| ksni::Icon { width: s as i32, height: s as i32, data })).collect()
     }
 }
 
@@ -76,7 +98,9 @@ impl ksni::Tray for Tray {
         ksni::Category::SystemServices
     }
     fn icon_name(&self) -> String {
-        if !self.state.online {
+        if self.counter_is_icon() {
+            "" // the counter is drawn (icon_pixmap)
+        } else if !self.state.online {
             "dialog-warning"
         } else if self.state.dnd {
             "notifications-disabled"
@@ -87,8 +111,15 @@ impl ksni::Tray for Tray {
         }
         .into()
     }
+    fn icon_pixmap(&self) -> Vec<ksni::Icon> {
+        if self.counter_is_icon() { self.badge() } else { Vec::new() }
+    }
+    // Do Not Disturb and focus mode keep their icon; unread ones then show as a small badge on it
+    fn overlay_icon_pixmap(&self) -> Vec<ksni::Icon> {
+        if self.state.online && !self.counter_is_icon() { self.badge() } else { Vec::new() }
+    }
     fn tool_tip(&self) -> ksni::ToolTip {
-        ksni::ToolTip { title: "noti-fi".into(), description: self.status_line(), icon_name: self.icon_name(), icon_pixmap: Vec::new() }
+        ksni::ToolTip { title: "noti-fi".into(), description: self.status_line(), icon_name: self.icon_name(), icon_pixmap: self.icon_pixmap() }
     }
     fn activate(&mut self, _x: i32, _y: i32) {
         (self.on_action)(TrayAction::Toggle);
@@ -106,6 +137,9 @@ impl ksni::Tray for Tray {
             StandardItem { label: self.status_line(), enabled: false, ..Default::default() }.into(),
             MenuItem::Separator,
             item("Open noti-fi", "window", TrayAction::Show),
+            MenuItem::Separator,
+            StandardItem { label: "Mark all as read".into(), icon_name: "mail-mark-read".into(), enabled: s.online && s.unread.iter().any(|u| u.2 > 0), activate: Box::new(|t: &mut Tray| (t.on_action)(TrayAction::MarkAllRead)), ..Default::default() }.into(),
+            StandardItem { label: "Clear all".into(), icon_name: "edit-clear-history".into(), enabled: s.online && !s.recent.is_empty(), activate: Box::new(|t: &mut Tray| (t.on_action)(TrayAction::ClearAll)), ..Default::default() }.into(),
             MenuItem::Separator,
             check("Do Not Disturb", s.dnd, s.online, TrayAction::SetDnd(!s.dnd)),
         ];
@@ -205,6 +239,7 @@ mod tests {
             focus_modes: vec![("urgent".into(), "Urgent only".into()), ("work".into(), "Work".into())],
             zones: vec![("business".into(), "Business".into(), true), ("personal".into(), "Personal".into(), false)],
             recent: vec![recent_line("2 min", "Steam", "New message", true, true), recent_line("1 h", "Brave", "x", false, false)],
+            unread: vec![("Personal".into(), "#60a5fa".into(), 2), ("System".into(), "#fbbf24".into(), 1)],
         }
     }
 
@@ -216,8 +251,8 @@ mod tests {
     fn the_menu_shows_the_status_and_lets_it_be_changed() {
         let t = tray(Default::default());
         let l = labels(&t.menu());
-        assert_eq!(l[0], "noti-fi: Do Not Disturb on, Focus: Urgent only, 2 on screen");
-        for want in ["Do Not Disturb [x]", "Focus >", "  Off [ ]", "  Urgent only [x]", "  Work [ ]", "Mute a group >", "  Business [x]", "  Personal [ ]", "Recent notifications >", "  2 min  Steam: New message", "  1 h  Brave  (held)", "  Show all history…", "Settings…", "Quit noti-fi"] {
+        assert_eq!(l[0], "noti-fi: Do Not Disturb on, Focus: Urgent only, 2 on screen, 3 unread (Personal 2, System 1)");
+        for want in ["Do Not Disturb [x]", "Focus >", "  Off [ ]", "  Urgent only [x]", "  Work [ ]", "Mute a group >", "  Business [x]", "  Personal [ ]", "Mark all as read", "Clear all", "Recent notifications >", "  2 min  Steam: New message", "  1 h  Brave  (held)", "  Show all history…", "Settings…", "Quit noti-fi"] {
             assert!(l.iter().any(|x| x == want), "missing `{want}` in {l:#?}");
         }
         assert_eq!(t.icon_name(), "notifications-disabled", "Do Not Disturb has its own icon");
@@ -249,6 +284,8 @@ mod tests {
         run("Business");
         run("Personal");
         run("Open noti-fi");
+        run("Mark all as read");
+        run("Clear all");
         run("Show all history…");
         run("Settings…");
         run("Quit noti-fi");
@@ -261,6 +298,8 @@ mod tests {
                 TrayAction::MuteZone("business".into(), false),
                 TrayAction::MuteZone("personal".into(), true),
                 TrayAction::Show,
+                TrayAction::MarkAllRead,
+                TrayAction::ClearAll,
                 TrayAction::OpenPage("history".into()),
                 TrayAction::OpenPage("general".into()),
                 TrayAction::Quit,
@@ -279,11 +318,38 @@ mod tests {
         let l = labels(&t.menu());
         assert_eq!(l[0], "noti-fi: notifd is not running");
         assert!(l.contains(&"Do Not Disturb [ ]".to_string()));
-        match &t.menu()[4] {
-            MenuItem::Checkmark(c) => assert!(!c.enabled, "the Do Not Disturb item is disabled when notifd is not running"),
-            _ => panic!("the fifth item should be the Do Not Disturb checkbox"),
-        }
+        let menu = t.menu();
+        let dnd = menu.iter().find_map(|i| match i {
+            MenuItem::Checkmark(c) if c.label == "Do Not Disturb" => Some(c),
+            _ => None,
+        });
+        assert!(!dnd.expect("a Do Not Disturb checkbox").enabled, "the Do Not Disturb item is disabled when notifd is not running");
+        let mark = menu.iter().find_map(|i| match i {
+            MenuItem::Standard(s) if s.label == "Mark all as read" => Some(s),
+            _ => None,
+        });
+        assert!(!mark.expect("a Mark all as read item").enabled);
         assert_eq!(t.icon_name(), "dialog-warning");
+        assert!(t.overlay_icon_pixmap().is_empty(), "no badge without a daemon");
+    }
+
+    #[test]
+    fn unread_notifications_become_the_icon_or_a_badge_on_it() {
+        let mut t = tray(Default::default());
+        // Do Not Disturb is on in the test state: its icon stays, the unread count is a badge on it
+        assert_eq!(t.icon_name(), "notifications-disabled");
+        let sizes: Vec<i32> = t.overlay_icon_pixmap().iter().map(|i| i.width).collect();
+        assert_eq!(sizes, [16, 22, 32, 48, 64]);
+        assert!(t.overlay_icon_pixmap().iter().all(|i| i.data.len() == (i.width * i.height * 4) as usize));
+        // otherwise the counter is the icon
+        t.state.dnd = false;
+        t.state.focus.clear();
+        assert_eq!(t.icon_name(), "");
+        assert_eq!(t.icon_pixmap().len(), 5);
+        assert!(t.overlay_icon_pixmap().is_empty());
+        t.state.unread.clear();
+        assert_eq!(t.icon_name(), "preferences-desktop-notification", "the usual icon once everything is read");
+        assert!(t.icon_pixmap().is_empty() && t.overlay_icon_pixmap().is_empty());
     }
 
     #[test]
