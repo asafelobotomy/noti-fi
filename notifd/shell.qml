@@ -72,11 +72,15 @@ ShellRoot {
     // why notifications are being held right now ("" = not held); critical ones may still pass
     function holdFor(c, st) {
         if (st.dnd) return "dnd"
+        if (st.inhibited) return "inhibited"
         if (c.autoDnd.fullscreen && st.auto.fullscreen) return "fullscreen"
         if (c.autoDnd.screenShare && st.auto.share) return "screen sharing"
         return ""
     }
-    function liveState() { return { dnd: ctl.dnd, muted: ctl.muted, focus: ctl.focus, auto: auto } }
+    function liveState() { return { dnd: ctl.dnd, muted: ctl.muted, focus: ctl.focus, auto: auto, inhibited: inhibitors.length > 0 } }
+    // apps that asked for notifications to be held (Inhibit, through `notify serve`): [{app, reason}]
+    property var inhibitors: []
+    onInhibitorsChanged: scheduleState()
     function holdReason() {
         const h = holdFor(cfg, liveState())
         return h !== "" ? h : (ctl.focus !== "" && ctl.focus in cfg.focus.modes ? "focus" : "")

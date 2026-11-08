@@ -3,10 +3,10 @@
 use std::path::Path;
 
 use crate::install::exe_path;
-use crate::sys::which;
 
+/// notifd: `notify serve` owns the notification name and runs Quickshell (the daemon) on a private bus behind it,
+/// so it can answer what Quickshell cannot (Inhibit). It stops when Quickshell stops, and systemd starts both again.
 pub fn unit_text(payload: &Path) -> String {
-    let qs = which("qs").unwrap_or_else(|| "/usr/bin/qs".into());
     format!(
         "[Unit]
 Description=notifd notification daemon (owns org.freedesktop.Notifications)
@@ -23,7 +23,7 @@ StartLimitBurst=5
 [Service]
 Type=dbus
 BusName=org.freedesktop.Notifications
-ExecStart={qs} -p {payload}
+ExecStart={exe} serve --payload {payload}
 Restart=always
 RestartSec=1
 TimeoutStartSec=12
@@ -37,6 +37,7 @@ RestrictSUIDSGID=yes
 [Install]
 WantedBy=plasma-core.target
 ",
+        exe = exe_path(),
         payload = payload.display()
     )
 }

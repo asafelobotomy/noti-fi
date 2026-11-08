@@ -35,3 +35,10 @@ pub fn connect(dev: bool) -> Result<Client> {
 pub fn try_connect(dev: bool) -> Option<Client> {
     Client::connect(socket_path(dev)).ok()
 }
+
+/// `notify serve`: run notifd (the installed files, or --payload) on a private bus, owning the notification name in front of it.
+pub fn serve(ctx: &crate::ctx::Ctx) -> Result<()> {
+    let payload = ctx.payload_dir.clone().unwrap_or_else(|| paths().payload);
+    let qs = crate::sys::which("qs").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("/usr/bin/qs"));
+    notify_bus::serve(&payload, &qs)
+}

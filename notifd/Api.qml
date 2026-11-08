@@ -37,7 +37,7 @@ Scope {
         return { dnd: s.ctl.dnd, muted: s.ctl.muted, zones: Object.keys(s.cfg.zones), active: onScreen, queued: queued,
                  focus: s.ctl.focus in s.cfg.focus.modes ? s.ctl.focus : "", perZone: per, stacks: s.layout.stackList(), cap: s.layout.cap(),
                  history: s.history.length, cfgError: s.cfgError, auto: s.auto, holding: s.holdReason(), previewing: s.preview.ids.length > 0,
-                 unread: unread.all, unreadPerZone: unread.perZone, center: s.centerOpen, kept: s.kept.count }
+                 unread: unread.all, unreadPerZone: unread.perZone, center: s.centerOpen, kept: s.kept.count, inhibitors: s.inhibitors }
     }
     // history entries not yet read (a popup the user dismissed counts as read; one that timed out does not)
     readonly property var unread: {
@@ -186,6 +186,12 @@ Scope {
         }).sort((a, b) => b.last - a.last)
     }
     function clearHistory() { api.shell.kept.closeAll(true); api.shell.history = []; api.shell.saveSoon(); api.shell.scheduleState(); return status() }
+    // the apps that hold notifications (sent by `notify serve`, which answers Inhibit for notifd): replaces the whole list
+    function inhibit(by) {
+        if (!Array.isArray(by)) fail("bad_params", "by must be a list of {app, reason}")
+        api.shell.inhibitors = by.slice(0, 64).map(i => ({ app: String((i && i.app) ?? "").slice(0, 200), reason: String((i && i.reason) ?? "").slice(0, 200) }))
+        return status()
+    }
     // press one of a notification's buttons (key "default" = clicking the notification itself), on screen or kept for the center
     function invoke(nid, key) {
         const s = api.shell

@@ -74,6 +74,7 @@ pub fn hold_text(connected: bool, holding: &str) -> &'static str {
         "dnd" => "On: normal notifications are held (critical ones still show)",
         "fullscreen" => "Held automatically while a window is full screen",
         "screen sharing" => "Held automatically while the screen is being shared",
+        "inhibited" => "Held because an app asked (a presentation, a call, a recording)",
         _ => "Off: notifications show normally",
     }
 }
@@ -182,6 +183,7 @@ mod tests {
             unread_per_zone: Default::default(),
             center: false,
             kept: 0,
+            inhibitors: vec![],
         }
     }
 

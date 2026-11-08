@@ -221,6 +221,16 @@ pub struct Status {
     /// Notifications kept open for their apps after their popup left (see `center.keep`).
     #[serde(default)]
     pub kept: u32,
+    /// Apps holding notifications through Inhibit (`holding` is then "inhibited", unless Do Not Disturb is on).
+    #[serde(default)]
+    pub inhibitors: Vec<Inhibitor>,
+}
+
+/// An app that asked for notifications to be held.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Inhibitor {
+    pub app: String,
+    pub reason: String,
 }
 
 /// A stack of notifications from one app/site/kind in one zone.

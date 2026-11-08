@@ -5,7 +5,7 @@ import QtQuick
 //   c    config            comp  compiled rules for c
 //   f    fields (see fields())
 //   exp  the app's requested timeout (-1 default, 0 never, >0 ms)
-//   st   { dnd, muted[], auto: { fullscreen, share }, focus }
+//   st   { dnd, muted[], auto: { fullscreen, share }, focus, inhibited }
 //
 // Groups (the config's "zones"): every notification ends up in exactly one. Two passes over the rules, in order:
 //   1. the group: the first matching rule that names one (rules that test the group itself take no part);

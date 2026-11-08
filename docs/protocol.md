@@ -40,7 +40,7 @@ server -> client   {"id":1,"result":{...}}
 | method | params | result |
 |---|---|---|
 | `ping` | — | `{pong, t}` |
-| `status` | — | `Status`: `dnd`, `muted[]`, `zones[]`, `active`, `queued`, `perZone{}`, `cap`, `history`, `cfgError`, `auto{fullscreen,share}`, `holding`, `previewing`, `focus`, `stacks[]`, `unread`, `unreadPerZone{}`, `center` (the notification center is open), `kept` (notifications kept open for their apps after their popup left; see `center.keep`) |
+| `status` | — | `Status`: `dnd`, `muted[]`, `zones[]`, `active`, `queued`, `perZone{}`, `cap`, `history`, `cfgError`, `auto{fullscreen,share}`, `holding`, `previewing`, `focus`, `stacks[]`, `unread`, `unreadPerZone{}`, `center` (the notification center is open), `kept` (notifications kept open for their apps after their popup left; see `center.keep`), `inhibitors[]` (`{app, reason}`: apps holding notifications through Inhibit; `holding` is then `inhibited` unless Do Not Disturb is on) |
 | `configStatus` | — | `{ok, error, rules, zones[], screenFound}` |
 | `configGet` | — | `{raw, effective, error}`: the file text, and the merged config the daemon runs |
 | `dnd` | `{mode: "on"\|"off"\|"toggle"}` | `Status` |
@@ -56,6 +56,7 @@ server -> client   {"id":1,"result":{...}}
 | `center` | `{action: open\|close\|toggle}` | `Status`: shows or hides the notification center (the tray icon's left click) |
 | `markRead` | `{ids?}` (notification ids; none = every entry) | `Status` |
 | `removeHistory` | `{id, t}` (both: ids start again at 1 when the daemon restarts) | `Status`; if it was kept, its app is told it was dismissed |
+| `inhibit` | `{by: [{app, reason}]}` | `Status`: replaces the list of apps holding notifications. `notify serve` sends this; it answers `Inhibit`/`UnInhibit` on the session bus |
 | `invoke` | `{id, key}` | `Status`: presses a live notification's button (the app receives `ActionInvoked`; it is marked read). `not_found` once its app closed it |
 | `reply` | `{id, text}` | `{ok}` (the app receives `NotificationReplied`) |
 | `validate` | `{config: {...}}` or `{text: "..."}` | `{ok, error?, rules?, zones?}`; never applies anything |

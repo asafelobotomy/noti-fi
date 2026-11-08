@@ -100,8 +100,9 @@ pub fn owner_of(name: &str) -> Option<Owner> {
     Some(Owner { pid: get("PID"), comm: get("Comm"), unit: get("UserUnit") })
 }
 
+/// notifd holds the notification name: Quickshell itself (older installs, `notify dev`), or `notify serve` in front of it.
 pub fn notifd_owns() -> bool {
-    owner().map(|o| o.comm == "qs" || o.comm == "quickshell").unwrap_or(false)
+    owner().map(|o| o.comm == "qs" || o.comm == "quickshell" || o.comm == "notify").unwrap_or(false)
 }
 
 pub fn sleep_ms(ms: u64) {

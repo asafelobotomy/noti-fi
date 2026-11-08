@@ -51,6 +51,7 @@ The `release` workflow builds on Arch, packages the archive with `packaging/buil
 | `crates/notify-cli` | the `notify` command (Rust). Embeds the daemon files, so `notify update` needs no project folder |
 | `crates/notify-protocol` | typed messages for the control socket and the `rules.json` model (no I/O) |
 | `crates/notify-client` | blocking Rust client for the control socket (used by the CLI and the panel) |
+| `crates/notify-bus` | `notify serve`, what `notifd.service` runs: owns `org.freedesktop.Notifications` and runs Quickshell on a private bus behind it, passing every call and signal through and answering `Inhibit` (apps asking for notifications to be held), which Quickshell cannot |
 | `crates/notify-jobs` | the job bridge (`notify jobs`, run by `notifd-jobs.service`): shows KDE file operations (Dolphin's copy, move, delete, extract; any KIO job) as notifd popups with live progress |
 | `crates/notify-testkit` | test harness: a throwaway daemon on a private D-Bus session |
 | `crates/notify-apps` | finds apps that send, or could send, notifications (launchers, KDE events, Plasma's list, Flatpak permissions) and merges them with the daemon's `seenApps` |
@@ -173,6 +174,9 @@ notify update --payload notifd   # deploy the checkout's daemon files instead of
 - **Screen sharing:** notifd watches PipeWire for a KWin screen-capture stream and holds popups the same way
   (`"autoDnd": {"screenShare": false}` to disable). *The detection signature has not been confirmed against a real
   share yet; see the notes in `notifd/shell.qml` (`shareScript`).*
+- **Apps that ask for quiet:** an app can ask for notifications to be held (`Inhibit`, used for presentations, calls and screen recordings).
+  notifd holds popups as for Do Not Disturb until the app lifts it or quits (critical ones still show); `notify status` says who asked.
+  `notifd.service` runs `notify serve`, which owns the notification name and runs the daemon on a private bus behind it to make this possible.
 - **Inline reply:** notifications that offer a reply (chat apps) get a reply box. Click it, type, press Enter
   (Escape dismisses). The popup takes keyboard focus only when you click into the box. `notify reply ID TEXT` does the same from a terminal.
 - **Notification center:** a left click on the panel's tray icon opens the recent notifications in the corner next to the tray

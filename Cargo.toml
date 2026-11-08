@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/notify-protocol", "crates/notify-client", "crates/notify-testkit", "crates/notify-cli", "crates/notify-panel", "crates/notify-panel-core", "crates/notify-apps", "crates/notify-update", "crates/notify-panel-smoke", "crates/notify-jobs"]
+members = ["crates/notify-protocol", "crates/notify-client", "crates/notify-testkit", "crates/notify-cli", "crates/notify-panel", "crates/notify-panel-core", "crates/notify-apps", "crates/notify-update", "crates/notify-panel-smoke", "crates/notify-jobs", "crates/notify-bus"]
 resolver = "3"
 
 [workspace.package]

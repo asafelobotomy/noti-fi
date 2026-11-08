@@ -1,0 +1,14 @@
+[package]
+name = "notify-bus"
+description = "Owns org.freedesktop.Notifications for notifd: forwards to Quickshell on a private bus and adds Inhibit"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+notify-client = { path = "../notify-client" }
+zbus = { version = "5", default-features = false, features = ["async-io", "blocking-api"] }

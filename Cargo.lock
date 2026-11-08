@@ -955,12 +955,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "notify-bus"
+version = "0.17.0"
+dependencies = [
+ "anyhow",
+ "notify-client",
+ "serde",
+ "serde_json",
+ "zbus",
+]
+
+[[package]]
 name = "notify-cli"
 version = "0.17.0"
 dependencies = [
  "anyhow",
  "chrono",
  "clap",
+ "notify-bus",
  "notify-client",
  "notify-jobs",
  "notify-protocol",
@@ -970,6 +982,7 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
+ "zbus",
 ]
 
 [[package]]

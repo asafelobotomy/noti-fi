@@ -317,6 +317,8 @@ enum Cmd {
     Jobs,
     /// Run the regression suite (needs the project checkout)
     Selftest,
+    /// Run notifd behind the notification name, adding Inhibit (notifd.service runs this; --payload picks the daemon files)
+    Serve,
 }
 
 fn run(cli: Cli) -> Result<bool> {
@@ -371,6 +373,7 @@ fn run(cli: Cli) -> Result<bool> {
         Cmd::Dev => dev::dev(&ctx)?,
         Cmd::Jobs => notify_jobs::run()?,
         Cmd::Selftest => dev::selftest()?,
+        Cmd::Serve => daemon::serve(&ctx)?,
     }
     Ok(true)
 }

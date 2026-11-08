@@ -88,6 +88,8 @@ fn takeover_update_and_restore_in_a_fake_home() {
     }
     let unit = std::fs::read_to_string(h.p("config/systemd/user/notifd-jobs.service")).unwrap_or_default();
     k.check("the job bridge unit starts before plasmashell and runs `notify jobs`", unit.contains("Before=plasma-plasmashell.service") && unit.contains(" jobs"), || unit.clone());
+    let unit = std::fs::read_to_string(h.p("config/systemd/user/notifd.service")).unwrap_or_default();
+    k.check("notifd.service runs `notify serve` on the installed daemon files", unit.contains(" serve --payload ") && unit.contains("BusName=org.freedesktop.Notifications"), || unit.clone());
     let (c, _, _) = h.run(&["takeover"]);
     k.check("a second takeover is refused", c != 0, String::new);
 
