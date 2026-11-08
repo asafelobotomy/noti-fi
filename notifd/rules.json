@@ -43,7 +43,8 @@
     "chart": "line"
   },
   "center": {
-    "anchor": "bottom-right"
+    "anchor": "bottom-right",
+    "keep": 50
   },
   "zones": {
     "business": {

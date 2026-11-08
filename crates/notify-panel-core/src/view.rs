@@ -181,11 +181,12 @@ mod tests {
             unread: 0,
             unread_per_zone: Default::default(),
             center: false,
+            kept: 0,
         }
     }
 
     fn entry(app: &str, summary: &str, zone: &str, shown: bool) -> HistoryEntry {
-        HistoryEntry { t: 0, id: 1, app: app.into(), summary: summary.into(), body: String::new(), zone: zone.into(), origin: String::new(), urgency: Urgency::Normal, shown, why: if shown { String::new() } else { "dnd".into() }, updates: None, desktop_entry: String::new(), category: String::new(), channel: String::new(), read: false }
+        HistoryEntry { t: 0, id: 1, app: app.into(), summary: summary.into(), body: String::new(), zone: zone.into(), origin: String::new(), urgency: Urgency::Normal, shown, why: if shown { String::new() } else { "dnd".into() }, updates: None, desktop_entry: String::new(), category: String::new(), channel: String::new(), read: false, live: false, actions: vec![] }
     }
 
     #[test]

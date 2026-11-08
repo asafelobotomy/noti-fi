@@ -40,22 +40,23 @@ server -> client   {"id":1,"result":{...}}
 | method | params | result |
 |---|---|---|
 | `ping` | — | `{pong, t}` |
-| `status` | — | `Status`: `dnd`, `muted[]`, `zones[]`, `active`, `queued`, `perZone{}`, `cap`, `history`, `cfgError`, `auto{fullscreen,share}`, `holding`, `previewing`, `focus`, `stacks[]`, `unread`, `unreadPerZone{}`, `center` (the notification center is open) |
+| `status` | — | `Status`: `dnd`, `muted[]`, `zones[]`, `active`, `queued`, `perZone{}`, `cap`, `history`, `cfgError`, `auto{fullscreen,share}`, `holding`, `previewing`, `focus`, `stacks[]`, `unread`, `unreadPerZone{}`, `center` (the notification center is open), `kept` (notifications kept open for their apps after their popup left; see `center.keep`) |
 | `configStatus` | — | `{ok, error, rules, zones[], screenFound}` |
 | `configGet` | — | `{raw, effective, error}`: the file text, and the merged config the daemon runs |
 | `dnd` | `{mode: "on"\|"off"\|"toggle"}` | `Status` |
 | `mute` | `{zone, on}` | `Status` |
 | `setAuto` | `{kind: "fullscreen"\|"share", on}` | `Status` (normally set by the watchers; for tests and tools) |
-| `history` | `{limit}` (max 1000) | list of `{t,id,app,summary,body,zone,origin,urgency,shown,why,updates?,read}`, newest first. `read`: opened in the notification center, or the popup was closed by the user (a popup that timed out stays unread) |
+| `history` | `{limit}` (max 1000) | list of `{t,id,app,summary,body,zone,origin,urgency,shown,why,updates?,read,live,actions[]}`, newest first. `read`: opened in the notification center, or the popup was closed by the user (a popup that timed out stays unread). `live`: its app still holds it (on screen, or kept after its popup left), so `actions` (`[{key,text}]`, `default` = clicking it) can be pressed with `invoke` |
 | `focus` | `{mode}` (a mode name, or `off`) | `Status` (with `focus`); an unknown name is `bad_params` and lists the modes that exist |
 | `stack` | `{zone, key, action: toggle\|clear\|scroll, delta?}` | `Status` (`stacks[]` lists stacks of 2+: `{zone,key,count,expanded}`) |
 | `samples` | `{id}` | the transfer measurements of a notification on screen: `[{t, pct, bps}]` (`pct` -1 and `bps` null when unknown) |
 | `seenApps` | — | list of `{key,app,desktopEntry,count,last,types[]}`: every app that ever sent a notification (kept across restarts, independent of history), newest first. `types[]` = `{key,category,channel,caps[],count,last}`: the kinds it has sent (category hint + channel `app`/`portal`/`web`; caps from actions, reply, image, icon, progress, resident, transient, low, critical, sound) |
-| `clearHistory` | — | `Status` |
+| `clearHistory` | — | `Status`; kept notifications are closed for their apps (as dismissed) |
 | `dismissAll` | — | `Status` |
 | `center` | `{action: open\|close\|toggle}` | `Status`: shows or hides the notification center (the tray icon's left click) |
 | `markRead` | `{ids?}` (notification ids; none = every entry) | `Status` |
-| `removeHistory` | `{id, t}` (both: ids start again at 1 when the daemon restarts) | `Status` |
+| `removeHistory` | `{id, t}` (both: ids start again at 1 when the daemon restarts) | `Status`; if it was kept, its app is told it was dismissed |
+| `invoke` | `{id, key}` | `Status`: presses a live notification's button (the app receives `ActionInvoked`; it is marked read). `not_found` once its app closed it |
 | `reply` | `{id, text}` | `{ok}` (the app receives `NotificationReplied`) |
 | `validate` | `{config: {...}}` or `{text: "..."}` | `{ok, error?, rules?, zones?}`; never applies anything |
 | `simulate` | `{config?, notification:{appName,desktopEntry,origin,category,channel,summary,body,urgency,expireTimeout}, ignoreState?}` | `{ok, zone, timeout, silent, wouldShow, hold, matched[], decidedBy{zone,timeout,silent,+style keys}, style{opacity,clickThrough,noFocus,width,fontFamily,fontSize,group}}` |

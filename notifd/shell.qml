@@ -42,6 +42,7 @@ ShellRoot {
     // =====================================================================
     property var ctl: ({ dnd: false, muted: [], focus: "" })
     property var history: []
+    onHistoryChanged: kept.prune()
     // every app that has ever sent us a notification: { key: { app, desktopEntry, count, last } }. Kept even when history is not.
     property var seen: ({})
     readonly property string stateDir: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/notifd"
@@ -198,6 +199,7 @@ ShellRoot {
     Transfers { id: tx }       // samples of downloads and transfers (rate over time), see Transfers.qml
 
     readonly property Rows layout: Rows { shell: root }    // ranking, stacks and sizes of the on-screen rows, see Rows.qml
+    readonly property Kept kept: Kept { shell: root }      // notifications kept alive for the notification center's buttons
 
     function show(n) {
         const f = fields(n)
@@ -211,16 +213,25 @@ ShellRoot {
         if (!n.transient) record(f, n, r, r.why)   // transient notifications are not kept
         emit("notification", { id: n.id, app: f.appName, summary: f.summary, body: (f.body || "").slice(0, 300), zone: r.zone,
                                 origin: f.origin, urgency: f.urgency, shown: r.why === "", why: r.why, transient: !!n.transient })
-        if (r.why !== "") { n.expire(); return }
-
+        // closing it yourself (the X, a click, an action) counts as reading it; timing out does not
+        n.closed.connect(reason => { if (reason === NotificationCloseReason.Dismissed) api.markRead([n.id]); root.kept.release(n.id); root.drop(n.id) })
+        watchUpdates(n)
+        place(n, f, r)
+    }
+    // On screen, or (held by Do Not Disturb, a mute, a focus mode) kept for the notification center
+    function place(n, f, r) {
+        if (r.why !== "") { if (!kept.keep(n)) n.expire(); return }
         byId[n.id] = n
         tx.note(n, f)
         layout.addRow(layout.rowFor(n.id, r.zone, r.timeout, r.style))
-        // closing it yourself (the X, a click, an action) counts as reading it; timing out does not
-        n.closed.connect(reason => { if (reason === NotificationCloseReason.Dismissed) api.markRead([n.id]); root.drop(n.id) })
-        watchUpdates(n)
         touch()
         sound.play(n)
+    }
+    // Its popup timed out: keep it for the notification center (the app still holds it), or close it
+    function timedOut(nid) {
+        const n = byId[nid]
+        if (!n) return
+        if (kept.keep(n)) drop(nid); else n.expire()
     }
 
     // An app that replaces a notification (same id) does not produce a new notification:
@@ -245,6 +256,15 @@ ShellRoot {
     }
     function applyUpdate(n) {
         const i = layout.rowIndex(n.id)
+        if ((i < 0 || rows.get(i).leaving) && kept.byId[n.id]) {   // replaced after its popup left: show it again (as a new notification would be)
+            if (i >= 0) { rows.remove(i); reapQueue = reapQueue.filter(x => x !== n.id) }    // still fading out: take it away now
+            kept.release(n.id)
+            const f = fields(n), r = decide(cfg, compiled, f, n.expireTimeout, liveState())
+            recordUpdate(f, n, r)
+            emit("updated", { id: n.id, summary: f.summary, body: (f.body || "").slice(0, 300), zone: r.zone })
+            place(n, f, r)
+            return
+        }
         if (i < 0 || rows.get(i).leaving) return
         const f = fields(n)
         const r = decide(cfg, compiled, f, n.expireTimeout, liveState())

@@ -13,7 +13,7 @@ QtObject {
     // how important a notification is; an app's urgency maps to low / normal / urgent, a rule can set any of the four
     readonly property var priorities: ["low", "normal", "high", "urgent"]
     readonly property var charts: ["bars", "line", "heatmap"]
-    readonly property var corners: ["top-left", "top-right", "bottom-left", "bottom-right"]
+    readonly property var corners: anchorNames.filter(a => a !== "free")   // where the notification center can open
 
     // "" when the style keys of a rule/zone are valid, otherwise why not
     function styleError(o, allowGroup) {
@@ -83,6 +83,7 @@ QtObject {
         if (fe !== "") return "focus: " + fe
         if (!c.transfer || charts.indexOf(c.transfer.chart) < 0) return "transfer.chart must be " + charts.join(", ")
         if (!c.center || corners.indexOf(c.center.anchor) < 0) return "center.anchor must be " + corners.join(", ")
+        if (!Number.isInteger(c.center.keep) || c.center.keep < 0 || c.center.keep > 1000) return "center.keep must be a whole number from 0 to 1000"
         for (const k of ["fullscreen", "screenShare"])
             if (typeof c.autoDnd[k] !== "boolean") return "autoDnd." + k + " must be true or false"
         if (c.autoDnd.watch !== undefined && typeof c.autoDnd.watch !== "boolean") return "autoDnd.watch must be true or false"

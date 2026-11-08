@@ -311,6 +311,7 @@ const SETTING_DEFAULTS: &[(&str, Kind)] = &[
     ("theme.timerStyle", Kind::Text("none")),
     ("transfer.chart", Kind::Text("line")),
     ("center.anchor", Kind::Text("bottom-right")),
+    ("center.keep", Kind::Num(50.0)),
 ];
 
 fn lookup<'a>(v: &'a Value, path: &str) -> Option<&'a Value> {

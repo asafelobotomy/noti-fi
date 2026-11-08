@@ -177,7 +177,8 @@ notify update --payload notifd   # deploy the checkout's daemon files instead of
   (Escape dismisses). The popup takes keyboard focus only when you click into the box. `notify reply ID TEXT` does the same from a terminal.
 - **Notification center:** a left click on the panel's tray icon opens the recent notifications in the corner next to the tray
   (`"center": {"anchor": "bottom-right"}`, or **Appearance → Notification list** in the panel), listed under each group's heading in its colour. Click a heading to fold
-  the group into a stack, a notification to mark it read, × to forget it; **Mark all read** and **Clear all** are at the top.
+  the group into a stack, a notification to mark it read (and do what clicking its popup would), × to forget it; **Mark all read** and **Clear all** are at the top.
+  A popup that times out stays open for its app (the last 50, `center.keep`), so its buttons (Reply, Open…) still work from the list.
   Escape or a click elsewhere closes it. `notify center [open|close]` does the same from a terminal, and `notify hotkey --center`
   (or **System → Open the notification list with Meta+N** in the panel) binds it to Meta+N; pass other keys to use those.
   While anything is unread the tray icon is a counter: the number on a disc split into the colours of the groups it comes from

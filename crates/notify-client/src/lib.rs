@@ -321,6 +321,11 @@ impl Client {
         })
     }
 
+    /// Press a live notification's button (`key` from its history entry's `actions`; "default" = clicking it).
+    pub fn invoke(&mut self, id: i64, key: &str) -> Result<Status> {
+        self.call("invoke", &json!({ "id": id, "key": key }))
+    }
+
     pub fn reply(&mut self, id: i64, text: &str) -> Result<()> {
         self.call_raw("reply", json!({ "id": id, "text": text })).map(|_| ())
     }

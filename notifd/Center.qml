@@ -21,6 +21,11 @@ Scope {
     onOpenChanged: if (!open) folded = ({})
 
     function close() { shell.api.center("close") }
+    // a click on a notification: what clicking its popup does (the app's default action) while the app still holds it; else just mark it read
+    function open_(entry, live) {
+        if (live && (live.actions || []).some(a => a.identifier === "default")) { shell.api.invoke(entry.id, "default"); close() }
+        else shell.api.markRead([entry.id])
+    }
     function accent(z) { return (cfg.zones[z] && cfg.zones[z].accent) || "#60a5fa" }
     function label(z) { return (cfg.zones[z] && cfg.zones[z].label) || z }
     function toggleFold(z) { const f = Object.assign({}, folded); if (f[z]) delete f[z]; else f[z] = true; folded = f }
@@ -99,8 +104,8 @@ Scope {
                         font.pixelSize: Math.max(6, (center.theme.fontSize ?? 12) - 1)
                     }
                 }
-                CenterButton { id: markBtn; theme: center.theme; text: "Mark all read"; enabled: center.unread > 0; onClicked: center.shell.api.markRead(null) }
-                CenterButton { id: clearBtn; theme: center.theme; text: "Clear all"; enabled: center.shell.history.length > 0; onClicked: center.shell.api.clearHistory() }
+                CenterButton { id: markBtn; anchors.verticalCenter: parent.verticalCenter; theme: center.theme; text: "Mark all read"; enabled: center.unread > 0; onClicked: center.shell.api.markRead(null) }
+                CenterButton { id: clearBtn; anchors.verticalCenter: parent.verticalCenter; theme: center.theme; text: "Clear all"; enabled: center.shell.history.length > 0; onClicked: center.shell.api.clearHistory() }
             }
 
             Text {
@@ -159,7 +164,9 @@ Scope {
                             accent: center.accent(row.modelData.zone)
                             theme: center.theme
                             now: center.now
-                            onOpened: center.shell.api.markRead([row.modelData.entry.id])
+                            live: { center.shell.kept.rev; return center.shell.kept.live(row.modelData.entry) }
+                            onOpened: center.open_(row.modelData.entry, live)
+                            onInvoked: key => { center.shell.api.invoke(row.modelData.entry.id, key); center.close() }
                             onRemoved: center.shell.api.removeHistory(row.modelData.entry.id, row.modelData.entry.t)
                         }
                     }

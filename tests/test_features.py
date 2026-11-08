@@ -1,5 +1,5 @@
 """Daemon tests for popup look and behaviour, priority, focus modes and stacking. Run through test_notifd.py (which passes in its `check` and BASE_CONFIG)."""
-import json, time
+import json, re, subprocess, time
 
 
 def make_tests(check, BASE_CONFIG):
@@ -207,4 +207,68 @@ def make_tests(check, BASE_CONFIG):
             check(f"center.anchor {corner!r} is {'accepted' if good else 'refused'}", isinstance(r, dict) and r.get("ok") is good, str(r))
         d.ipc("clearHistory")
 
-    return [test_style_and_types, test_priority_and_focus, test_stacking, test_center_and_unread]
+    def test_kept_for_the_center(d):
+        """A popup that times out stays open for its app, so its buttons work from the notification center."""
+        d.ipc("clearHistory")
+
+        def notify(summary, actions=(), t=900, replace=0):     # as an app does it (notify-send gives up waiting after the timeout)
+            acts = "[" + ",".join(f"'{x}'" for a in actions for x in a) + "]"
+            r = subprocess.run(["gdbus", "call", "--session", "--dest", "org.freedesktop.Notifications", "--object-path", "/org/freedesktop/Notifications",
+                                "--method", "org.freedesktop.Notifications.Notify", "Steam", str(replace), "", summary, "x", acts, "{}", str(t)],
+                               env=d.env, capture_output=True, text=True, timeout=10)
+            m = re.search(r"uint32 (\d+)", r.stdout)
+            return int(m.group(1)) if m else 0
+
+        def signals():                       # what the apps are told: ActionInvoked and NotificationClosed
+            p = subprocess.Popen(["dbus-monitor", "--session", "type='signal',interface='org.freedesktop.Notifications'"],
+                                 env=d.env, stdout=subprocess.PIPE, text=True)
+            time.sleep(0.4)
+            return p
+
+        def told(mon, *needles):
+            time.sleep(0.8)
+            mon.terminate()
+            out = mon.communicate(timeout=5)[0]
+            return all(n in out for n in needles), out[-400:]
+
+        def kept():
+            return (d.ipc("status") or {}).get("kept")
+
+        def entry(nid):
+            return next((x for x in (d.ipc("history", 5) or []) if x.get("id") == nid), {})
+
+        mon = signals()
+        nid = notify("keep me", [("open", "Open"), ("default", "Show")])
+        gone = d.wait_for(lambda: d.active() == 0 and kept() == 1, 6)
+        ok, out = told(mon, "NotificationClosed")
+        check("a timed-out popup leaves the screen but stays open for its app", gone and not ok, out)
+        h = entry(nid)
+        check("history says it is live, with its buttons", h.get("live") is True and h.get("actions") == [{"key": "open", "text": "Open"}, {"key": "default", "text": "Show"}], str(h))
+        mon = signals()
+        r = d.ipc("invoke", nid, "open")
+        ok, out = told(mon, "ActionInvoked", f"uint32 {nid}", 'string "open"')
+        check("a button pressed in the center reaches the app", isinstance(r, dict) and "error" not in r and ok, f"{r} {out}")
+        check("...marks it read and closes it", d.wait_for(lambda: kept() == 0, 4) and entry(nid).get("read") is True, str(entry(nid)))
+        r = d.ipc("invoke", nid, "open")
+        check("a closed notification's buttons are refused", isinstance(r, dict) and "error" in r, str(r))
+
+        nid = notify("clear me", [("open", "Open")])
+        d.wait_for(lambda: kept() == 1, 6)
+        mon = signals()
+        d.ipc("clearHistory")
+        ok, out = told(mon, "NotificationClosed", f"uint32 {nid}", "uint32 2")    # reason 2: dismissed by the user
+        check("clearing the list closes the kept notifications for their apps (as dismissed)", ok and kept() == 0, out)
+
+        nid = notify("replace me")
+        d.wait_for(lambda: kept() == 1, 6)
+        notify("replaced", t=3000, replace=nid)
+        check("an app replacing a kept notification shows it again", d.wait_for(lambda: d.active() == 1 and kept() == 0, 4), f"{nid} {d.ipc('status')} {d.ipc('history', 3)}")
+        d.ipc("dismissAll")
+        for bad in (-1, 1.5, "lots"):
+            r = d.ipc("validate", json.dumps({**BASE_CONFIG, "center": {"anchor": "bottom-center", "keep": bad}}))
+            check(f"center.keep {bad!r} is refused", isinstance(r, dict) and r.get("ok") is False, str(r))
+        r = d.ipc("validate", json.dumps({**BASE_CONFIG, "center": {"anchor": "bottom-center", "keep": 0}}))
+        check("center.keep 0 and a centred list are accepted", isinstance(r, dict) and r.get("ok") is True, str(r))
+        d.ipc("clearHistory")
+
+    return [test_style_and_types, test_priority_and_focus, test_stacking, test_center_and_unread, test_kept_for_the_center]

@@ -23,7 +23,7 @@ Scope {
         // how the graph of a download / transfer popup is drawn by default: bars, line or heatmap
         transfer: { chart: "line" },
         // the notification center (the list the tray icon opens) sits in this corner, next to the tray
-        center: { anchor: "bottom-right" },
+        center: { anchor: "bottom-right", keep: 50 },
         zones: { personal: { anchor: "top-right", accent: "#60a5fa", label: "Personal" } },
         rules: []
     })

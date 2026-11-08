@@ -443,11 +443,22 @@
         "anchor": {
           "enum": [
             "top-left",
+            "top-center",
             "top-right",
+            "middle-left",
+            "center",
+            "middle-right",
             "bottom-left",
+            "bottom-center",
             "bottom-right"
           ],
-          "description": "The corner it opens in; put it next to the system tray."
+          "description": "Where it opens; put it next to the system tray."
+        },
+        "keep": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "How many notifications whose popup has gone stay open for their apps, so their buttons work from the list (oldest closed first). 0 closes each one when its popup times out."
         }
       }
     }

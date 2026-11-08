@@ -56,6 +56,7 @@ Scope {
         case "markRead": return a.markRead(Array.isArray(p.ids) ? p.ids : null)
         case "removeHistory": return a.removeHistory(p.id, p.t)
         case "reply": return a.reply(p.id, String(p.text ?? ""))
+        case "invoke": return a.invoke(p.id, String(p.key ?? ""))
         case "validate": return a.validate(p.config !== undefined ? JSON.stringify(p.config) : String(p.text ?? ""))
         case "simulate": return a.simulate(p)
         case "preview": return a.preview(p)

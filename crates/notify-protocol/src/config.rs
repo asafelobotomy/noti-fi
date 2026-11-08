@@ -241,10 +241,12 @@ impl Default for TransferSettings {
 pub struct CenterSettings {
     /// Where it opens, next to the tray: any popup anchor (top-left ... bottom-right, top-center, center ...).
     pub anchor: String,
+    /// How many notifications whose popup has gone stay open for their apps, so their buttons work from the list. 0 = none.
+    pub keep: u32,
 }
 impl Default for CenterSettings {
     fn default() -> Self {
-        Self { anchor: "bottom-right".into() }
+        Self { anchor: "bottom-right".into(), keep: 50 }
     }
 }
 

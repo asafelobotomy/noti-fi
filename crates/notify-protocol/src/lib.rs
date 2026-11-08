@@ -218,6 +218,9 @@ pub struct Status {
     /// The notification center is open.
     #[serde(default)]
     pub center: bool,
+    /// Notifications kept open for their apps after their popup left (see `center.keep`).
+    #[serde(default)]
+    pub kept: u32,
 }
 
 /// A stack of notifications from one app/site/kind in one zone.

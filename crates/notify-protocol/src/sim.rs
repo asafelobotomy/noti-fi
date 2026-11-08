@@ -135,6 +135,19 @@ pub struct HistoryEntry {
     /// Read in the notification center, or dismissed by the user (entries from before 0.18 are unread).
     #[serde(default)]
     pub read: bool,
+    /// Its app still holds it, so its buttons work (only in `history` replies; never saved).
+    #[serde(default)]
+    pub live: bool,
+    /// Its buttons while live: `key` to pass to `invoke`, and the label.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub actions: Vec<HistoryAction>,
+}
+
+/// A button of a live notification.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct HistoryAction {
+    pub key: String,
+    pub text: String,
 }
 
 /// One kind of notification an app sends (see `seenApps`).

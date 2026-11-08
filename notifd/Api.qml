@@ -37,7 +37,7 @@ Scope {
         return { dnd: s.ctl.dnd, muted: s.ctl.muted, zones: Object.keys(s.cfg.zones), active: onScreen, queued: queued,
                  focus: s.ctl.focus in s.cfg.focus.modes ? s.ctl.focus : "", perZone: per, stacks: s.layout.stackList(), cap: s.layout.cap(),
                  history: s.history.length, cfgError: s.cfgError, auto: s.auto, holding: s.holdReason(), previewing: s.preview.ids.length > 0,
-                 unread: unread.all, unreadPerZone: unread.perZone, center: s.centerOpen }
+                 unread: unread.all, unreadPerZone: unread.perZone, center: s.centerOpen, kept: s.kept.count }
     }
     // history entries not yet read (a popup the user dismissed counts as read; one that timed out does not)
     readonly property var unread: {
@@ -68,6 +68,7 @@ Scope {
     // forget one history entry (id and time together: ids start again at 1 when the daemon restarts)
     function removeHistory(id, t) {
         const s = api.shell
+        if (t >= s.kept.startedAt) s.kept.close(id, true)     // the app is told it was dismissed
         s.history = s.history.filter(h => !(h.id === id && h.t === t))
         s.saveSoon()
         s.scheduleState()
@@ -168,7 +169,14 @@ Scope {
         return r
     }
     function endPreview() { api.shell.preview.end(); return status() }
-    function history(limit) { return api.shell.history.slice(0, Math.max(0, Math.min(1000, Number(limit) || 0))) }
+    // history entries, newest first; `live`: the app still holds it, so its buttons work (see Kept.qml), with `actions` [{key, text}]
+    function history(limit) {
+        const s = api.shell
+        return s.history.slice(0, Math.max(0, Math.min(1000, Number(limit) || 0))).map(h => {
+            const n = s.kept.live(h)
+            return Object.assign({}, h, { live: n !== null, actions: n ? (n.actions || []).map(a => ({ key: a.identifier, text: a.text })) : [] })
+        })
+    }
     function seenApps() {
         const seen = api.shell.seen
         return Object.keys(seen).map(k => {
@@ -177,7 +185,18 @@ Scope {
             return { key: k, app: e.app, desktopEntry: e.desktopEntry, count: e.count, last: e.last, types: types }
         }).sort((a, b) => b.last - a.last)
     }
-    function clearHistory() { api.shell.history = []; api.shell.saveSoon(); api.shell.scheduleState(); return status() }
+    function clearHistory() { api.shell.kept.closeAll(true); api.shell.history = []; api.shell.saveSoon(); api.shell.scheduleState(); return status() }
+    // press one of a notification's buttons (key "default" = clicking the notification itself), on screen or kept for the center
+    function invoke(nid, key) {
+        const s = api.shell
+        const n = s.kept.byId[nid] || s.byId[nid]
+        if (!n) fail("not_found", "that notification is no longer live (closed by its app, or from before notifd restarted)")
+        const a = (n.actions || []).find(x => x.identifier === key)
+        if (!a) fail("bad_params", "that notification has no button '" + key + "'")
+        markRead([nid])
+        a.invoke()
+        return status()
+    }
     function dismissAll() {
         const s = api.shell, rows = s.rowList
         // only notifications that are still live: one that is already fading out is closed and must not be closed again
@@ -215,5 +234,6 @@ Scope {
         function dismissAll(): string { return api.json(() => api.dismissAll()) }
         function center(action: string): string { return api.json(() => api.center(action)) }
         function markAllRead(): string { return api.json(() => api.markRead(null)) }
+        function invoke(nid: int, key: string): string { return api.json(() => api.invoke(nid, key)) }
     }
 }

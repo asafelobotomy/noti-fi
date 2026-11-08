@@ -207,13 +207,21 @@ Kirigami.Page {
                         onActivated: index => page.model.settingSet("center.anchor", ids[index])
                         Accessible.name: "Where the notification list opens"
                     }
+                    Segmented {
+                        Kirigami.FormData.label: "Buttons in the list:"
+                        accessibleName: "How many notifications keep their buttons in the list"
+                        readonly property string cur: page.vals["center.keep"] !== undefined ? String(page.vals["center.keep"]) : "50"
+                        options: [{ value: "0", label: "Off" }, { value: "20", label: "Last 20" }, { value: "50", label: "Last 50" }, { value: "100", label: "Last 100" }]
+                        value: cur
+                        onPicked: v => page.model.settingSet("center.keep", v)
+                    }
                     QQC2.Label {
                         Kirigami.FormData.label: ""
                         wrapMode: Text.Wrap
                         Layout.fillWidth: true
                         Layout.maximumWidth: Kirigami.Units.gridUnit * 28
                         opacity: 0.7
-                        text: "The list of recent notifications that clicking the tray icon opens. Put it in the corner next to your tray. To open it from the keyboard, set a shortcut on the System page, or run notify center."
+                        text: "The list of recent notifications that clicking the tray icon opens. Put it in the corner next to your tray. To open it from the keyboard, set a shortcut on the System page, or run notify center. A notification whose popup timed out stays open for its app, so its buttons (Reply, Open…) still work from the list; Off closes it when the popup goes, as before."
                     }
 
                     Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }

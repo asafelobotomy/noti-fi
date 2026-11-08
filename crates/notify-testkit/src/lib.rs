@@ -208,6 +208,7 @@ pub mod fake {
             unread: 0,
             unread_per_zone: Default::default(),
             center: false,
+            kept: 0,
         };
         serde_json::to_value(s).unwrap()
     }

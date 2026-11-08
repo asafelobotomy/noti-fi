@@ -1,15 +1,19 @@
 import QtQuick
 
-// One notification in the notification center: who sent it and when, its title and text, an unread dot in the group's colour.
-// A click marks it read; the × forgets it.
+// One notification in the notification center: who sent it and when, its title and text, an unread dot in the group's colour,
+// and its buttons while the app still holds it (`live`). A click marks it read (and does what clicking the popup would); the × forgets it.
 Rectangle {
     id: item
     required property var entry          // a history entry: { id, t, app, summary, body, zone, shown, why, read }
     required property color accent
     required property var theme
     required property real now
+    property var live: null              // the Notification while its app still holds it (see Kept.qml), else null
     signal opened()
     signal removed()
+    signal invoked(string key)
+
+    readonly property var buttons: live ? (live.actions || []).filter(a => a.identifier !== "default" && a.text !== "") : []
 
     readonly property bool unread: entry.read !== true
     readonly property string fontFamily: theme.fontFamily ?? ""
@@ -89,6 +93,21 @@ Rectangle {
             font.family: item.fontFamily
             font.pixelSize: item.fontSize
         }
+        Flow {
+            width: parent.width
+            visible: item.buttons.length > 0
+            spacing: 6
+            topPadding: 4
+            Repeater {
+                model: item.buttons
+                delegate: CenterButton {
+                    required property var modelData
+                    theme: item.theme
+                    text: modelData.text
+                    onClicked: item.invoked(modelData.identifier)
+                }
+            }
+        }
     }
 
     Text {                // forget this one
@@ -100,6 +119,6 @@ Rectangle {
         Accessible.role: Accessible.Button
         Accessible.name: "Remove from the list"
         HoverHandler { id: closeHover }
-        TapHandler { onTapped: item.removed() }
+        MouseArea { anchors.fill: parent; anchors.margins: -4; onClicked: item.removed() }   // keeps the click from the card
     }
 }
