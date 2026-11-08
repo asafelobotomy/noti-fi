@@ -33,7 +33,8 @@ pub struct Paths {
     pub tray_marker: PathBuf,
     pub kwin_script: PathBuf,
     pub autostart: PathBuf,
-    pub hotkey_desktop: PathBuf,
+    /// Where `notify hotkey` puts its launcher .desktop files.
+    pub applications: PathBuf,
 }
 
 pub fn paths() -> Paths {
@@ -61,6 +62,6 @@ pub fn paths() -> Paths {
         tray_marker: state_home.join("notify/tray-hidden"),
         kwin_script: data.join("kwin/scripts/notifd-autodnd"),
         autostart: config.join("autostart"),
-        hotkey_desktop: data.join("applications/notify-dnd-toggle.desktop"),
+        applications: data.join("applications"),
     }
 }

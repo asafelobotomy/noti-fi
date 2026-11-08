@@ -21,7 +21,8 @@ Kirigami.ScrollablePage {
         { id: "takeover", label: "Make notifd the notification owner", apply: "Take over now", warn: "This restarts the Plasma shell briefly. Notifications are handed back with Restore." },
         { id: "restore", label: "Hand notifications back to Plasma", apply: "Restore", warn: "Plasma shows notifications again; notifd keeps its files." },
         { id: "adapt", label: "Make Brave deliver notifications", apply: "Apply to Brave", warn: "Brave must be closed. The original settings are backed up first." },
-        { id: "update", label: "Install changed daemon files", apply: "Update daemon", warn: "The new files are smoke-tested on a private bus first and rolled back if the daemon will not start." }
+        { id: "update", label: "Install changed daemon files", apply: "Update daemon", warn: "The new files are smoke-tested on a private bus first and rolled back if the daemon will not start." },
+        { id: "hotkey", label: "Open the notification list with Meta+N", apply: "Set shortcut", warn: "Registers Meta+N with KDE's shortcut service. Change or remove it in System Settings -> Shortcuts." }
     ]
 
     readonly property var uiState: ({

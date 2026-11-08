@@ -25,6 +25,7 @@ fn settings_show_defaults_and_set_by_path() {
     let v = d.settings_view();
     assert_eq!(v["values"]["theme.card"], "#1d1f27", "a missing key shows the daemon's default");
     assert_eq!(v["values"]["maxVisible"], 5);
+    assert_eq!(v["values"]["center.anchor"], "bottom-right", "the notification list's corner defaults to the tray's");
     assert_eq!(v["zones"].as_array().unwrap().len(), 2);
     assert_eq!(v["zones"][0]["rules"], 1, "business is used by one rule");
     d.set_setting("theme.card", "#000000").unwrap();

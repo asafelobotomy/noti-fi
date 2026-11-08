@@ -246,6 +246,7 @@ fn focus_modes_priority_stack_and_media_settings_work_end_to_end() {
     let m = &after["focus"]["modes"]["mode2"];
     assert_eq!((m["label"].as_str(), m["minPriority"].as_str(), m["allow"][0]["appName"].as_str()), (Some("Work"), Some("high"), Some("^Signal$")), "{after}");
     assert_eq!(after["transfer"]["chart"], "heatmap");
+    assert_eq!(after["center"]["anchor"], "top-left", "the notification list's corner is saved");
     let r0 = &after["rules"][0];
     assert_eq!((r0["priority"].as_str(), r0["stack"].as_bool(), r0["media"].as_bool()), (Some("urgent"), Some(true), Some(false)), "{r0}");
 
@@ -254,6 +255,7 @@ fn focus_modes_priority_stack_and_media_settings_work_end_to_end() {
     let g = c.config_get().unwrap();
     assert_eq!(g.effective.focus.modes["mode2"].min_priority.as_deref(), Some("high"));
     assert_eq!(g.effective.transfer.chart, "heatmap");
+    assert_eq!(g.effective.center.anchor, "top-left");
     let mut sim = |app: &str| c.call_raw("simulate", serde_json::json!({"notification": {"appName": app}, "ignoreState": true, "focus": "mode2"})).unwrap();
     assert_eq!(sim("Signal")["wouldShow"], true, "an allowed app gets through the mode");
     let other = sim("Somebody");

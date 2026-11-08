@@ -310,6 +310,7 @@ const SETTING_DEFAULTS: &[(&str, Kind)] = &[
     ("theme.fontFamily", Kind::Text("")), ("theme.fontSize", Kind::Num(12.0)),
     ("theme.timerStyle", Kind::Text("none")),
     ("transfer.chart", Kind::Text("line")),
+    ("center.anchor", Kind::Text("bottom-right")),
 ];
 
 fn lookup<'a>(v: &'a Value, path: &str) -> Option<&'a Value> {

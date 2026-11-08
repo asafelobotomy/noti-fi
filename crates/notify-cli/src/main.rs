@@ -5,6 +5,7 @@ mod controls;
 mod ctx;
 mod daemon;
 mod dev;
+mod hotkey;
 mod install;
 mod integrations;
 mod lint;
@@ -80,6 +81,13 @@ enum TrayAction {
     Status,
     Hide,
     Show,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum CenterAction {
+    Toggle,
+    Open,
+    Close,
 }
 
 #[derive(Subcommand)]
@@ -192,11 +200,13 @@ enum Cmd {
         #[arg(long)]
         autostart: bool,
     },
-    /// Global shortcut that toggles Do Not Disturb
+    /// Global shortcut that toggles Do Not Disturb (or, with --center, opens the notification list)
     Hotkey {
-        /// The key combination, in KDE's notation
-        #[arg(default_value = "Meta+Shift+N")]
-        keys: String,
+        /// The key combination, in KDE's notation [default: Meta+Shift+N, or Meta+N with --center]
+        keys: Option<String>,
+        /// The shortcut for the notification list instead of Do Not Disturb
+        #[arg(long)]
+        center: bool,
         /// Remove the shortcut
         #[arg(long)]
         remove: bool,
@@ -257,6 +267,12 @@ enum Cmd {
         /// Erase history
         #[arg(long)]
         clear: bool,
+    },
+    /// Open or close the notification list (what clicking the tray icon does)
+    Center {
+        /// Open it, close it, or flip it
+        #[arg(value_enum, default_value = "toggle")]
+        action: CenterAction,
     },
     /// Close every popup on screen
     Dismiss,
@@ -335,7 +351,9 @@ fn run(cli: Cli) -> Result<bool> {
         Cmd::Restore { dry_run, purge, auto } => install::restore(&ctx, dry_run, purge, auto)?,
         Cmd::Portal { remove, dry_run } => install::portal(&ctx, remove, dry_run)?,
         Cmd::Adapt { apply, background, autostart } => integrations::adapt(&ctx, integrations::AdaptArgs { apply, background, autostart })?,
-        Cmd::Hotkey { keys, remove, dry_run } => integrations::hotkey(&ctx, &keys, remove, dry_run)?,
+        Cmd::Hotkey { keys, center, remove, dry_run } => {
+            hotkey::hotkey(&ctx, if center { hotkey::Target::Center } else { hotkey::Target::Dnd }, keys.as_deref(), remove, dry_run)?
+        }
         Cmd::Autodnd { action } => integrations::autodnd(&ctx, match action { Toggle::Status => "status", Toggle::Install => "install", Toggle::Remove => "remove" })?,
         Cmd::Tray { action } => integrations::tray(&ctx, match action { TrayAction::Status => "status", TrayAction::Hide => "hide", TrayAction::Show => "show" })?,
         Cmd::Focus { mode } => controls::focus(&ctx, mode.as_deref())?,
@@ -343,6 +361,7 @@ fn run(cli: Cli) -> Result<bool> {
         Cmd::Mute { zone } => controls::mute(&ctx, &zone, true)?,
         Cmd::Unmute { zone } => controls::mute(&ctx, &zone, false)?,
         Cmd::History { n, zone, app, missed, full, clear } => controls::history(&ctx, controls::HistoryArgs { n, zone, app, missed, full, clear })?,
+        Cmd::Center { action } => controls::center(&ctx, match action { CenterAction::Toggle => "toggle", CenterAction::Open => "open", CenterAction::Close => "close" })?,
         Cmd::Dismiss => controls::dismiss(&ctx)?,
         Cmd::Reply { id, text } => controls::reply(&ctx, id, &text)?,
         Cmd::Send { summary, body, app, urgency, timeout, origin, desktop_entry } => {

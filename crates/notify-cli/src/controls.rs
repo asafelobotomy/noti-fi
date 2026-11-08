@@ -89,6 +89,13 @@ pub fn dismiss(ctx: &Ctx) -> Result<()> {
     Ok(())
 }
 
+pub fn center(ctx: &Ctx, action: &str) -> Result<()> {
+    let mut c = daemon::connect(ctx.dev)?;
+    let st = c.center(action)?;
+    ctx.out.result(true, if st.center { "notification list open" } else { "notification list closed" });
+    Ok(())
+}
+
 pub fn reply(ctx: &Ctx, id: i64, text: &str) -> Result<()> {
     let mut c = daemon::connect(ctx.dev)?;
     c.reply(id, text).map_err(|e| anyhow!("{e}"))?;

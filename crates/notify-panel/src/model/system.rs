@@ -1,4 +1,5 @@
-//! The System page: the health checks (`notify doctor`) and the install actions (take over, restore, update the daemon, make Brave deliver).
+//! The System page: the health checks (`notify doctor`) and the install actions (take over, restore, update the daemon, make Brave deliver,
+//! set the shortcut that opens the notification list).
 //! Each action first shows what it would do (the command's own preview), and only runs for real when the page asks for `apply`.
 //! The work is done by the `notify` program beside this one, so the panel and the command line can never disagree.
 
@@ -21,6 +22,8 @@ fn args_for(action: &str, apply: bool) -> Option<Vec<&'static str>> {
         ("adapt", false) => vec!["adapt"],
         ("adapt", true) => vec!["adapt", "--apply"],
         ("update", true) => vec!["update"],
+        ("hotkey", false) => vec!["hotkey", "--center", "--dry-run"],
+        ("hotkey", true) => vec!["hotkey", "--center"],
         _ => return None,
     })
 }

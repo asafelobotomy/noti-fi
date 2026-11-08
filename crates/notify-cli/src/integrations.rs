@@ -1,17 +1,16 @@
-//! Integrations with the rest of the desktop: the full-screen KWin script, the Plasma tray icon, Brave's profile,
-//! and the global Do Not Disturb shortcut.
+//! Integrations with the rest of the desktop: the full-screen KWin script, the Plasma tray icon,
+//! and Brave's profile (global shortcuts are in hotkey.rs).
 
 use std::fs;
 use std::path::PathBuf;
 
-use anyhow::{Result, anyhow, bail};
+use anyhow::{Result, bail};
 use chrono::Local;
 use serde_json::{Value, json};
 
 use crate::apps::{CHROMIUM_FAMILY, config_dir, running_needles};
 use crate::ctx::Ctx;
 use crate::daemon;
-use crate::install::exe_path;
 use crate::out::{BAD, INFO, OK, WARN};
 use crate::paths::paths;
 use crate::sys::{atomic_write, exe_running, sh, sleep_ms, which};
@@ -304,76 +303,9 @@ pub fn adapt(ctx: &Ctx, a: AdaptArgs) -> Result<()> {
     if failed { bail!("adapt did not complete") } else { Ok(()) }
 }
 
-// ---------------------------------------------------------------- global shortcut
-
-const HOTKEY_DESKTOP: &str = "notify-dnd-toggle.desktop";
-const HOTKEY_NAME: &str = "Toggle Do Not Disturb (noti-fi)";
-
-/// "Meta+Shift+N" -> the integer Qt (and KDE's shortcut service) uses.
-pub fn qt_keycode(combo: &str) -> Result<i64> {
-    let mut code: i64 = 0;
-    for part in combo.split('+') {
-        let k = part.trim().to_lowercase();
-        code |= match k.as_str() {
-            "meta" | "super" => 0x1000_0000,
-            "shift" => 0x0200_0000,
-            "ctrl" | "control" => 0x0400_0000,
-            "alt" => 0x0800_0000,
-            s if s.len() == 1 && s.chars().all(|c| c.is_ascii_alphanumeric()) => s.to_uppercase().chars().next().unwrap() as i64,
-            s if s.starts_with('f') && s[1..].parse::<i64>().is_ok_and(|n| (1..=12).contains(&n)) => 0x0100_0030 + s[1..].parse::<i64>().unwrap_or(1) - 1,
-            _ => bail!("unsupported key '{}'", part),
-        };
-    }
-    if code & 0x00FF_FFFF == 0 {
-        bail!("needs a main key, like Meta+Shift+N");
-    }
-    Ok(code)
-}
-
-fn kga(args: &[&str]) -> (i32, String) {
-    let mut a = vec!["--user", "call", "org.kde.kglobalaccel", "/kglobalaccel", "org.kde.KGlobalAccel"];
-    a.extend_from_slice(args);
-    sh("busctl", &a)
-}
-
-pub fn hotkey(ctx: &Ctx, keys: &str, remove: bool, dry: bool) -> Result<()> {
-    let desktop = paths().hotkey_desktop;
-    if remove {
-        kga(&["unregister", "ss", HOTKEY_DESKTOP, "_launch"]);
-        if desktop.exists() {
-            fs::remove_file(&desktop)?;
-        }
-        ctx.out.result(true, "hotkey removed");
-        return Ok(());
-    }
-    let code = qt_keycode(keys).map_err(|e| anyhow!("{e}"))?;
-    println!("{keys} -> {} dnd toggle", exe_path());
-    if dry {
-        ctx.out.result(true, "\nDry run only; nothing was changed.");
-        return Ok(());
-    }
-    atomic_write(&desktop, &format!("[Desktop Entry]\nType=Application\nName={HOTKEY_NAME}\nExec={} dnd toggle\nNoDisplay=true\nX-KDE-GlobalAccel-CommandShortcut=true\n", exe_path()))?;
-    sh("kbuildsycoca6", &[]);
-    let (rc, _) = kga(&["doRegister", "as", "4", HOTKEY_DESKTOP, "_launch", "", HOTKEY_NAME]);
-    let (rc2, _) = kga(&["setShortcut", "asaiu", "4", HOTKEY_DESKTOP, "_launch", "", HOTKEY_NAME, "1", &code.to_string(), "3"]);
-    if rc != 0 || rc2 != 0 {
-        bail!("could not register with KDE's shortcut service; set it in System Settings -> Shortcuts -> Add Command instead");
-    }
-    ctx.out.result(true, "registered. Press it to toggle Do Not Disturb. Change it in System Settings -> Shortcuts if you like.");
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn key_codes_match_qt() {
-        assert_eq!(qt_keycode("Meta+Shift+N").unwrap(), 301_989_966); // the value KDE stored for the real shortcut
-        assert_eq!(qt_keycode("ctrl+alt+F5").unwrap(), 0x0400_0000 | 0x0800_0000 | (0x0100_0030 + 4));
-        assert!(qt_keycode("Bogus+Q").is_err());
-        assert!(qt_keycode("Meta+Shift").is_err());
-    }
 
     #[test]
     fn tray_script_mentions_the_item_and_action() {

@@ -62,6 +62,13 @@ fn the_notify_binary_end_to_end() {
     let (c, out, _) = cli.run(&["dnd", "toggle"]);
     k.check("dnd toggle flips it", c == 0 && out.contains("ON"), || out.clone());
     cli.run(&["dnd", "toggle"]);
+    // the notification list (what the tray icon and the shortcut open)
+    let (c, out, _) = cli.run(&["center", "open"]);
+    k.check("center open opens the notification list", c == 0 && out.contains("list open"), || out.clone());
+    let (c, out, _) = cli.run(&["center"]);
+    k.check("center (toggle) closes it again", c == 0 && out.contains("list closed"), || out.clone());
+    let (c, out, _) = cli.run(&["hotkey", "--center", "--dry-run"]);
+    k.check("hotkey --center previews Meta+N -> center toggle", c == 0 && out.contains("Meta+N -> ") && out.contains(" center toggle"), || out.clone());
     // upgrade: a build in target/ is not an installed copy, so replacing it is refused before any network use
     let (c, _, err) = cli.run(&["upgrade", "--apply"]);
     k.check("upgrade --apply refuses to replace a build that is not installed", c != 0 && err.contains("not in a `bin` folder"), || err.clone());

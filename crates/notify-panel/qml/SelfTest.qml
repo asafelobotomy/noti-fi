@@ -200,7 +200,7 @@ Item {
             else if (step === 6) call("focusSet", mode, "allow", "^Signal$")
             else if (step === 7) call("focusSet", mode, "minPriority", "mega")    // refused: a toast is expected
             else if (step === 8) call("focusSet", mode, "allow", "appName:")      // refused: a toast is expected
-            else if (step === 9) call("settingSet", "transfer.chart", "heatmap")
+            else if (step === 9) { call("settingSet", "transfer.chart", "heatmap"); call("settingSet", "center.anchor", "top-left") }
             else if (step === 10) call("ruleSetStyle", 0, "priority", "urgent")
             else if (step === 11) call("ruleSetStyle", 0, "stack", "true")
             else if (step === 12) call("ruleSetStyle", 0, "media", "false")

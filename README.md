@@ -147,6 +147,7 @@ A draft is never applied: `preview` swaps it in for a few seconds and then resto
 notify dnd toggle        notify mute business     notify history --missed
 notify send "Hi" -a Steam                         notify test
 Meta+Shift+N             (after: notify hotkey)   toggles Do Not Disturb
+Meta+N                   (after: notify hotkey --center)   opens the notification list (or: notify center)
 ```
 
 ## Safety properties (all covered by `notify selftest`)
@@ -178,9 +179,10 @@ notify update --payload notifd   # deploy the checkout's daemon files instead of
 - **Inline reply:** notifications that offer a reply (chat apps) get a reply box. Click it, type, press Enter
   (Escape dismisses). The popup takes keyboard focus only when you click into the box. `notify reply ID TEXT` does the same from a terminal.
 - **Notification center:** a left click on the panel's tray icon opens the recent notifications in the corner next to the tray
-  (`"center": {"anchor": "bottom-right"}`; any corner), listed under each group's heading in its colour. Click a heading to fold
+  (`"center": {"anchor": "bottom-right"}`, or **Appearance → Notification list** in the panel), listed under each group's heading in its colour. Click a heading to fold
   the group into a stack, a notification to mark it read, × to forget it; **Mark all read** and **Clear all** are at the top.
-  Escape or a click elsewhere closes it (`qs ipc call notifd center toggle` does the same, for a keyboard shortcut).
+  Escape or a click elsewhere closes it. `notify center [open|close]` does the same from a terminal, and `notify hotkey --center`
+  (or **System → Open the notification list with Meta+N** in the panel) binds it to Meta+N; pass other keys to use those.
   While anything is unread the tray icon is a counter: the number on a disc split into the colours of the groups it comes from
   (under Do Not Disturb or a focus mode their icon stays, with the counter as a small badge). Closing a popup yourself counts as
   reading it; one that timed out stays unread.

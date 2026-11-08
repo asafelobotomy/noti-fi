@@ -239,7 +239,7 @@ impl Default for TransferSettings {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields, default)]
 pub struct CenterSettings {
-    /// The corner it opens in, next to the tray: top-left, top-right, bottom-left or bottom-right.
+    /// Where it opens, next to the tray: any popup anchor (top-left ... bottom-right, top-center, center ...).
     pub anchor: String,
 }
 impl Default for CenterSettings {

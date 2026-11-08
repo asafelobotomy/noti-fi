@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- **Notification center:** a left click on the tray icon opens a list of recent notifications next to the tray, under each group's heading in its colour (fold a group into a stack with a click on its heading). **Mark all read** and **Clear all** at the top; click one to mark it read, × to forget it. Escape or a click elsewhere closes it. Its corner is `center.anchor` (default bottom-right).
+- **Notification center:** a left click on the tray icon opens a list of recent notifications next to the tray, under each group's heading in its colour (fold a group into a stack with a click on its heading). **Mark all read** and **Clear all** at the top; click one to mark it read, × to forget it. Escape or a click elsewhere closes it. Its corner is `center.anchor` (default bottom-right), also on the panel's Appearance page.
+- **Keyboard:** `notify center [toggle|open|close]` opens and closes the list; `notify hotkey --center [KEYS]` binds it to a global shortcut (default Meta+N), and the panel's System page can set it up.
 - **Unread count on the tray icon:** while anything is unread the icon shows the number on a disc split into the colours of the groups the unread notifications are in. The menu gains **Mark all as read** and **Clear all**; the tooltip lists unread per group. A popup you close yourself counts as read, one that times out does not.
 - **Protocol:** `status` has `unread`, `unreadPerZone` and `center`; history entries have `read`; new methods `center`, `markRead`, `removeHistory` (and `qs ipc` `center`, `markAllRead`).
 - **Daemon:** `shell.qml` (1010 lines) is split into `Config.qml`, `Rows.qml`, `Api.qml`, `Control.qml`, `Preview.qml`, `Sound.qml` and `AutoDnd.qml`; it is now 333 lines and the last file exempt from the 400-line limit is gone. No change in behaviour.

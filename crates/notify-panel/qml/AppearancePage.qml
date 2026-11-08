@@ -197,6 +197,26 @@ Kirigami.Page {
 
                     Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
 
+                    Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Notification list" }
+                    QQC2.ComboBox {
+                        Kirigami.FormData.label: "Opens in:"
+                        readonly property var ids: ["bottom-right", "bottom-center", "bottom-left", "top-right", "top-center", "top-left"]
+                        model: ["Bottom right", "Bottom centre", "Bottom left", "Top right", "Top centre", "Top left"]
+                        currentIndex: Math.max(0, ids.indexOf(page.vals["center.anchor"] !== undefined ? page.vals["center.anchor"] : "bottom-right"))
+                        onActivated: index => page.model.settingSet("center.anchor", ids[index])
+                        Accessible.name: "Where the notification list opens"
+                    }
+                    QQC2.Label {
+                        Kirigami.FormData.label: ""
+                        wrapMode: Text.Wrap
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: Kirigami.Units.gridUnit * 28
+                        opacity: 0.7
+                        text: "The list of recent notifications that clicking the tray icon opens. Put it in the corner next to your tray. To open it from the keyboard, set a shortcut on the System page, or run notify center."
+                    }
+
+                    Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
+
                     Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Sound" }
                     Toggle { Kirigami.FormData.label: "Play a sound:"; text: "when a popup appears"; path: "sound.enabled" }
                     SoundPicker {
