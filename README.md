@@ -184,7 +184,8 @@ notify update --payload notifd   # deploy the checkout's daemon files instead of
 - **Screen sharing:** notifd watches PipeWire for a KWin screen-capture stream and holds popups the same way
   (`"autoDnd": {"screenShare": false}` to disable), following PipeWire as it changes; checked against a real OBS capture.
   KDE's screen-share dialog also asks for quiet itself (Inhibit, below) as the share starts, which counts as sharing too.
-  `notify status --json` shows who is capturing (`sharingBy`); captures by programs you trust (say Claude's computer use,
+  Plasma's own window previews (hovering a taskbar entry, the task switcher) are captures read by plasmashell and never count,
+  nor does a capture stream nobody reads. `notify status --json` shows who is capturing (`sharingBy`); captures by programs you trust (say Claude's computer use,
   `kwin-portal-bridge`) can be left out with `"autoDnd": {"ignoreCaptureBy": ["kwin-portal-bridge"]}`.
 - **For desktop shells (uQ and others):** the control socket is the integration API (`docs/protocol.md`): a `subscribe`
   stream of `state` events with `unread`, `dnd`, `center`, `sharing` and `latest`; `center`, `dnd` and an `osd` command

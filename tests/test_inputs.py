@@ -148,10 +148,15 @@ def make_tests(check, BASE_CONFIG, ROOT, SRC):
         cam = node(5, {"media.class": "Video/Source", "node.name": "v4l2_input.usb", "node.description": "HD Webcam"})
         claude_cast = node(6, {"media.class": "Stream/Output/Video", "media.name": "kwin-screencast-com.anthropic.Claude", "node.name": "kwin_wayland"})
         claude_in = node(7, {"media.class": "Stream/Input/Video", "node.name": "lamco-pw-76", "client.id": 21})
+        # recorded live: hovering a taskbar entry; KWin captures that window and plasmashell reads it to draw the preview
+        preview = node(8, {"media.class": "Stream/Output/Video", "media.name": "kwin-screencast-org.kde.dolphin", "node.name": "kwin_wayland"})
+        preview_in = node(9, {"media.class": "Stream/Input/Video", "node.name": "plasma-screencast-node-8", "client.id": 22})
         gone = {"id": 3, "info": None}                   # how `pw-dump --monitor` reports a removed object
         cases = (([[client(20, "obs"), cam, obs, kwin, link(30, 3, 4)]], '["obs"]', "KWin's capture read by OBS names OBS"),
                  ([[cam, obs]], "[]", "no KWin stream (a webcam and a reader)"),
-                 ([[cam], [kwin], [gone]], '[]\n["?"]\n[]', "a share starting (nobody reading yet) and ending is reported as it happens"),
+                 ([[cam], [kwin], [gone]], "[]", "a KWin stream nobody reads is not a capture (KDE's remote-control sessions keep one open)"),
+                 ([[client(20, "obs"), obs], [kwin], [link(30, 3, 4)], [gone]], '[]\n["obs"]\n[]', "a share starting and ending is reported as it happens"),
+                 ([[client(22, "plasmashell"), preview, preview_in, link(32, 8, 9)]], '["plasmashell"]', "a taskbar preview names plasmashell (which notifd then ignores)"),
                  ([[client(21, "claude"), claude_cast, claude_in, link(31, 6, 7)]], '["claude"]', "a capture by the Claude app (computer use) names it"),
                  (None, "[]", "pw-dump failing"))
         for updates, want, what in cases:

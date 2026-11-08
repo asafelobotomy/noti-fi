@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Fixed: hovering a taskbar entry hid notifications.** Plasma draws its window previews from short-lived KWin captures read by plasmashell, which counted as screen sharing. Captures read by plasmashell no longer count, nor does a capture stream nobody reads (KDE's remote-control sessions keep an idle one open). Checked live by hovering taskbar entries.
+
 - **Who is capturing the screen:** the screen-share watch now names the programs reading KWin's capture (`sharingBy` in `status`), and `autoDnd.ignoreCaptureBy` lists programs whose captures do not count as sharing. Found because Claude's computer use (`kwin-portal-bridge`) captures the screen and so hid notifications, which looked like another app's doing.
 
 - **Hyprland: screen sharing and full screen hold popups.** notifd follows Hyprland's own events (`HyprlandWatch.qml`, which also gives the focused monitor): a screen capture counts as sharing (text hidden, popups held) until 1.5 s after its last frame, and a full-screen window (not a maximised one) holds popups as the KWin script does on Plasma. Tested on a real Hyprland with `wf-recorder` and a full-screen terminal.

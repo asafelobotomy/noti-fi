@@ -10,9 +10,10 @@ Scope {
     required property var shell          // cfg, auto, setAuto(), screens.hypr
     readonly property bool watching: shell.cfg.autoDnd.watch !== false      // off in tests, which drive the state by hand
     readonly property var hypr: shell.screens.hypr
-    property var readers: []              // programs reading a KWin screen capture right now ("?" = not yet known)
-    // captures by programs in autoDnd.ignoreCaptureBy (a screen-reading assistant, a remote-support tool you trust) do not count
-    readonly property var ignored: (shell.cfg.autoDnd.ignoreCaptureBy || []).map(x => String(x).toLowerCase())
+    property var readers: []              // programs reading a KWin screen capture right now
+    // captures that do not count: the desktop's own (Plasma draws the taskbar's and task switcher's window previews from
+    // short-lived captures, read by plasmashell), and programs in autoDnd.ignoreCaptureBy (an assistant, a support tool you trust)
+    readonly property var ignored: ["plasmashell"].concat((shell.cfg.autoDnd.ignoreCaptureBy || []).map(x => String(x).toLowerCase()))
     readonly property bool pwShare: readers.some(r => ignored.indexOf(r.toLowerCase()) < 0)
     readonly property bool shareNow: pwShare || (hypr !== null && hypr.screencast === true)
     readonly property bool hyprFull: hypr !== null && hypr.fullscreen === true
@@ -35,7 +36,8 @@ Scope {
     // Screen sharing: a PipeWire video stream produced by KWin means something is capturing the screen. `pw-dump --monitor`
     // prints the whole graph, then an array of changes whenever something changes (a removed object has "info": null), so a
     // share is seen the moment its stream appears, not on a poll. On every change it prints, as a JSON list, the programs reading
-    // those streams (found through the links from KWin's stream to their own); "?" for a stream nobody reads yet. [] = none.
+    // those streams (found through the links from KWin's stream to their own). A stream nobody reads is not a capture: KDE's
+    // remote-control sessions keep an idle one open. [] = none.
     readonly property string shareScript:
         "pw-dump --monitor 2>/dev/null | python3 -u -c '" +
         "import json,sys\n" +
@@ -53,7 +55,7 @@ Scope {
         "      if l.get(\"type\")!=\"PipeWire:Interface:Link\" or li.get(\"output-node-id\")!=i: continue\n" +
         "      n=objs.get(li.get(\"input-node-id\"),{}); cl=objs.get(props(n).get(\"client.id\"),{}); cp=props(cl)\n" +
         "      names.add(str(cp.get(\"application.process.binary\") or cp.get(\"application.name\") or props(n).get(\"node.name\") or \"?\"))\n" +
-        "    out|=names or {\"?\"}\n" +
+        "    out|=names\n" +
         "  return sorted(out)\n" +
         "for line in sys.stdin:\n" +
         "  buf.append(line)\n" +
