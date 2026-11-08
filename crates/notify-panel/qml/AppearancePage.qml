@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
+import "Json.js" as Json
 
 // Colours, sound and the "hold popups while..." behaviour. Edits the same draft as the other editor pages.
 Kirigami.Page {
@@ -14,7 +15,7 @@ Kirigami.Page {
     property var ui
     readonly property bool online: model !== undefined && model !== null && model.connected === true
 
-    readonly property var settings: { try { return JSON.parse(page.model ? page.model.settingsJson : "{}") } catch (e) { return {} } }
+    readonly property var settings: Json.parse(page.model ? page.model.settingsJson : "", ({}))
     readonly property var vals: page.settings.values !== undefined ? page.settings.values : ({})
     // a colour that is safe to bind while offline or half-typed
     function colour(path) { const v = page.vals[path]; return v !== undefined && /^#[0-9a-fA-F]{3,8}$/.test(v) ? v : "transparent" }

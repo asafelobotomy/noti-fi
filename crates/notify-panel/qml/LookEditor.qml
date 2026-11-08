@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
+import "Json.js" as Json
 
 // How popups look and behave at one level (a zone, an app, a type of notification, a rule). Pick a ready-made style, then adjust it
 // with choices beside a live preview. The breadcrumb shows the levels a popup's look passes through; anything not changed here is
@@ -19,7 +20,7 @@ ColumnLayout {
     signal edited(string key, string text)
     spacing: Kirigami.Units.largeSpacing
 
-    readonly property var settingsValues: { try { return JSON.parse(root.model ? root.model.settingsJson : "{}").values || ({}) } catch (e) { return ({}) } }
+    readonly property var settingsValues: Json.parse(root.model ? root.model.settingsJson : "", ({})).values || ({})
     readonly property var base: ({
         card: settingsValues["theme.card"], border: settingsValues["theme.border"], text: settingsValues["theme.text"], subtext: settingsValues["theme.subtext"],
         button: settingsValues["theme.button"], opacity: settingsValues["theme.opacity"], fontFamily: settingsValues["theme.fontFamily"],

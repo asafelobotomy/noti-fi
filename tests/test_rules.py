@@ -204,8 +204,10 @@ def make_tests(check, BASE_CONFIG, ROOT, SRC):
     def test_cli_smoke(d):
         """Every read-only CLI command must run to completion without a traceback (against this machine's real setup)."""
         rust = next((p for p in (ROOT / "target/release/notify", ROOT / "target/debug/notify") if p.exists()), None)
-        cmd = [str(rust)] if rust else [sys.executable, "-I", str(ROOT / "legacy/notify-py")]
-        notify = cmd
+        if not rust:
+            check("a built notify exists (cargo build -p notify-cli)", False)
+            return
+        notify = [str(rust)]
         for args in (["status"], ["status", "--json"], ["apps"], ["apps", "--json"], ["rules"], ["rules", "--json"],
                      ["rules", "--file", str(SRC / "rules.json")], ["doctor"], ["doctor", "--json"], ["autodnd", "status"], ["tray", "status"],
                      ["restore", "--dry-run"], ["takeover", "--dry-run"], ["portal", "--dry-run"],

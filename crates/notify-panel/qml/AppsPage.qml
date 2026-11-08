@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
+import "Json.js" as Json
 
 // Every app that sends notifications, and every installed app that could but never has. Per app: mute it, send it to a zone,
 // change how long its popups stay (all saved as a rule), and for Flatpak apps change the app's own notification permission.
@@ -42,15 +43,15 @@ Kirigami.Page {
         return {
             appId: m.appId, name: m.name, iconName: m.iconName, sent: m.sent, count: m.count, last: m.last, reasons: m.reasons,
             flatpak: m.flatpak, perm: m.perm, matchField: m.matchField, matchValue: m.matchValue, muted: m.muted, zone: m.zone,
-            timeout: m.timeout, kindCount: m.kindCount, appStyle: JSON.parse(m.appStyleJson), kinds: JSON.parse(m.kindsJson)
+            timeout: m.timeout, kindCount: m.kindCount, appStyle: Json.parse(m.appStyleJson, ({})), kinds: Json.parse(m.kindsJson, [])
         }
     }
     function appById(id) {
         for (let i = 0; i < rows.count; i++) if (rows.get(i).appId === id) return page.asApp(rows.get(i))
         return null
     }
-    readonly property var zoneNames: { try { return JSON.parse(page.model ? page.model.draftZonesJson : "[]") } catch (e) { return [] } }
-    readonly property var zoneObjs: { try { return JSON.parse(page.model ? page.model.settingsJson : "{}").zones || [] } catch (e) { return [] } }
+    readonly property var zoneNames: Json.parse(page.model ? page.model.draftZonesJson : "[]", [])
+    readonly property var zoneObjs: Json.parse(page.model ? page.model.settingsJson : "", ({})).zones || []
     function zoneInfo(id) { return page.zoneObjs.find(z => z.id === id) || null }
     function zoneLabel(id) { const z = page.zoneInfo(id); return z && z.label ? z.label : id }
     readonly property var zoneChoiceLabels: page.zoneChoices.map((z, i) => i === 0 ? z : page.zoneLabel(z))
@@ -92,8 +93,8 @@ Kirigami.Page {
     property int totalSilent: 0
     function sync() {
         if (!page.model) return
-        let list = []
-        try { list = JSON.parse(page.model.appsJson) } catch (e) { return }
+        const list = Json.parse(page.model.appsJson, null)
+        if (list === null) return
         let sending = 0, silent = 0
         const visible = []
         for (const a of list) {

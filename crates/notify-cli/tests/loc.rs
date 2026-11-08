@@ -2,7 +2,7 @@
 //!
 //! A ratchet: files that were already longer when this rule was added are listed in `tests/loc-baseline.txt` with the length they may not exceed.
 //! A listed file may shrink (lower its number, or delete the line once it is within the limit) but never grow; any other file must be within the limit.
-//! Frozen reference code (`legacy/`), generated output, data files (JSON) and docs are not counted.
+//! Generated output, data files (JSON) and docs are not counted.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 
 const LIMIT: usize = 400;
 const SOURCE_EXTENSIONS: [&str; 4] = ["rs", "qml", "py", "sh"];
-const SKIP_DIRS: [&str; 6] = ["target", ".git", "legacy", "shots", "node_modules", ".cache"];
+const SKIP_DIRS: [&str; 5] = ["target", ".git", "shots", "node_modules", ".cache"];
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap()

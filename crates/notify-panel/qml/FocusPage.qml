@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
+import "Json.js" as Json
 
 // Focus modes: while one is on, only notifications at or above its minimum priority, or matching its allow list, are shown.
 // (Turning a mode on is on the Overview page; this page edits the modes themselves.)
@@ -15,7 +16,7 @@ Kirigami.Page {
     property var ui
     readonly property bool online: model !== undefined && model !== null && model.connected === true
 
-    readonly property var modes: { try { return JSON.parse(page.model ? page.model.focusDraftJson : "[]") } catch (e) { return [] } }
+    readonly property var modes: Json.parse(page.model ? page.model.focusDraftJson : "[]", [])
     readonly property var levels: ["low", "normal", "high", "urgent"]
     readonly property var levelNames: ["Low and above (everything)", "Normal and above", "High and above", "Urgent only"]
 

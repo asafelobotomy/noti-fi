@@ -84,14 +84,24 @@ fn kga(args: &[&str]) -> (i32, String) {
     sh("busctl", &a)
 }
 
+/// Remove a shortcut: unregister it (unless `files_only`) and delete its launcher. True if there was a launcher.
+pub fn remove(t: Target, files_only: bool) -> Result<bool> {
+    let desktop = paths().applications.join(t.desktop_file());
+    if !files_only {
+        kga(&["unregister", "ss", t.desktop_file(), "_launch"]);
+    }
+    let had = desktop.exists();
+    if had {
+        fs::remove_file(&desktop)?;
+    }
+    Ok(had)
+}
+
 pub fn hotkey(ctx: &Ctx, t: Target, keys: Option<&str>, remove: bool, dry: bool) -> Result<()> {
     let id = t.desktop_file();
     let desktop = paths().applications.join(id);
     if remove {
-        kga(&["unregister", "ss", id, "_launch"]);
-        if desktop.exists() {
-            fs::remove_file(&desktop)?;
-        }
+        self::remove(t, false)?;
         ctx.out.result(true, "hotkey removed");
         return Ok(());
     }

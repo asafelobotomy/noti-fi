@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
+import "Json.js" as Json
 
 // The apps, websites and kinds of notification in one group, as chips, with "Add app" and "Add website".
 // Membership is kept as rules (a rule that puts matching notifications in this group): a rule that tests one thing as a plain list
@@ -21,8 +22,8 @@ ColumnLayout {
     readonly property var icons: ({ appName: "application-x-executable", desktopEntry: "application-x-executable", origin: "internet-web-browser",
                                     category: "tag", summary: "edit-find", body: "edit-find", urgency: "emblem-important", channel: "network-connect" })
 
-    readonly property var rules: { try { return JSON.parse(root.model ? root.model.rulesJson : "[]") } catch (e) { return [] } }
-    readonly property var apps: { try { return JSON.parse(root.model ? root.model.appsJson : "[]") } catch (e) { return [] } }
+    readonly property var rules: Json.parse(root.model ? root.model.rulesJson : "[]", [])
+    readonly property var apps: Json.parse(root.model ? root.model.appsJson : "[]", [])
     function appLabel(field, word) {
         if (field !== "appName" && field !== "desktopEntry") return word
         const a = root.apps.find(x => (field === "desktopEntry" ? x.desktop_entry : x.name).toLowerCase() === word.toLowerCase())
@@ -144,7 +145,7 @@ ColumnLayout {
         id: sitePop
         width: Kirigami.Units.gridUnit * 20; height: Kirigami.Units.gridUnit * 16
         padding: Kirigami.Units.smallSpacing
-        readonly property var seen: { try { return sitePop.visible ? (JSON.parse(root.model.ruleSuggestions()).origin || []) : [] } catch (e) { return [] } }
+        readonly property var seen: sitePop.visible ? (Json.parse(root.model.ruleSuggestions(), ({})).origin || []) : []
         onOpened: { siteField.text = ""; siteField.forceActiveFocus() }
         contentItem: ColumnLayout {
             RowLayout {

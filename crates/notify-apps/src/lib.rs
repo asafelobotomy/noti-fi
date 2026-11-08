@@ -13,6 +13,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+pub mod desktop;
 mod group;
 
 use notify_protocol::{SeenApp, SeenType};
@@ -111,35 +112,13 @@ fn norm(s: &str) -> String {
 
 /// `[Desktop Entry]` keys of one launcher, or None when it is hidden or not an application.
 fn parse_desktop(path: &Path, flatpak_export: bool) -> Option<Launcher> {
-    let text = fs::read_to_string(path).ok()?;
-    let mut inside = false;
-    let (mut name, mut icon, mut kind) = (String::new(), String::new(), String::new());
-    let (mut hidden, mut declared, mut category) = (false, false, false);
-    let mut categories = String::new();
-    for l in text.lines() {
-        let l = l.trim();
-        if l.starts_with('[') {
-            inside = l == "[Desktop Entry]";
-            continue;
-        }
-        if !inside {
-            continue;
-        }
-        let Some((k, v)) = l.split_once('=') else { continue };
-        match k.trim() {
-            "Name" => name = v.trim().to_string(),
-            "Icon" => icon = v.trim().to_string(),
-            "Type" => kind = v.trim().to_string(),
-            "NoDisplay" | "Hidden" => hidden |= v.trim() == "true",
-            "X-GNOME-UsesNotifications" => declared = v.trim() == "true",
-            "Categories" => {
-                categories = v.trim().to_string();
-                category = v.split(';').any(|c| ["InstantMessaging", "Chat", "Email", "IRCClient", "News", "Feed", "VideoConference"].contains(&c.trim()));
-            }
-            _ => {}
-        }
-    }
-    if kind != "Application" || hidden || name.is_empty() {
+    let keys = desktop::entry_keys(&fs::read_to_string(path).ok()?);
+    let get = |k: &str| keys.get(k).cloned().unwrap_or_default();
+    let (name, icon, categories) = (get("Name"), get("Icon"), get("Categories"));
+    let hidden = get("NoDisplay") == "true" || get("Hidden") == "true";
+    let declared = get("X-GNOME-UsesNotifications") == "true";
+    let category = categories.split(';').any(|c| ["InstantMessaging", "Chat", "Email", "IRCClient", "News", "Feed", "VideoConference"].contains(&c.trim()));
+    if get("Type") != "Application" || hidden || name.is_empty() {
         return None;
     }
     let id = norm(path.file_name()?.to_str()?.strip_suffix(".desktop")?);

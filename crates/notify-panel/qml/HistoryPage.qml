@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
+import "Json.js" as Json
 
 Kirigami.ScrollablePage {
     id: page
@@ -18,7 +19,7 @@ Kirigami.ScrollablePage {
     property var recent: []
     // test/screenshot hook: --open-details opens the newest entry
     onItemsChanged: if (page.expandedId < 0 && page.items.length && Qt.application.arguments.indexOf("--open-details") >= 0) page.expandedId = page.items[0].id
-    onExpandedIdChanged: if (expandedId >= 0 && page.model) { try { page.recent = JSON.parse(page.model.recentNotifications()) } catch (e) { page.recent = [] } }
+    onExpandedIdChanged: if (expandedId >= 0 && page.model) page.recent = Json.parse(page.model.recentNotifications(), [])
     readonly property bool showText: ui ? ui.showText : false
     readonly property bool missedOnly: ui ? ui.missedOnly : false
 
@@ -26,9 +27,7 @@ Kirigami.ScrollablePage {
     // what the user actually sees (read by the headless tests)
     readonly property var uiState: ({ page: "history", rows: list.count, summary: countLabel.text })
 
-    readonly property var items: {
-        try { return JSON.parse(page.model ? page.model.historyJson : "[]") } catch (e) { return [] }
-    }
+    readonly property var items: Json.parse(page.model ? page.model.historyJson : "[]", [])
     function applyFilter() { if (page.model) page.model.setHistoryFilter(search.text, page.missedOnly) }
     onMissedOnlyChanged: applyFilter()
     Component.onCompleted: applyFilter()

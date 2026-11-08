@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
+import "Json.js" as Json
 
 // The rules editor. Everything here edits a DRAFT held by the Rust model; nothing reaches notifd until Save.
 // The daemon validates every edit and simulates the draft, so what the simulator says is what will happen.
@@ -32,8 +33,8 @@ Kirigami.Page {
     }
     function sync() {
         if (!page.model) return
-        let list = []
-        try { list = JSON.parse(page.model.rulesJson) } catch (e) { return }
+        const list = Json.parse(page.model.rulesJson, null)
+        if (list === null) return
         while (rules.count > list.length) rules.remove(rules.count - 1)
         for (let i = 0; i < list.length; i++) {
             const row = flat(list[i])
@@ -55,14 +56,12 @@ Kirigami.Page {
         if (t.silent) page.model.ruleSetSilent(i, true)
     }
 
-    readonly property var zoneObjs: { try { return JSON.parse(page.model ? page.model.settingsJson : "{}").zones || [] } catch (e) { return [] } }
+    readonly property var zoneObjs: Json.parse(page.model ? page.model.settingsJson : "", ({})).zones || []
     function zoneInfo(id) { return page.zoneObjs.find(z => z.id === id) || null }
     function zoneLabel(id) { const z = page.zoneInfo(id); return z && z.label ? z.label : id }
     readonly property var zoneChoiceLabels: page.zoneChoices.map((z, i) => i === 0 ? z : page.zoneLabel(z))
     function zoneAccent(id) { const z = page.zoneInfo(id); return z && z.accent ? z.accent : "" }
-    readonly property var zones: {
-        try { return JSON.parse(page.model ? page.model.draftZonesJson : "[]") } catch (e) { return [] }
-    }
+    readonly property var zones: Json.parse(page.model ? page.model.draftZonesJson : "[]", [])
     readonly property var zoneChoices: {
         const z = ["(leave to later rules)"].concat(page.zones)
         if (page.current && page.current.zone !== "" && z.indexOf(page.current.zone) < 0) z.push(page.current.zone)
@@ -79,14 +78,14 @@ Kirigami.Page {
     property var suggest: ({})
     property var recent: []
     function refreshSuggestions() {
-        try { page.suggest = JSON.parse(page.model.ruleSuggestions()) } catch (e) { page.suggest = ({}) }
+        page.suggest = Json.parse(page.model.ruleSuggestions(), ({}))
         page.suggest = Object.assign({}, page.suggest, { group: page.zoneObjs.map(z => z.id) })
-        try { page.recent = JSON.parse(page.model.recentNotifications()) } catch (e) { page.recent = [] }
+        page.recent = Json.parse(page.model.recentNotifications(), [])
     }
     Connections { target: page.model; function onAppsJsonChanged() { page.refreshSuggestions() } function onHistoryTotalChanged() { page.refreshSuggestions() } }
 
     readonly property var sim: {
-        try { return JSON.parse(page.model ? page.model.simJson : "{}") } catch (e) { return {} }
+        return Json.parse(page.model ? page.model.simJson : "", ({}))
     }
 
     // what the user actually sees (read by the headless tests)

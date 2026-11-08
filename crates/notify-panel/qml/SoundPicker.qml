@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
+import "Json.js" as Json
 
 // An event sound chosen from the installed sound themes, with ▶ to hear it first. "" = the default notification sound.
 RowLayout {
@@ -10,7 +11,7 @@ RowLayout {
     property string value: ""
     property string unsetLabel: "Default sound"
     signal edited(string text)
-    readonly property var names: { try { return JSON.parse(root.model ? root.model.soundNames() : "[]") } catch (e) { return [] } }
+    readonly property var names: Json.parse(root.model ? root.model.soundNames() : "[]", [])
     // the usual notification sounds first, then the rest
     readonly property var preferred: ["message-new-instant", "message-new-email", "message", "dialog-information", "bell", "complete", "phone-incoming-call"]
     readonly property var choices: [root.unsetLabel].concat(root.preferred.filter(n => root.names.indexOf(n) >= 0), root.names.filter(n => root.preferred.indexOf(n) < 0))

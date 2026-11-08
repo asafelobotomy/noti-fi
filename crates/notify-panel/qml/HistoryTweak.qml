@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
+import "Json.js" as Json
 
 // Under an expanded History entry: change how notifications like this one are shown, saved as a rule of their own.
 // "Like this" is chosen with switches (from this app, from this website, of this type); the first change creates the rule at the
@@ -47,7 +48,7 @@ ColumnLayout {
     readonly property string ruleName: "From History: " + [root.useApp ? root.entry.app : "", root.useSite ? root.entry.origin : "", root.useType ? root.entry.category : ""].concat(root.keywords.map(w => "“" + w + "”")).filter(x => x).join(" · ")
 
     // ---- the rule for exactly this "like this", if there is one already
-    readonly property var rules: { try { return JSON.parse(root.model ? root.model.rulesJson : "[]") } catch (e) { return [] } }
+    readonly property var rules: Json.parse(root.model ? root.model.rulesJson : "[]", [])
     readonly property int ruleIndex: root.rules.findIndex(r => Object.keys(root.match).every(k => (r.match[k] || "") === root.match[k]))
     readonly property var rule: root.ruleIndex >= 0 ? root.rules[root.ruleIndex] : null
     function ensureRule() {
@@ -60,7 +61,7 @@ ColumnLayout {
     }
 
     // ---- zones
-    readonly property var zoneObjs: { try { return JSON.parse(root.model ? root.model.settingsJson : "{}").zones || [] } catch (e) { return [] } }
+    readonly property var zoneObjs: Json.parse(root.model ? root.model.settingsJson : "", ({})).zones || []
     function zoneInfo(id) { return root.zoneObjs.find(z => z.id === id) || null }
     readonly property var zoneIds: [""].concat(root.zoneObjs.map(z => z.id))
     readonly property string zoneNow: root.rule ? (root.rule.zone || "") : ""

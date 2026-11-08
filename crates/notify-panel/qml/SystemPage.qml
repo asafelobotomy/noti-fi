@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
+import "Json.js" as Json
 
 // Health checks (what `notify doctor` prints) and the install actions. Every action shows its plan first and only runs after a second, explicit click.
 Kirigami.ScrollablePage {
@@ -13,7 +14,7 @@ Kirigami.ScrollablePage {
     property var model
     property var ui
 
-    readonly property var sys: { try { return JSON.parse(page.model ? page.model.systemJson : "{}") } catch (e) { return ({}) } }
+    readonly property var sys: Json.parse(page.model ? page.model.systemJson : "", ({}))
     readonly property var checks: sys.checks ?? []
     readonly property string busy: sys.busy ?? ""
     property string planned: ""            // the action whose plan is on screen; its Apply button is enabled

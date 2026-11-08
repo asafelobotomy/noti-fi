@@ -42,6 +42,15 @@ fn restore_steps(ctx: &Ctx, purge: bool) -> Vec<Step> {
         }));
     }
     {
+        let c = ctx.clone();
+        steps.push(Step::new("remove the global shortcuts `notify hotkey` set up (Do Not Disturb, notification list)", move || {
+            for t in [crate::hotkey::Target::Dnd, crate::hotkey::Target::Center] {
+                crate::hotkey::remove(t, c.no_systemctl)?;
+            }
+            Ok(())
+        }));
+    }
+    {
         let (c, ts) = (ctx.clone(), p.takeover_state.clone());
         steps.push(Step::new("daemon-reload; if nobody owns the notification or job names, restart plasmashell so Plasma takes them back", move || {
             if !c.no_systemctl {

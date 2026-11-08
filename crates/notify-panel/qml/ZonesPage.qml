@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
+import "Json.js" as Json
 
 // Where popups appear: the zones (a name, a corner, an accent colour) and the layout numbers. Edits a draft; Save writes it.
 Kirigami.Page {
@@ -12,7 +13,7 @@ Kirigami.Page {
     signal openTab(string name)
     readonly property bool online: model !== undefined && model !== null && model.connected === true
 
-    readonly property var settings: { try { return JSON.parse(page.model ? page.model.settingsJson : "{}") } catch (e) { return {} } }
+    readonly property var settings: Json.parse(page.model ? page.model.settingsJson : "", ({}))
     readonly property var vals: page.settings.values !== undefined ? page.settings.values : ({})
     readonly property var zones: page.settings.zones !== undefined ? page.settings.zones : []
     property string selectedId: ""

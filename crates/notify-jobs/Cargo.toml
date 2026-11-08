@@ -9,4 +9,5 @@ license.workspace = true
 [dependencies]
 anyhow.workspace = true
 serde.workspace = true
+notify-apps = { path = "../notify-apps" }
 zbus = { version = "5", default-features = false, features = ["async-io", "blocking-api"] }

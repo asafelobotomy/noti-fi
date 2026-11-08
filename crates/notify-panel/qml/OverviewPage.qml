@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
+import "Json.js" as Json
 
 Kirigami.ScrollablePage {
     id: page
@@ -25,12 +26,8 @@ Kirigami.ScrollablePage {
         zones: zoneRepeater.count
     })
 
-    readonly property var focusModes: {
-        try { return JSON.parse(page.model ? page.model.focusModesJson : "[]") } catch (e) { return [] }
-    }
-    readonly property var zones: {
-        try { return JSON.parse(page.model ? page.model.zonesJson : "[]") } catch (e) { return [] }
-    }
+    readonly property var focusModes: Json.parse(page.model ? page.model.focusModesJson : "[]", [])
+    readonly property var zones: Json.parse(page.model ? page.model.zonesJson : "[]", [])
 
     ColumnLayout {
         spacing: Kirigami.Units.largeSpacing

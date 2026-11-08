@@ -58,6 +58,14 @@ exit 0
     unsafe { std::env::set_var("QMAKE", &wrapper) };
 }
 
+/// The files in qml/ that end in `ext`, so a new page needs no list edited.
+fn qml_dir(ext: &str) -> Vec<String> {
+    println!("cargo:rerun-if-changed=qml");
+    let mut names: Vec<String> = std::fs::read_dir("qml").expect("read qml/").flatten().map(|e| e.file_name().to_string_lossy().into_owned()).filter(|n| n.ends_with(ext)).map(|n| format!("qml/{n}")).collect();
+    names.sort();
+    names
+}
+
 fn main() {
     println!("cargo:rerun-if-env-changed=NOTIFI_QML_AOT");
     println!("cargo:rerun-if-env-changed=QMAKE");
@@ -65,8 +73,9 @@ fn main() {
         portable_qml(Path::new(&std::env::var("OUT_DIR").expect("OUT_DIR")));
     }
     CxxQtBuilder::new_qml_module(
-        QmlModule::new("org.notify.panel").qml_files(["qml/Main.qml", "qml/OverviewPage.qml", "qml/HistoryPage.qml", "qml/RoutingPage.qml", "qml/MatchTags.qml", "qml/RuleData.qml", "qml/RuleList.qml", "qml/AppDetails.qml", "qml/AppHeader.qml", "qml/AppTile.qml", "qml/PopupPreview.qml", "qml/Segmented.qml", "qml/DurationChips.qml", "qml/SwatchPicker.qml", "qml/FontPicker.qml", "qml/SoundPicker.qml", "qml/LookEditor.qml", "qml/LookControls.qml", "qml/ZoneMap.qml", "qml/RulePreview.qml", "qml/HistoryTweak.qml", "qml/GroupMembers.qml", "qml/RuleThen.qml", "qml/MiniScreen.qml", "qml/RulesPage.qml", "qml/RulesSimulator.qml", "qml/ZonesPage.qml", "qml/AppearancePage.qml", "qml/DraftBanners.qml", "qml/ColorField.qml", "qml/AppsPage.qml", "qml/FocusPage.qml", "qml/GeneralPage.qml", "qml/SystemPage.qml", "qml/SelfTest.qml"]),
+        QmlModule::new("org.notify.panel").qml_files(qml_dir(".qml")),
     )
+    .qrc_resources(qml_dir(".js")) // helpers the pages import by relative path (`import "Json.js" as Json`)
     .qt_module("Quick")
     .qt_module("QuickControls2")
     .files(["src/model.rs"])

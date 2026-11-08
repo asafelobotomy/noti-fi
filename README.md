@@ -61,9 +61,7 @@ The `release` workflow builds on Arch, packages the archive with `packaging/buil
 | `notifd/rules.json`, `rules.schema.json` | default config and its JSON Schema |
 | `tests/test_notifd.py` | daemon regression suite on a private bus; runs `test_rules.py`, `test_features.py`, `test_inputs.py` and `test_socket.py` (socket stress tests); `test_sound.py` separately |
 | `tests/qml` | QML unit tests (`cargo test -p notify-cli --test qml`) |
-| `tests/parity.py` | proves the Rust CLI does exactly what the old Python CLI did |
-| `legacy/notify-py` | the old Python CLI, kept only for the parity test |
-| `docs/` | `protocol.md` (control socket), `control-panel-plan.md` (the GUI plan) |
+| `docs/protocol.md` | the control socket |
 
 Build and test:
 
@@ -71,7 +69,6 @@ Build and test:
 cargo build --release -p notify-cli && install -m 755 target/release/notify ~/.local/bin/notify
 cargo test --workspace -- --test-threads=1      # unit + contract + CLI integration tests (starts a throwaway daemon)
 python3 tests/test_notifd.py                    # daemon suite (or: notify selftest)
-python3 tests/parity.py                         # Rust CLI vs the legacy Python CLI
 ```
 
 Installed copies live in `~/.local/share/notifd/` (daemon), `~/.config/notifd/rules.json` (your config),
@@ -112,7 +109,7 @@ Every command accepts `--json`. Read commands print one JSON document (`status`,
 ```
 
 A failure always ends with `{"type":"result","ok":false,"message":...}` and exit code 1. The control socket protocol that
-the daemon speaks (for tools and the planned GUI) is in [docs/protocol.md](docs/protocol.md).
+the daemon speaks (for tools and the panel) is in [docs/protocol.md](docs/protocol.md).
 
 ## Configuring
 
@@ -199,10 +196,6 @@ notify update --payload notifd   # deploy the checkout's daemon files instead of
 - The panel is built against one Qt minor version. Release archives record it (`qt-version`) and `notify upgrade` refuses a panel that does not match; a `portable-qml` archive works across Qt versions.
 - Release archives are x86_64 Linux only and are not signed (they are checked against a published sha256).
 - CI runs the unit, CLI, QML, job bridge and offscreen-panel tests, and the daemon and sound suites under a headless labwc compositor (`tests/ci-daemon.sh`).
-
-## Planned
-
-See [docs/control-panel-plan.md](docs/control-panel-plan.md) and the open issues for what is next.
 
 ## Licence
 

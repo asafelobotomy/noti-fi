@@ -137,6 +137,11 @@ impl Checks {
             self.failed.push(format!("{name}: {d}"));
         }
     }
+    /// Print the tally and fail the test if any check failed.
+    pub fn finish(self) {
+        println!("\n{} passed, {} failed", self.passed, self.failed.len());
+        assert!(self.failed.is_empty(), "failures:\n{}", self.failed.join("\n"));
+    }
 }
 
 
