@@ -135,6 +135,9 @@ pub struct HistoryEntry {
     /// Read in the notification center, or dismissed by the user (entries from before 0.18 are unread).
     #[serde(default)]
     pub read: bool,
+    /// The app's icon as it sent it (a theme name or a local path), for the notification list and `latest`.
+    #[serde(default)]
+    pub icon: String,
     /// Its app still holds it, so its buttons work (only in `history` replies; never saved).
     #[serde(default)]
     pub live: bool,

@@ -26,7 +26,7 @@ Rectangle {
     property string timerStyle: "none"   // how the time left is shown: any of line, circle, frame (comma separated), or none
     property bool media: true; property bool players: false   // large pictures; audio/video players are off unless a rule enables them (a notification can name any local file)
     property var samples: []             // transfer measurements (see TransferChart.qml); 2 or more make the popup expandable
-    property string chartDefault: "line"
+    property string chartDefault: "line"; property bool hideText: false   // the screen is being shared: app name and icon only
     property string chartMode: ""       // this popup's own choice; empty = the default
     property bool graphOpen: false
     property string priority: "normal"   // low / normal / high / urgent; shown as a small badge when above normal
@@ -92,7 +92,7 @@ Rectangle {
     }
 
     implicitHeight: content.implicitHeight + 24
-    radius: 12
+    radius: theme.radius ?? 12
     color: Qt.rgba(cCard.r, cCard.g, cCard.b, cCard.a * bgOpacity)
     border.width: pinned ? 2 : 1
     border.color: pinned ? accent : (hover.hovered ? Qt.lighter(accent, 1.2) : Qt.rgba(cBorder.r, cBorder.g, cBorder.b, cBorder.a * Math.max(bgOpacity, 0.4)))
@@ -153,7 +153,7 @@ Rectangle {
             Layout.fillWidth: true
 
             Image {
-                source: card.notif ? card.iconSource(card.notif.image !== "" && !bigImage.visible ? card.notif.image : card.notif.appIcon) : ""
+                source: card.notif ? card.iconSource(card.notif.image !== "" && !bigImage.visible && !card.hideText ? card.notif.image : card.notif.appIcon) : ""
                 sourceSize.width: 40; sourceSize.height: 40
                 Layout.preferredWidth: 40; Layout.preferredHeight: 40
                 visible: status === Image.Ready
@@ -174,7 +174,7 @@ Rectangle {
                     Layout.fillWidth: true
                 }
                 Text {
-                    text: card.notif ? card.notif.summary : ""
+                    text: card.hideText ? "Hidden while your screen is shared" : card.notif ? card.notif.summary : ""
                     textFormat: Text.PlainText
                     color: card.cText
                     font.pixelSize: card.fontSize + 2
@@ -257,7 +257,7 @@ Rectangle {
 
         Text {
             visible: text !== ""
-            text: card.notif ? card.safeBody(card.notif.body) : ""
+            text: card.notif && !card.hideText ? card.safeBody(card.notif.body) : ""
             textFormat: Text.StyledText
             color: card.cSub
             font.pixelSize: card.fontSize
@@ -270,7 +270,7 @@ Rectangle {
 
         Image {      // a large picture (web push images, screenshots, covers); small images stay as the icon
             id: bigImage
-            source: card.media && card.notif ? card.iconSource(card.notif.image) : ""
+            source: card.media && card.notif && !card.hideText ? card.iconSource(card.notif.image) : ""
             visible: status === Image.Ready && implicitWidth >= 200
             Layout.fillWidth: true
             Layout.preferredHeight: visible ? Math.min(180, Math.round(width * implicitHeight / Math.max(1, implicitWidth))) : 0
@@ -281,7 +281,7 @@ Rectangle {
         // audio or video from a local file; loaded only when needed (needs Qt Multimedia)
         Loader {
             id: mediaLoader
-            active: card.mediaFile !== null
+            active: card.mediaFile !== null && !card.hideText
             visible: active && status === Loader.Ready
             Layout.fillWidth: true
             Layout.preferredHeight: visible && item ? item.implicitHeight : 0

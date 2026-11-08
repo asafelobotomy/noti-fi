@@ -37,7 +37,14 @@ Scope {
         return { dnd: s.ctl.dnd, muted: s.ctl.muted, zones: Object.keys(s.cfg.zones), active: onScreen, queued: queued,
                  focus: s.ctl.focus in s.cfg.focus.modes ? s.ctl.focus : "", perZone: per, stacks: s.layout.stackList(), cap: s.layout.cap(),
                  history: s.history.length, cfgError: s.cfgError, auto: s.auto, holding: s.holdReason(), previewing: s.preview.ids.length > 0,
-                 unread: unread.all, unreadPerZone: unread.perZone, center: s.centerOpen, kept: s.kept.count, inhibitors: s.inhibitors }
+                 unread: unread.all, unreadPerZone: unread.perZone, center: s.centerOpen, kept: s.kept.count, inhibitors: s.inhibitors,
+                 sharing: s.auto.share === true, latest: latest() }
+    }
+    // the newest notification, for a bar or a dock: no title while the screen is being shared
+    function latest() {
+        const h = api.shell.history[0]
+        if (!h) return null
+        return { id: h.id, t: h.t, appName: h.app || h.desktopEntry || "", appIcon: h.icon || "", summary: api.shell.auto.share ? "" : h.summary, read: h.read === true }
     }
     // history entries not yet read (a popup the user dismissed counts as read; one that timed out does not)
     readonly property var unread: {
@@ -77,7 +84,7 @@ Scope {
     function configStatus() {
         const c = api.shell.cfg
         return { ok: api.shell.cfgError === "", error: api.shell.cfgError, rules: c.rules.length, zones: Object.keys(c.zones),
-                 screenFound: c.screen === "" || Quickshell.screens.some(x => x.name === c.screen) }
+                 screenFound: c.screen === "" || c.screen === "focused" || Quickshell.screens.some(x => x.name === c.screen) }
     }
     function configGet() { return { raw: api.shell.rawConfig, effective: api.shell.cfg, error: api.shell.cfgError } }
     function dnd(mode) {
@@ -186,6 +193,16 @@ Scope {
         }).sort((a, b) => b.last - a.last)
     }
     function clearHistory() { api.shell.kept.closeAll(true); api.shell.history = []; api.shell.saveSoon(); api.shell.scheduleState(); return status() }
+    // a level on the on-screen display (volume, mic, brightness), for a desktop shell's media keys: one line per step, no process
+    function osd(p) {
+        const kinds = ["volume", "mic", "brightness"]
+        if (!p || kinds.indexOf(p.kind) < 0) fail("bad_params", "kind must be " + kinds.join(", "))
+        const max = Number(p.max ?? 100), value = Number(p.value)
+        if (!Number.isFinite(max) || max <= 0 || max > 1000000) fail("bad_params", "max must be a number above 0")
+        if (!Number.isFinite(value) || value < 0) fail("bad_params", "value must be a number from 0 to max")
+        api.shell.showLevel({ kind: p.kind, value: Math.min(value, max), max: max, muted: p.muted === true })
+        return { ok: true }
+    }
     // the apps that hold notifications (sent by `notify serve`, which answers Inhibit for notifd): replaces the whole list
     function inhibit(by) {
         if (!Array.isArray(by)) fail("bad_params", "by must be a list of {app, reason}")

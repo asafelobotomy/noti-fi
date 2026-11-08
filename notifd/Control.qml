@@ -3,7 +3,7 @@ import Quickshell
 import Quickshell.Io
 
 // Control socket: JSON lines over a Unix socket (protocol: docs/protocol.md).
-//   server -> client first:  {"event":"hello","protocol":1,"daemon":"...","pid":N,"seq":N}
+//   server -> client first:  {"event":"hello","name":"notifd","protocol":1,"daemon":"...","pid":N,"seq":N}
 //   client -> server:        {"id":1,"method":"status","params":{}}
 //   server -> client:        {"id":1,"result":{...}}  or  {"id":1,"error":{"code":"...","message":"..."}}
 //   after {"method":"subscribe"} the server also pushes events:
@@ -58,6 +58,7 @@ Scope {
         case "reply": return a.reply(p.id, String(p.text ?? ""))
         case "invoke": return a.invoke(p.id, String(p.key ?? ""))
         case "inhibit": return a.inhibit(p.by)
+        case "osd": return a.osd(p)
         case "validate": return a.validate(p.config !== undefined ? JSON.stringify(p.config) : String(p.text ?? ""))
         case "simulate": return a.simulate(p)
         case "preview": return a.preview(p)
@@ -103,7 +104,7 @@ Scope {
                     return
                 }
                 control.conns = control.conns.concat([sock])
-                control.sendLine(sock, { event: "hello", protocol: control.shell.protocolVersion, daemon: control.shell.daemonVersion,
+                control.sendLine(sock, { event: "hello", name: "notifd", protocol: control.shell.protocolVersion, daemon: control.shell.daemonVersion,
                                          pid: Quickshell.processId, seq: control.eventSeq })
             }
             Component.onCompleted: Qt.callLater(greet)

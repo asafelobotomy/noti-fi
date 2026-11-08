@@ -50,6 +50,9 @@ pub struct Response {
 /// First message on every connection.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Hello {
+    /// "notifd": lets a client tell it reached notifd (absent before 0.18).
+    #[serde(default)]
+    pub name: String,
     pub protocol: u32,
     pub daemon: String,
     pub pid: u32,
@@ -112,6 +115,8 @@ pub enum Event {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct HelloBody {
+    #[serde(default)]
+    pub name: String,
     pub protocol: u32,
     pub daemon: String,
     pub pid: u32,
@@ -224,6 +229,24 @@ pub struct Status {
     /// Apps holding notifications through Inhibit (`holding` is then "inhibited", unless Do Not Disturb is on).
     #[serde(default)]
     pub inhibitors: Vec<Inhibitor>,
+    /// The screen is being shared (automatic Do Not Disturb's screen-share watch): notification text is hidden.
+    #[serde(default)]
+    pub sharing: bool,
+    /// The newest notification (its title is empty while the screen is shared); None with an empty history.
+    #[serde(default)]
+    pub latest: Option<Latest>,
+}
+
+/// The newest notification, as a bar shows it.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct Latest {
+    pub id: i64,
+    pub t: i64,
+    pub app_name: String,
+    pub app_icon: String,
+    pub summary: String,
+    pub read: bool,
 }
 
 /// An app that asked for notifications to be held.
@@ -288,9 +311,11 @@ mod tests {
     fn parses_hello_and_events() {
         let m = Incoming::parse(r#"{"event":"hello","protocol":1,"daemon":"0.6.0","pid":42,"seq":0}"#).unwrap();
         match m {
-            Incoming::Event(e) => assert_eq!(e.event, Event::Hello(HelloBody { protocol: 1, daemon: "0.6.0".into(), pid: 42 })),
+            Incoming::Event(e) => assert_eq!(e.event, Event::Hello(HelloBody { name: String::new(), protocol: 1, daemon: "0.6.0".into(), pid: 42 })),
             _ => panic!("expected an event"),
         }
+        let m = Incoming::parse(r#"{"event":"hello","name":"notifd","protocol":1,"daemon":"0.18.0","pid":7,"seq":0}"#).unwrap();
+        assert!(matches!(m, Incoming::Event(e) if matches!(&e.event, Event::Hello(h) if h.name == "notifd")), "newer daemons name themselves");
         let m = Incoming::parse(r#"{"event":"closed","seq":9,"t":1,"id":5}"#).unwrap();
         assert!(matches!(m, Incoming::Event(e) if e.seq == 9 && e.event == Event::Closed(ClosedEvent { id: 5 })));
     }

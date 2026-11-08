@@ -84,6 +84,11 @@ notify takeover --now       # also switch the running session (panel disappears 
 notify restore              # hand notifications back to Plasma, remove everything installed
 ```
 
+**Hyprland and other desktops:** outside KDE (or with `--plain`) `takeover` installs notifd as a plain user service that
+starts with your graphical session: no plasmashell, no fallback to Plasma, no KWin script. Stop any other notification
+daemon first (mako, dunst, swaync); `--now` refuses and rolls back if one still holds the name. On Hyprland,
+`"screen": "focused"` puts popups and the notification list on the focused monitor, and the OSD always follows it.
+
 `takeover` also routes Flatpak/portal notifications through notifd (`notify portal`), arms an automatic
 fallback (if notifd keeps failing, notifications are handed back to Plasma instead of being lost),
 and records what it created so `restore` removes exactly that.
@@ -153,6 +158,9 @@ Meta+N                   (after: notify hotkey --center)   opens the notificatio
 - Notification text is untrusted: titles are plain text; bodies keep only `<b> <i> <u> <br>`; images/links/other
   tags are dropped and icons are limited to local files and theme names, so a notification cannot make this
   machine fetch a URL.
+- No rich text from apps anywhere else either: app names, button labels and everything in the notification list are plain text.
+- While the screen is shared, popups and the notification list show only the app (no title, text or pictures), and `latest` on the socket has no title.
+- notifd's layer surfaces (namespaces `notifd-*`) must never be given an `above_lock` rule (Hyprland), or popups and the OSD would draw over the lock screen.
 - A bad config never drops notifications; a failing popup path falls back to a plain popup.
 - `notify update` keeps the previous version and rolls back automatically if notifd does not come back healthy.
 - Replaced notifications (progress, chat) refresh their timer and update one history entry.
@@ -174,6 +182,11 @@ notify update --payload notifd   # deploy the checkout's daemon files instead of
 - **Screen sharing:** notifd watches PipeWire for a KWin screen-capture stream and holds popups the same way
   (`"autoDnd": {"screenShare": false}` to disable); checked against a real OBS capture. KDE's screen-share dialog also asks
   for quiet itself (Inhibit, below), so a share is held either way.
+- **For desktop shells (uQ and others):** the control socket is the integration API (`docs/protocol.md`): a `subscribe`
+  stream of `state` events with `unread`, `dnd`, `center`, `sharing` and `latest`; `center`, `dnd` and an `osd` command
+  that draws a volume, mic or brightness level (one line per key-repeat step, no process). With `theme.tokens` ("auto"
+  by default) notifd takes its colours, corner radius and font from uQ's `~/.local/state/uq/theme/tokens.json` (or any
+  file in that format); your own `theme` settings still win.
 - **Apps that ask for quiet:** an app can ask for notifications to be held (`Inhibit`, used for presentations, calls and screen recordings).
   notifd holds popups as for Do Not Disturb until the app lifts it or quits (critical ones still show); `notify status` says who asked.
   `notifd.service` runs `notify serve`, which owns the notification name and runs the daemon on a private bus behind it to make this possible.

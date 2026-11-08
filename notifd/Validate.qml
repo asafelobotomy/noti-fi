@@ -79,6 +79,8 @@ QtObject {
             if (typeof c[k] !== "number" || !(c[k] >= 0)) return k + " must be a number >= 0"
         const te = styleError({ opacity: c.theme.opacity, fontFamily: c.theme.fontFamily, fontSize: c.theme.fontSize, timerStyle: c.theme.timerStyle }, false)
         if (te !== "") return "theme: " + te
+        if (typeof c.theme.tokens !== "string" || c.theme.tokens.length > 500) return "theme.tokens must be \"auto\", \"\" or a file path"
+        if (typeof c.theme.radius !== "number" || !(c.theme.radius >= 0 && c.theme.radius <= 40)) return "theme.radius must be a number from 0 to 40"
         const fe = focusError(c.focus)
         if (fe !== "") return "focus: " + fe
         if (!c.transfer || charts.indexOf(c.transfer.chart) < 0) return "transfer.chart must be " + charts.join(", ")

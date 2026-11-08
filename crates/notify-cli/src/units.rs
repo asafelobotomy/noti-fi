@@ -4,20 +4,34 @@ use std::path::Path;
 
 use crate::install::exe_path;
 
-/// notifd: `notify serve` owns the notification name and runs Quickshell (the daemon) on a private bus behind it,
-/// so it can answer what Quickshell cannot (Inhibit). It stops when Quickshell stops, and systemd starts both again.
-pub fn unit_text(payload: &Path) -> String {
-    format!(
-        "[Unit]
-Description=notifd notification daemon (owns org.freedesktop.Notifications)
-# Start before plasmashell so we claim the name first; Plasma then runs without it.
+/// How the unit is ordered and started: before plasmashell on Plasma (with a fallback that hands notifications back), or as a
+/// plain user service of the graphical session elsewhere (Hyprland, Sway ...), where there is no Plasma to take over from.
+fn session_lines(plain: bool) -> (&'static str, &'static str) {
+    if plain {
+        ("After=graphical-session.target\nPartOf=graphical-session.target\n", "graphical-session.target")
+    } else {
+        (
+            "# Start before plasmashell so we claim the name first; Plasma then runs without it.
 After=plasma-kwin_wayland.service
 Before=plasma-plasmashell.service
 PartOf=graphical-session.target
 # If notifd keeps failing to start (5 failed starts within 3 minutes, about a minute of
 # trying), hand notifications back to Plasma instead of leaving none.
 OnFailure=notifd-fallback.service
-StartLimitIntervalSec=180
+",
+            "plasma-core.target",
+        )
+    }
+}
+
+/// notifd: `notify serve` owns the notification name and runs Quickshell (the daemon) on a private bus behind it,
+/// so it can answer what Quickshell cannot (Inhibit). It stops when Quickshell stops, and systemd starts both again.
+pub fn unit_text(payload: &Path, plain: bool) -> String {
+    let (order, wanted_by) = session_lines(plain);
+    format!(
+        "[Unit]
+Description=notifd notification daemon (owns org.freedesktop.Notifications)
+{order}StartLimitIntervalSec=180
 StartLimitBurst=5
 
 [Service]
@@ -35,7 +49,7 @@ LockPersonality=yes
 RestrictSUIDSGID=yes
 
 [Install]
-WantedBy=plasma-core.target
+WantedBy={wanted_by}
 ",
         exe = exe_path(),
         payload = payload.display()
@@ -44,16 +58,17 @@ WantedBy=plasma-core.target
 
 /// The job bridge: KDE file operations (Dolphin's copy/move/delete progress) as notifd notifications.
 /// Plasma takes org.kde.JobViewServer without allowing replacement, so this must hold it before plasmashell starts.
-pub fn jobs_unit_text() -> String {
+/// Without Plasma (plain mode) nobody else claims the names, so KDE apps on other desktops report their copies here too.
+pub fn jobs_unit_text(plain: bool) -> String {
+    let order = if plain { "After=graphical-session.target notifd.service" } else { "After=plasma-kwin_wayland.service notifd.service\nBefore=plasma-plasmashell.service" };
     format!(
         "[Unit]
 Description=noti-fi job bridge (shows file copy/move/delete progress through notifd; owns org.kde.JobViewServer)
-After=plasma-kwin_wayland.service notifd.service
-Before=plasma-plasmashell.service
+{order}
 PartOf=graphical-session.target
 
 [Service]
-# ready once it holds the names (or is queued behind Plasma), so plasmashell starts after it
+# ready once it holds the names, or waits in the queue behind their current owner (on KDE, the shell starts after this)
 Type=notify
 NotifyAccess=main
 ExecStart={} jobs
@@ -67,9 +82,10 @@ LockPersonality=yes
 RestrictSUIDSGID=yes
 
 [Install]
-WantedBy=plasma-core.target
+WantedBy={}
 ",
-        exe_path()
+        exe_path(),
+        if plain { "graphical-session.target" } else { "plasma-core.target" }
     )
 }
 

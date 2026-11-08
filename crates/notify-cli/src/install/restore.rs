@@ -35,7 +35,7 @@ fn restore_steps(ctx: &Ctx, purge: bool) -> Vec<Step> {
                 integrations::autodnd_remove();
             }
             // Plasma needs its notification tray item to take notifications back; show it if `notify tray hide` hid it
-            if !c.no_systemctl {
+            if !c.no_systemctl && !st.plain {
                 integrations::tray_ensure_shown();
             }
             Ok(())
@@ -51,9 +51,12 @@ fn restore_steps(ctx: &Ctx, purge: bool) -> Vec<Step> {
         }));
     }
     {
-        let (c, ts) = (ctx.clone(), p.takeover_state.clone());
+        let (c, ts, plain) = (ctx.clone(), p.takeover_state.clone(), state.plain);
         steps.push(Step::new("daemon-reload; if nobody owns the notification or job names, restart plasmashell so Plasma takes them back", move || {
-            if !c.no_systemctl {
+            if !c.no_systemctl && plain {
+                systemctl(&c, &["daemon-reload"]);
+                systemctl(&c, &["reset-failed", "notifd.service"]);
+            } else if !c.no_systemctl {
                 systemctl(&c, &["daemon-reload"]);
                 systemctl(&c, &["reset-failed", "notifd.service"]);
                 for _ in 0..10 {

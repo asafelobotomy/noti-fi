@@ -269,6 +269,11 @@ pub struct Theme {
     pub font_size: f64,
     /// How a popup shows its time left: none, or any of line, circle, frame separated by commas.
     pub timer_style: String,
+    /// Corner radius of popups and the notification list, in pixels.
+    #[serde(serialize_with = "ser_num")]
+    pub radius: f64,
+    /// A desktop's design tokens as the base of the theme: "auto" (uQ's tokens.json when present), "" or a file path.
+    pub tokens: String,
 }
 impl Default for Theme {
     fn default() -> Self {
@@ -283,6 +288,8 @@ impl Default for Theme {
             font_family: String::new(),
             font_size: 12.0,
             timer_style: "none".into(),
+            radius: 12.0,
+            tokens: "auto".into(),
         }
     }
 }

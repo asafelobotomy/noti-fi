@@ -24,7 +24,7 @@ Variants {
         readonly property bool atCenter: !free && (zone.anchor.endsWith("center") || zone.anchor === "center")
         readonly property bool atRight: !free && !atLeft && !atCenter
 
-        screen: Quickshell.screens.find(s => s.name === root.cfg.screen) ?? Quickshell.screens[0]
+        screen: root.screens.popups
         readonly property real screenW: screen ? screen.width : 1920
         readonly property real screenH: screen ? screen.height : 1080
         // the window is as wide as the widest popup it shows (popups can have their own width, or be resized by hand)
@@ -238,6 +238,7 @@ Variants {
                         players: slot.players
                         samples: { tx.rev; return tx.samplesFor(slot.nid) }
                         chartDefault: root.cfg.transfer.chart
+                        hideText: root.auto.share
                         stackCount: slot.stacked ? slot.sinfo.count : 1
                         stackExpanded: slot.expanded
                         onStackToggled: root.layout.toggleStack(slot.zone, slot.stackKey)

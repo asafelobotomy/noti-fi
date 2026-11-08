@@ -17,7 +17,8 @@ Scope {
         sound: { enabled: true, defaultName: "" },
         autoDnd: { fullscreen: true, screenShare: true },
         theme: { card: "#1d1f27", border: "#2c2f3a", text: "#f2f3f7", subtext: "#b9bccb",
-                 button: "#272a36", buttonHover: "#323646", opacity: 1, fontFamily: "", fontSize: 12, timerStyle: "none" },
+                 button: "#272a36", buttonHover: "#323646", opacity: 1, fontFamily: "", fontSize: 12, timerStyle: "none",
+                 radius: 12, tokens: "auto" },      // tokens: a desktop's design tokens as the base (see Tokens.qml)
         // Focus modes (like Apple's): while one is on, only notifications at or above `minPriority`, or matching an `allow` entry, are shown.
         focus: { modes: { urgent: { label: "Urgent only", minPriority: "urgent" } } },
         // how the graph of a download / transfer popup is drawn by default: bars, line or heatmap
@@ -32,7 +33,7 @@ Scope {
         const c = Object.assign({}, defaults, user)
         if (!c.zones || !("system" in c.zones)) c.zones = Object.assign({}, c.zones, { system: { anchor: "bottom-right", accent: "#fbbf24", label: "System" } })
         for (const k of ["dnd", "history", "sound", "autoDnd", "theme", "focus", "transfer", "center"])
-            c[k] = Object.assign({}, defaults[k], (user && typeof user[k] === "object" && user[k]) || {})
+            c[k] = Object.assign({}, defaults[k], k === "theme" ? config.shell.tokens.theme : {}, (user && typeof user[k] === "object" && user[k]) || {})
         return c
     }
 

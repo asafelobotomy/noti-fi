@@ -333,8 +333,8 @@ def socket_tests():
 
 def feature_tests():
     """The tests of look/behaviour, priority, focus and stacking live in test_features.py (they share this file's harness, passed in)."""
-    import test_features
-    return test_features.make_tests(check, BASE_CONFIG)
+    import test_desktop, test_features
+    return test_features.make_tests(check, BASE_CONFIG) + test_desktop.make_tests(check, BASE_CONFIG, Sock)
 
 
 def main():

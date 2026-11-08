@@ -9,6 +9,7 @@ use serde_json::Value;
 
 struct Home {
     root: PathBuf,
+    desktop: String,
 }
 
 impl Home {
@@ -16,7 +17,7 @@ impl Home {
         let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
         let root = std::env::temp_dir().join(format!("notify-lifecycle-{label}-{}-{nanos}", std::process::id()));
         std::fs::create_dir_all(root.join("run")).unwrap();
-        Home { root }
+        Home { root, desktop: "KDE".into() }
     }
     fn run(&self, args: &[&str]) -> (i32, String, String) {
         let o = Command::new(env!("CARGO_BIN_EXE_notify"))
@@ -28,6 +29,7 @@ impl Home {
             .env("XDG_RUNTIME_DIR", self.root.join("run")) // nothing listens here: no daemon
             .env("DBUS_SESSION_BUS_ADDRESS", format!("unix:path={}", self.root.join("run/no-bus").display()))
             .env_remove("NOTIFD_SOCKET")
+            .env("XDG_CURRENT_DESKTOP", &self.desktop)
             .output()
             .expect("run notify");
         (o.status.code().unwrap_or(-1), String::from_utf8_lossy(&o.stdout).into_owned(), String::from_utf8_lossy(&o.stderr).into_owned())
@@ -179,5 +181,30 @@ fn json_progress_events_for_the_panel() {
     let (_, lines) = h.json_lines(&["restore"]);
     let done = lines.iter().filter(|l| l["status"] == "done").count() as u64;
     k.check("restore --json streams a plan, steps and a result", lines.first().is_some_and(|l| l["type"] == "plan" && l["total"].as_u64() == Some(done)) && lines.last().is_some_and(|l| l["ok"] == true), || format!("{lines:?}"));
+    k.finish();
+}
+
+#[test]
+fn on_hyprland_takeover_installs_a_plain_user_service() {
+    let mut h = Home::new("plain");
+    h.desktop = "Hyprland".into();
+    let mut k = Checks::default();
+    let (c, out, err) = h.run(&["takeover"]);
+    k.check("takeover on Hyprland says it installs a plain user service", c == 0 && out.contains("plain user service"), || format!("{out}{err}"));
+    let unit = std::fs::read_to_string(h.p("config/systemd/user/notifd.service")).unwrap_or_default();
+    k.check("notifd starts with the graphical session, with no Plasma ordering or fallback", unit.contains("WantedBy=graphical-session.target") && !unit.contains("plasma") && !unit.contains("OnFailure"), || unit.clone());
+    let jobs = std::fs::read_to_string(h.p("config/systemd/user/notifd-jobs.service")).unwrap_or_default();
+    k.check("the job bridge too (KDE apps on other desktops report their copies there)", jobs.contains("WantedBy=graphical-session.target") && !jobs.contains("plasma"), || jobs.clone());
+    k.check("no fallback unit (there is no Plasma to hand back to)", !h.p("config/systemd/user/notifd-fallback.service").exists(), || format!("{:?}", h.files()));
+    let state: Value = serde_json::from_str(&std::fs::read_to_string(h.p("state/notifd/takeover.json")).unwrap()).unwrap();
+    k.check("the install is recorded as plain", state["plain"] == true, || state.to_string());
+    let (c, out, err) = h.run(&["update"]);
+    let unit = std::fs::read_to_string(h.p("config/systemd/user/notifd.service")).unwrap_or_default();
+    k.check("update keeps it plain", c == 0 && !unit.contains("plasma") && !h.p("config/systemd/user/notifd-fallback.service").exists(), || format!("{out}{err}{unit}"));
+    let (c, out, err) = h.run(&["restore"]);
+    k.check("restore removes it", c == 0 && !h.p("config/systemd/user/notifd.service").exists() && !h.p("state/notifd/takeover.json").exists(), || format!("{out}{err}"));
+    h.desktop = "KDE".into();
+    let (c, out, _) = h.run(&["takeover", "--dry-run", "--plain"]);
+    k.check("--plain forces it on Plasma too", c == 0 && out.contains("plain user service") && !out.contains("fallback"), || out.clone());
     k.finish();
 }

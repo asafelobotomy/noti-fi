@@ -159,6 +159,9 @@ enum Cmd {
         /// Do not install the full-screen KWin script
         #[arg(long)]
         no_autodnd: bool,
+        /// Install as a plain user service, without taking over from Plasma (automatic outside KDE, e.g. on Hyprland)
+        #[arg(long)]
+        plain: bool,
     },
     /// Look for a newer noti-fi release; with --apply, download, verify and install it (nothing is contacted unless you run this)
     Upgrade {
@@ -347,7 +350,7 @@ fn run(cli: Cli) -> Result<bool> {
             },
         )?,
         Cmd::Preview { config, seconds, end } => controls::preview(&ctx, config, seconds, end)?,
-        Cmd::Takeover { dry_run, now, no_portal, no_autodnd } => install::takeover(&ctx, now, dry_run, no_portal, no_autodnd)?,
+        Cmd::Takeover { dry_run, now, no_portal, no_autodnd, plain } => install::takeover(&ctx, now, dry_run, no_portal, no_autodnd, plain)?,
         Cmd::Update => install::update(&ctx)?,
         Cmd::Upgrade { apply } => upgrade::upgrade(&ctx, apply)?,
         Cmd::Restore { dry_run, purge, auto } => install::restore(&ctx, dry_run, purge, auto)?,

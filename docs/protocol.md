@@ -13,7 +13,7 @@ How tools talk to the running daemon. The Rust types live in `crates/notify-prot
 ## Conversation
 
 ```
-server -> client   {"event":"hello","protocol":1,"daemon":"0.8.0","pid":123,"seq":0}      (always first)
+server -> client   {"event":"hello","name":"notifd","protocol":1,"daemon":"0.18.0","pid":123,"seq":0}      (always first; `name` since 0.18)
 client -> server   {"id":1,"method":"status","params":{}}
 server -> client   {"id":1,"result":{...}}
                    {"id":1,"error":{"code":"bad_params","message":"mode must be on, off or toggle"}}
@@ -40,7 +40,7 @@ server -> client   {"id":1,"result":{...}}
 | method | params | result |
 |---|---|---|
 | `ping` | — | `{pong, t}` |
-| `status` | — | `Status`: `dnd`, `muted[]`, `zones[]`, `active`, `queued`, `perZone{}`, `cap`, `history`, `cfgError`, `auto{fullscreen,share}`, `holding`, `previewing`, `focus`, `stacks[]`, `unread`, `unreadPerZone{}`, `center` (the notification center is open), `kept` (notifications kept open for their apps after their popup left; see `center.keep`), `inhibitors[]` (`{app, reason}`: apps holding notifications through Inhibit; `holding` is then `inhibited` unless Do Not Disturb is on) |
+| `status` | — | `Status`: `dnd`, `muted[]`, `zones[]`, `active`, `queued`, `perZone{}`, `cap`, `history`, `cfgError`, `auto{fullscreen,share}`, `holding`, `previewing`, `focus`, `stacks[]`, `unread`, `unreadPerZone{}`, `center` (the notification center is open), `kept` (notifications kept open for their apps after their popup left; see `center.keep`), `inhibitors[]` (`{app, reason}`: apps holding notifications through Inhibit; `holding` is then `inhibited` unless Do Not Disturb is on), `sharing` (the screen is being shared: notification text is hidden), `latest` (`{id, t, appName, appIcon, summary, read}` of the newest notification, `summary` empty while sharing; null with no history) |
 | `configStatus` | — | `{ok, error, rules, zones[], screenFound}` |
 | `configGet` | — | `{raw, effective, error}`: the file text, and the merged config the daemon runs |
 | `dnd` | `{mode: "on"\|"off"\|"toggle"}` | `Status` |
@@ -56,6 +56,7 @@ server -> client   {"id":1,"result":{...}}
 | `center` | `{action: open\|close\|toggle}` | `Status`: shows or hides the notification center (the tray icon's left click) |
 | `markRead` | `{ids?}` (notification ids; none = every entry) | `Status` |
 | `removeHistory` | `{id, t}` (both: ids start again at 1 when the daemon restarts) | `Status`; if it was kept, its app is told it was dismissed |
+| `osd` | `{kind: volume\|mic\|brightness, value, max?, muted?}` (`max` defaults to 100) | `{ok}`: shows the level on the focused monitor (Hyprland) or the configured screen for 1.5 s; cheap enough for key repeat |
 | `inhibit` | `{by: [{app, reason}]}` | `Status`: replaces the list of apps holding notifications. `notify serve` sends this; it answers `Inhibit`/`UnInhibit` on the session bus |
 | `invoke` | `{id, key}` | `Status`: presses a live notification's button (the app receives `ActionInvoked`; it is marked read). `not_found` once its app closed it |
 | `reply` | `{id, text}` | `{ok}` (the app receives `NotificationReplied`) |

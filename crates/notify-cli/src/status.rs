@@ -117,23 +117,31 @@ pub fn doctor(ctx: &Ctx) -> anyhow::Result<bool> {
         add("Daemon", WARN, "no notifd instance answering on the control socket".into(), Some("systemctl --user start notifd"));
     }
     let installed = p.takeover_state.exists();
-    add("Install", if installed { OK } else { INFO }, if installed { "takeover installed (starts at login)".into() } else { "takeover not installed (Plasma owns notifications)".into() }, None);
+    let plain = crate::install::read_state(&p).is_some_and(|s| s.plain);
+    let what = if plain { "installed as a plain user service (starts with your graphical session)" } else { "takeover installed (starts at login)" };
+    add("Install", if installed { OK } else { INFO }, if installed { what.into() } else { "takeover not installed (another program owns notifications)".into() }, None);
     if installed {
         let (_, enabled) = sh("systemctl", &["--user", "is-enabled", "notifd.service"]);
         add("Install", if enabled == "enabled" { OK } else { WARN }, format!("notifd.service: {}", if enabled.is_empty() { "unknown" } else { &enabled }), None);
         let fb = p.fallback_unit.exists();
-        add("Install", if fb { OK } else { WARN }, format!("automatic fallback to Plasma if notifd keeps failing: {}", if fb { "armed" } else { "missing" }), if fb { None } else { Some("run: notify update") });
+        if !plain {
+            add("Install", if fb { OK } else { WARN }, format!("automatic fallback to Plasma if notifd keeps failing: {}", if fb { "armed" } else { "missing" }), if fb { None } else { Some("run: notify update") });
+        }
         let jobs = p.jobs_unit.exists();
         add("Install", if jobs { OK } else { WARN }, format!("job bridge for file operations (notifd-jobs.service): {}", if jobs { "installed" } else { "missing" }), if jobs { None } else { Some("run: notify update") });
         let portal_ok = std::fs::read_to_string(&p.portal).map(|t| t.contains(PORTAL_MARK)).unwrap_or(false);
         add("Install", if portal_ok { OK } else { WARN }, format!("Flatpak/portal notifications routed through notifd: {}", if portal_ok { "yes" } else { "NO" }), if portal_ok { None } else { Some("run: notify portal") });
-        let loaded = integrations::kwin_loaded();
-        add("Install", if loaded { OK } else { WARN }, format!("automatic Do Not Disturb for full-screen windows: {}", if loaded { "active" } else { "KWin script not loaded" }), if loaded { None } else { Some("run: notify autodnd install") });
-        if p.tray_marker.exists() {
-            add("Install", INFO, "Plasma's notification tray icon is hidden by notify (restore and the automatic fallback show it again so Plasma can take notifications back)".into(), None);
-        }
-        if integrations::tray_state("status").as_deref() == Some("shown") {
-            add("Install", WARN, "Plasma's own notification icon is still in the system tray (it does nothing now)".into(), Some("run: notify tray hide"));
+        if plain {
+            add("Install", INFO, "not on Plasma: no fallback to Plasma and no KWin full-screen script (screen sharing and apps' Inhibit still hold popups)".into(), None);
+        } else {
+            let loaded = integrations::kwin_loaded();
+            add("Install", if loaded { OK } else { WARN }, format!("automatic Do Not Disturb for full-screen windows: {}", if loaded { "active" } else { "KWin script not loaded" }), if loaded { None } else { Some("run: notify autodnd install") });
+            if p.tray_marker.exists() {
+                add("Install", INFO, "Plasma's notification tray icon is hidden by notify (restore and the automatic fallback show it again so Plasma can take notifications back)".into(), None);
+            }
+            if integrations::tray_state("status").as_deref() == Some("shown") {
+                add("Install", WARN, "Plasma's own notification icon is still in the system tray (it does nothing now)".into(), Some("run: notify tray hide"));
+            }
         }
     }
     let (rep, rules_text, rules_ok) = controls::rules_report(ctx, None);

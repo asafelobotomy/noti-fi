@@ -8,12 +8,13 @@ Rectangle {
     required property color accent
     required property var theme
     required property real now
-    property var live: null              // the Notification while its app still holds it (see Kept.qml), else null
+    property var live: null
+    property bool hideText: false        // the screen is being shared: no titles, text or buttons              // the Notification while its app still holds it (see Kept.qml), else null
     signal opened()
     signal removed()
     signal invoked(string key)
 
-    readonly property var buttons: live ? (live.actions || []).filter(a => a.identifier !== "default" && a.text !== "") : []
+    readonly property var buttons: live && !hideText ? (live.actions || []).filter(a => a.identifier !== "default" && a.text !== "") : []
 
     readonly property bool unread: entry.read !== true
     readonly property string fontFamily: theme.fontFamily ?? ""
@@ -75,7 +76,7 @@ Rectangle {
         Text {
             width: parent.width
             visible: text !== ""
-            text: item.plain(item.entry.summary)
+            text: item.hideText ? "Hidden while your screen is shared" : item.plain(item.entry.summary)
             textFormat: Text.PlainText      // app-supplied text: never rich text (it could load remote images)
             elide: Text.ElideRight
             color: item.theme.text ?? "#f2f3f7"
@@ -86,7 +87,7 @@ Rectangle {
         Text {
             width: parent.width
             visible: text !== ""
-            text: item.plain(item.entry.body)
+            text: item.hideText ? "" : item.plain(item.entry.body)
             wrapMode: Text.Wrap
             maximumLineCount: 2
             elide: Text.ElideRight

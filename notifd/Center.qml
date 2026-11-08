@@ -14,7 +14,7 @@ Scope {
     readonly property var cfg: shell.cfg
     readonly property var theme: cfg.theme
     readonly property string corner: (cfg.center && cfg.center.anchor) || "bottom-right"
-    readonly property var screenObj: Quickshell.screens.find(s => s.name === cfg.screen) ?? Quickshell.screens[0]
+    readonly property var screenObj: shell.screens.popups
     property var folded: ({})            // group -> true while it is folded into a stack
     property real now: Date.now()
     Timer { interval: 30000; repeat: true; running: center.open; triggeredOnStart: true; onTriggered: center.now = Date.now() }
@@ -73,7 +73,7 @@ Scope {
 
         Rectangle {
             anchors.fill: parent
-            radius: 12
+            radius: center.theme.radius ?? 12
             color: center.theme.card ?? "#1d1f27"
             border.width: 1
             border.color: center.theme.border ?? "#2c2f3a"
@@ -166,6 +166,7 @@ Scope {
                             theme: center.theme
                             now: center.now
                             live: { center.shell.kept.rev; return center.shell.kept.live(row.modelData.entry) }
+                            hideText: center.shell.auto.share
                             onOpened: center.open_(row.modelData.entry, live)
                             onInvoked: key => { center.shell.api.invoke(row.modelData.entry.id, key); center.close() }
                             onRemoved: center.shell.api.removeHistory(row.modelData.entry.id, row.modelData.entry.t)

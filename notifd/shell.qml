@@ -10,6 +10,8 @@ ShellRoot {
 
     // The parts of the daemon, each in its own file. They reach the shared state below through `shell`.
     readonly property Config config: Config { shell: root }        // defaults + rules.json, validated and hot-reloaded
+    readonly property Tokens tokens: Tokens { shell: root }        // a desktop's design tokens under the theme (uQ's tokens.json)
+    function reapply() { if (rawConfig !== "") config.apply(rawConfig) }
     readonly property Preview preview: Preview { shell: root }     // real sample popups from a draft config
     readonly property Api api: Api { shell: root }                 // the control API and `qs ipc call notifd ...`
     readonly property Control control: Control { shell: root }     // the control socket and its events
@@ -110,7 +112,7 @@ ShellRoot {
         const limit = cfg.history.limit || 200
         const h = history.slice(0, limit - 1)
         h.unshift({
-            t: Date.now(), id: n.id, app: f.appName, summary: f.summary, body: (f.body || "").slice(0, 300),
+            t: Date.now(), id: n.id, app: f.appName, icon: String(n.appIcon || "").slice(0, 500), summary: f.summary, body: (f.body || "").slice(0, 300),
             zone: r.zone, origin: f.origin, urgency: f.urgency, shown: why === "", why: why, desktopEntry: f.desktopEntry || "", category: f.category || "", channel: f.channel || "app",
             read: false
         })
@@ -322,12 +324,22 @@ ShellRoot {
     }
 
     // =====================================================================
-    // Confirmation pill (DND / mute / config errors); shown even during DND
+    // Confirmation pill (DND / mute / config errors) and levels (volume ...) from a desktop shell; shown even during DND
     // =====================================================================
     property string osdText: ""
     property color osdColor: "#34d399"
     property bool osdShown: false
+    property var osdLevel: null              // {kind, value, max, muted} while a level shows; null for the pill
+    readonly property Screens screens: Screens { shell: root }
+    function showLevel(l) {
+        osdLevel = l
+        osdColor = "#60a5fa"
+        osdShown = true
+        osdTimer.interval = 1500
+        osdTimer.restart()
+    }
     function flash(text, color, ms) {
+        osdLevel = null
         osdText = text
         osdColor = color
         osdShown = true

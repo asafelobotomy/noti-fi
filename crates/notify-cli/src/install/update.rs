@@ -45,7 +45,12 @@ pub fn update(ctx: &Ctx) -> Result<()> {
     }
     // installs from before the job bridge existed get it now
     let jobs_new = !p.jobs_unit.exists();
-    for (path, text) in [(&p.unit, unit_text(&p.payload)), (&p.fallback_unit, fallback_unit_text()), (&p.dbus, dbus_text().to_string()), (&p.jobs_unit, jobs_unit_text())] {
+    let plain = read_state(&p).is_some_and(|s| s.plain);
+    let mut units = vec![(&p.unit, unit_text(&p.payload, plain)), (&p.dbus, dbus_text().to_string()), (&p.jobs_unit, jobs_unit_text(plain))];
+    if !plain {
+        units.push((&p.fallback_unit, fallback_unit_text()));
+    }
+    for (path, text) in units {
         if fs::read_to_string(path).ok().as_deref() != Some(&text) {
             atomic_write(path, &text)?;
             out.text(&format!("  refreshed {}", path.file_name().and_then(|n| n.to_str()).unwrap_or("")));

@@ -8,7 +8,7 @@
   "properties": {
     "screen": {
       "type": "string",
-      "description": "Output name to show popups on (e.g. eDP-1). Empty = first screen."
+      "description": "Output name to show popups and the notification list on (e.g. eDP-1); \"focused\" = the monitor Hyprland has focused. Empty = first screen."
     },
     "debug": {
       "type": "boolean",
@@ -149,6 +149,17 @@
           "type": "string",
           "pattern": "^(none|((line|circle|frame)(,(line|circle|frame))*))$",
           "description": "How a popup shows the time it has left: none, or any of line (a footer line that shortens), circle (a ring that empties) and frame (an outline that shrinks), separated by commas."
+        },
+        "radius": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 40,
+          "description": "Corner radius of popups and the notification list, in pixels."
+        },
+        "tokens": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "A desktop's design tokens (colours, radius, font) as the base of this theme: \"auto\" uses uQ's ~/.local/state/uq/theme/tokens.json when it exists, a path uses that file, \"\" none. Settings here still win."
         }
       }
     },

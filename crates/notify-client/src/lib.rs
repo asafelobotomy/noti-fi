@@ -104,7 +104,7 @@ impl Client {
             buf: Vec::new(),
             next_id: 1,
             events: VecDeque::new(),
-            hello: Hello { protocol: 0, daemon: String::new(), pid: 0, seq: 0 },
+            hello: Hello { name: String::new(), protocol: 0, daemon: String::new(), pid: 0, seq: 0 },
         };
         let first = c.read_incoming(DEFAULT_TIMEOUT)?;
         match first {
@@ -113,7 +113,7 @@ impl Client {
                     if h.protocol != PROTOCOL_VERSION {
                         return Err(Error::VersionMismatch { daemon: h.protocol, client: PROTOCOL_VERSION });
                     }
-                    c.hello = Hello { protocol: h.protocol, daemon: h.daemon, pid: h.pid, seq: env.seq };
+                    c.hello = Hello { name: h.name, protocol: h.protocol, daemon: h.daemon, pid: h.pid, seq: env.seq };
                 }
                 Event::Error(e) => return Err(Error::Refused(format!("{} ({})", e.message, e.code))),
                 other => return Err(Error::Protocol(format!("expected hello, got {other:?}"))),

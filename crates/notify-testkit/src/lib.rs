@@ -210,6 +210,8 @@ pub mod fake {
             center: false,
             kept: 0,
             inhibitors: vec![],
+            sharing: false,
+            latest: None,
         };
         serde_json::to_value(s).unwrap()
     }

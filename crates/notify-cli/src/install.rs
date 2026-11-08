@@ -46,6 +46,14 @@ pub struct TakeoverState {
     /// The job bridge unit (empty in installs made before it existed).
     #[serde(default)]
     pub jobs_unit: String,
+    /// A plain user service (not KDE Plasma): no plasmashell ordering, no fallback to Plasma, no KWin script.
+    #[serde(default)]
+    pub plain: bool,
+}
+
+/// The session is KDE Plasma (XDG_CURRENT_DESKTOP lists KDE); anything else gets the plain install.
+pub fn plasma_session() -> bool {
+    std::env::var("XDG_CURRENT_DESKTOP").is_ok_and(|d| d.split(':').any(|x| x.eq_ignore_ascii_case("KDE")))
 }
 
 pub(crate) fn read_state(p: &Paths) -> Option<TakeoverState> {
@@ -211,7 +219,8 @@ pub fn healthy(abandoned_if_missing: Option<&Path>, timeout: Duration) -> bool {
 
 // ---------------------------------------------------------------- takeover
 
-pub fn takeover(ctx: &Ctx, now: bool, dry: bool, no_portal: bool, no_autodnd: bool) -> Result<()> {
+pub fn takeover(ctx: &Ctx, now: bool, dry: bool, no_portal: bool, no_autodnd: bool, force_plain: bool) -> Result<()> {
+    let plain = force_plain || !plasma_session();
     let p = paths();
     let pl = Payload::load(ctx.payload_dir.as_deref())?;
     let rules_v: Value = serde_json::from_str(&pl.rules)?;
@@ -225,7 +234,7 @@ pub fn takeover(ctx: &Ctx, now: bool, dry: bool, no_portal: bool, no_autodnd: bo
     if p.takeover_state.exists() {
         bail!("notifd takeover is already installed (use 'notify update' to change it, or 'notify restore' first)");
     }
-    ctx.out.text(&format!("{}takeover plan", if dry { "DRY RUN - " } else { "" }));
+    ctx.out.text(&format!("{}takeover plan{}", if dry { "DRY RUN - " } else { "" }, if plain { " (plain user service: no Plasma here to take over from)" } else { "" }));
     let pl = std::rc::Rc::new(pl);
     let nosys = ctx.no_systemctl;
     let mut steps: Vec<Step> = Vec::new();
@@ -253,22 +262,23 @@ pub fn takeover(ctx: &Ctx, now: bool, dry: bool, no_portal: bool, no_autodnd: bo
     }
     {
         let (unit, payload_dir) = (p.unit.clone(), p.payload.clone());
-        steps.push(Step::new(format!("write user unit {} (starts before plasmashell)", p.unit.display()), move || atomic_write(&unit, &unit_text(&payload_dir))));
+        let when = if plain { "starts with your graphical session" } else { "starts before plasmashell" };
+        steps.push(Step::new(format!("write user unit {} ({when})", p.unit.display()), move || atomic_write(&unit, &unit_text(&payload_dir, plain))));
     }
-    {
+    if !plain {
         let f = p.fallback_unit.clone();
         steps.push(Step::new(format!("write fallback unit {} (hands back to Plasma if notifd keeps failing)", p.fallback_unit.display()), move || atomic_write(&f, &fallback_unit_text())));
     }
     {
         let f = p.jobs_unit.clone();
-        steps.push(Step::new(format!("write job bridge unit {} (Dolphin's copy/move/delete progress through notifd; starts before plasmashell)", p.jobs_unit.display()), move || atomic_write(&f, &jobs_unit_text())));
+        steps.push(Step::new(format!("write job bridge unit {} (KDE apps' copy/move/delete progress through notifd)", p.jobs_unit.display()), move || atomic_write(&f, &jobs_unit_text(plain))));
     }
     {
         let f = p.dbus.clone();
         steps.push(Step::new(format!("write D-Bus activation override {} (restarts notifd if it ever stops)", p.dbus.display()), move || atomic_write(&f, dbus_text())));
     }
     let autodnd_done = slot(false);
-    if !no_autodnd {
+    if !no_autodnd && !plain {
         let d = autodnd_done.clone();
         steps.push(Step::new("install the KWin script for automatic Do Not Disturb (full-screen windows)", move || {
             if !nosys {
@@ -304,16 +314,32 @@ pub fn takeover(ctx: &Ctx, now: bool, dry: bool, no_portal: bool, no_autodnd: bo
         steps.push(Step::new(format!("record what was installed in {} (restore removes exactly these)", p.takeover_state.display()), move || {
             let state = TakeoverState {
                 unit: unit.display().to_string(),
-                fallback_unit: fb.display().to_string(),
+                fallback_unit: if plain { String::new() } else { fb.display().to_string() },
                 dbus: dbus.display().to_string(),
                 portal: if *pd.borrow() { Some(portal.display().to_string()) } else { None },
                 autodnd: *ad.borrow(),
                 jobs_unit: jobs.display().to_string(),
+                plain,
             };
             atomic_write(&st, &serde_json::to_string_pretty(&state)?)
         }));
     }
-    if now {
+    if now && plain {
+        let c2 = ctx.clone();
+        steps.push(Step::new("NOW: start notifd and the job bridge; auto-rollback if notifd is not the owner (stop mako, dunst or swaync first)", move || {
+            if let Some(o) = owner().filter(|o| o.comm != "notify" && o.comm != "qs") {
+                c2.out.text(&format!("  ! {} (pid {}) owns notifications; notifd waits behind it until it stops", o.comm, o.pid));
+            }
+            let rc = systemctl(&c2, &["start", "notifd.service"]);
+            systemctl(&c2, &["start", "notifd-jobs.service"]);
+            if !c2.no_systemctl && (rc != 0 || !healthy(None, Duration::from_secs(10))) {
+                c2.out.text("  ! takeover did not take effect; rolling back");
+                do_restore(&c2)?;
+                bail!("notifd did not become the notification owner and the install was rolled back (is another notification daemon running?)");
+            }
+            Ok(())
+        }));
+    } else if now {
         let c2 = ctx.clone();
         steps.push(Step::new("NOW: stop plasmashell, start notifd and the job bridge, start plasmashell (panel disappears ~5s); auto-rollback if notifd is not the owner", move || {
             let sys = |a: &[&str]| systemctl(&c2, a);
