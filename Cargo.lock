@@ -1005,7 +1005,6 @@ dependencies = [
  "notify-client",
  "notify-panel-core",
  "notify-protocol",
- "notify-testkit",
  "notify-update",
  "serde_json",
 ]

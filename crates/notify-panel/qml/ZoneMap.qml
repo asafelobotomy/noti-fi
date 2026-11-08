@@ -49,7 +49,7 @@ Rectangle {
                 cursorShape: page.selectedFree ? Qt.ArrowCursor : Qt.PointingHandCursor
                 onClicked: if (page.selectedId !== "" && !page.selectedFree) page.model.zoneSet(page.selectedId, "anchor", cell.modelData)
                 Accessible.role: Accessible.Button
-                Accessible.name: "Move the selected zone to " + page.anchorNames[cell.modelData]
+                Accessible.name: "Move the selected group to " + page.anchorNames[cell.modelData]
             }
         }
     }
@@ -132,7 +132,7 @@ Rectangle {
                     chip.x = Qt.binding(() => chip.posX)
                     chip.y = Qt.binding(() => chip.posY)
                 }
-                Accessible.name: "Zone " + (chip.modelData.label || chip.modelData.id) + ", drag to place it"
+                Accessible.name: "Group " + (chip.modelData.label || chip.modelData.id) + ", drag to place it"
             }
         }
     }

@@ -64,7 +64,6 @@ pub mod qobject {
         #[qproperty(bool, external_changed)]
         #[qproperty(bool, conflict)]
         #[qproperty(QString, save_message)]
-        #[qproperty(QString, rules_path_text)]
         #[qproperty(QString, sim_json)]
         #[qproperty(QString, settings_json)]
         // start at login (the autostart entry exists)

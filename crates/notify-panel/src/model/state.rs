@@ -6,7 +6,7 @@ use std::sync::mpsc::Sender;
 
 use cxx_qt_lib::QString;
 use notify_apps::AppEntry;
-use notify_panel_core::draft::{self, Draft, SimInput};
+use notify_panel_core::draft::{Draft, SimInput};
 use notify_panel_core::{shell, view};
 use notify_panel_core::view::Conn;
 use notify_panel_core::worker::Cmd;
@@ -40,7 +40,6 @@ pub struct PanelModelRust {
     pub(crate) external_changed: bool,
     pub(crate) conflict: bool,
     pub(crate) save_message: QString,
-    pub(crate) rules_path_text: QString,
     pub(crate) sim_json: QString,
     pub(crate) settings_json: QString,
     pub(crate) autostart: bool,
@@ -108,7 +107,6 @@ impl Default for PanelModelRust {
             external_changed: false,
             conflict: false,
             save_message: QString::from(""),
-            rules_path_text: QString::from(&draft::rules_path().display().to_string()),
             sim_json: QString::from("{}"),
             settings_json: QString::from("{}"),
             autostart: shell::autostart_enabled(&shell::config_home()),

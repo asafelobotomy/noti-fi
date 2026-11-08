@@ -84,13 +84,14 @@ whose `seq` is greater than the returned `seq`.
 
 ## Compatibility
 
-`qs ipc call notifd <fn>` keeps working unchanged (`status`, `configStatus`, `dnd`, `mute`, `setAuto`, `reply`, `validate`,
-`simulate`, `preview`, `endPreview`, `history`, `clearHistory`, `dismissAll`); it shares the same implementation.
+`qs ipc call notifd <fn>` keeps working unchanged (`status`, `configStatus`, `dnd`, `mute`, `focus`, `stack`, `samples`,
+`setAuto`, `reply`, `validate`, `simulate`, `preview`, `endPreview`, `history`, `seenApps`, `clearHistory`, `dismissAll`);
+it shares the same implementation.
 Adding methods or event fields is not a protocol change; renaming or removing them, or changing a meaning, bumps `protocol`.
 
 ## Tested
 
-`tests/test_notifd.py` (socket, events, limits, stress: 1000 pipelined requests, 300 connect/disconnect cycles with no
+`tests/test_socket.py`, run by `tests/test_notifd.py` (socket, events, limits, stress: 1000 pipelined requests, 300 connect/disconnect cycles with no
 fd or memory growth, 400-event flood with no loss, a client that never reads, p99 latency under six concurrent clients,
 recovery from a hard-killed daemon with a stale socket file) and
 `crates/notify-client/tests/contract.rs` (every message parses into the Rust types; the daemon accepts what Rust writes).

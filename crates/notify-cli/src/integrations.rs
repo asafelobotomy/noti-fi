@@ -320,7 +320,7 @@ pub fn qt_keycode(combo: &str) -> Result<i64> {
             "ctrl" | "control" => 0x0400_0000,
             "alt" => 0x0800_0000,
             s if s.len() == 1 && s.chars().all(|c| c.is_ascii_alphanumeric()) => s.to_uppercase().chars().next().unwrap() as i64,
-            s if s.starts_with('f') && s[1..].parse::<u32>().map(|n| (1..=12).contains(&n)).unwrap_or(false) => 0x0100_0030 + s[1..].parse::<i64>().unwrap() - 1,
+            s if s.starts_with('f') && s[1..].parse::<i64>().is_ok_and(|n| (1..=12).contains(&n)) => 0x0100_0030 + s[1..].parse::<i64>().unwrap_or(1) - 1,
             _ => bail!("unsupported key '{}'", part),
         };
     }

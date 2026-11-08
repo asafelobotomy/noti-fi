@@ -65,7 +65,7 @@ Kirigami.FormLayout {
                 color: Kirigami.Theme.negativeTextColor
                 text: sim.result.error !== undefined ? "Cannot simulate: " + sim.result.error : ""
             }
-            QQC2.Label { visible: sim.result.zone !== undefined; text: "Zone: " + sim.result.zone + "   (" + sim.result.zoneBy + ")"; font.bold: true }
+            QQC2.Label { visible: sim.result.zone !== undefined; text: "Group: " + sim.result.zone + "   (" + sim.result.zoneBy + ")"; font.bold: true }
             QQC2.Label { visible: sim.result.timeout !== undefined; text: "Timeout: " + sim.result.timeout + "   (" + sim.result.timeoutBy + ")" }
             QQC2.Label { visible: sim.result.outcome !== undefined; text: "Outcome: " + sim.result.outcome }
             QQC2.Label {

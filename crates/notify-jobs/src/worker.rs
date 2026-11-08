@@ -203,7 +203,9 @@ impl Worker<'_> {
         if let Some((_, p)) = self.finished.iter().find(|(n, _)| *n == nid) {
             let dir = if p.is_dir() { p.clone() } else { p.parent().map(PathBuf::from).unwrap_or_else(|| p.clone()) };
             std::thread::spawn(move || {
-                let _ = std::process::Command::new("xdg-open").arg(&dir).stdin(std::process::Stdio::null()).status();
+                if let Err(e) = std::process::Command::new("xdg-open").arg(&dir).stdin(std::process::Stdio::null()).status() {
+                    eprintln!("notify-jobs: could not open {}: {e}", dir.display());
+                }
             });
         }
     }

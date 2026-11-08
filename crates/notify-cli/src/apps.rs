@@ -68,7 +68,7 @@ pub struct Apps {
 }
 
 pub fn config_dir() -> PathBuf {
-    std::env::var_os("XDG_CONFIG_HOME").filter(|v| !v.is_empty()).map(PathBuf::from).unwrap_or_else(|| home().join(".config"))
+    crate::paths::xdg("XDG_CONFIG_HOME", ".config")
 }
 
 fn json_at<'a>(v: &'a Value, path: &[&str]) -> Option<&'a Value> {

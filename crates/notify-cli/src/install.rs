@@ -23,7 +23,7 @@ use crate::sys::{atomic_write, notifd_owns, owner, owner_of, sh, sh_timeout, sle
 
 pub const PORTAL_MARK: &str = "# managed by notify: routes portal notifications through notifd";
 
-// ---------------------------------------------------------------- generated files (identical to the Python CLI's)
+// ---------------------------------------------------------------- generated files
 
 pub fn exe_path() -> String {
     let installed = crate::paths::home().join(".local/bin/notify");
@@ -323,7 +323,7 @@ pub fn takeover(ctx: &Ctx, now: bool, dry: bool, no_portal: bool, no_autodnd: bo
             sys(&["start", "plasma-plasmashell.service"]);
             if !c2.no_systemctl && (rc != 0 || !notifd_owns()) {
                 c2.out.text("  ! takeover did not take effect; rolling back");
-                do_restore(&c2, true, false)?;
+                do_restore(&c2)?;
                 bail!("takeover did not take effect and was rolled back");
             }
             Ok(())

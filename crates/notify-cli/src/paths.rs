@@ -6,7 +6,7 @@ pub fn home() -> PathBuf {
     std::env::var_os("HOME").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("/"))
 }
 
-fn xdg(var: &str, default: &str) -> PathBuf {
+pub fn xdg(var: &str, default: &str) -> PathBuf {
     match std::env::var_os(var).filter(|v| !v.is_empty()) {
         Some(v) => PathBuf::from(v),
         None => home().join(default),

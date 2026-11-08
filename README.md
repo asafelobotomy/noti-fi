@@ -6,9 +6,10 @@ A notification daemon for KDE Plasma on Wayland, built on [Quickshell](https://q
 and the Rust command-line tool and control panel that install and run it.
 
 - **notifd** owns `org.freedesktop.Notifications`, replacing Plasma's built-in notification service.
-  Popups are routed into named **zones** (corners of the screen) by **rules** (app, site, urgency, text).
+  Popups are routed into named **groups** (each shown in its own corner of the screen; the config key is still `zones`)
+  by **rules** (app, site, urgency, text).
 - **notify** installs it as a user service, switches Plasma over and back, and gives daily controls
-  (Do Not Disturb, mute a zone, history, a global hotkey).
+  (Do Not Disturb, mute a group, history, a global hotkey).
 
 ## Install from a release
 
@@ -49,16 +50,17 @@ The `release` workflow builds on Arch, packages the archive with `packaging/buil
 |---|---|
 | `crates/notify-cli` | the `notify` command (Rust). Embeds the daemon files, so `notify update` needs no project folder |
 | `crates/notify-protocol` | typed messages for the control socket and the `rules.json` model (no I/O) |
-| `crates/notify-client` | blocking Rust client for the control socket (used by the CLI; the future panel will use it too) |
+| `crates/notify-client` | blocking Rust client for the control socket (used by the CLI and the panel) |
 | `crates/notify-jobs` | the job bridge (`notify jobs`, run by `notifd-jobs.service`): shows KDE file operations (Dolphin's copy, move, delete, extract; any KIO job) as notifd popups with live progress |
 | `crates/notify-testkit` | test harness: a throwaway daemon on a private D-Bus session |
 | `crates/notify-apps` | finds apps that send, or could send, notifications (launchers, KDE events, Plasma's list, Flatpak permissions) and merges them with the daemon's `seenApps` |
 | `crates/notify-panel-core` | the panel's Qt-free logic: connection worker (reconnects, coalesces events), view data, history filtering |
-| `crates/notify-panel` | the control panel app (Rust + cxx-qt + Kirigami): Overview (with the focus switch), General (tray, start at login), History, Apps, Focus modes, Rules, Zones & layout and Appearance so far; `cargo run -p notify-panel` |
+| `crates/notify-panel` | the control panel app (Rust + cxx-qt + Kirigami): Overview (with the focus switch), History, Appearance, Focus modes, Apps, Groups, Rules, General and System; `cargo run -p notify-panel` |
 | `crates/notify-panel-smoke` | headless tests of the real panel app (asserts what the UI displays) |
-| `notifd/shell.qml`, `Popup.qml`, `Media.qml`, `TransferChart.qml` | the daemon (QML on Quickshell): rules, state, control socket, popups; `Media.qml` (audio/video players) needs the optional `qt6-multimedia` |
+| `notifd/*.qml` | the daemon (QML on Quickshell): `shell.qml` (state, history, control socket), `Route.qml` (rules), `Validate.qml` (config checks), `ZoneWindows.qml`/`Popup*.qml` (popups), `Transfers.qml`/`TransferChart.qml` (progress graphs), `Osd.qml`; `Media.qml` (audio/video players) needs the optional `qt6-multimedia` |
 | `notifd/rules.json`, `rules.schema.json` | default config and its JSON Schema |
-| `tests/test_notifd.py` | daemon regression suite incl. socket stress tests (private bus) |
+| `tests/test_notifd.py` | daemon regression suite on a private bus; runs `test_rules.py`, `test_features.py`, `test_inputs.py` and `test_socket.py` (socket stress tests); `test_sound.py` separately |
+| `tests/qml` | QML unit tests (`cargo test -p notify-cli --test qml`) |
 | `tests/parity.py` | proves the Rust CLI does exactly what the old Python CLI did |
 | `legacy/notify-py` | the old Python CLI, kept only for the parity test |
 | `docs/` | `protocol.md` (control socket), `control-panel-plan.md` (the GUI plan) |

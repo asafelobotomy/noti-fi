@@ -77,7 +77,7 @@ fn restore_steps(ctx: &Ctx, purge: bool) -> Vec<Step> {
 }
 
 /// Hand notifications back without printing anything (rollbacks).
-pub fn do_restore(ctx: &Ctx, _quiet: bool, _auto: bool) -> Result<()> {
+pub fn do_restore(ctx: &Ctx) -> Result<()> {
     for s in restore_steps(ctx, false) {
         if let Some(a) = s.action {
             a()?;

@@ -354,7 +354,7 @@ mod tests {
 
     #[test]
     fn accepts_javascript_only_regex_features() {
-        // lookbehind and named groups are valid ES; the old Python lint wrongly rejected some of these shapes
+        // lookbehind and named groups are valid ES (the daemon's regex engine)
         assert!(regex_problem(r"(?<=a)b").is_none());
         assert!(regex_problem(r"(?<name>steam)").is_none());
         assert!(regex_problem(r"\b(example-shop|example-chat)\b").is_none());

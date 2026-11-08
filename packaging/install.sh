@@ -9,9 +9,14 @@ here=$(cd "$(dirname "$0")" && pwd)
 prefix=${PREFIX:-$HOME/.local}
 
 if [ "${1:-}" = "--uninstall" ]; then
+    # notify restore needs the notify binary: run it first, or notifd and its job bridge would stay installed with no way to remove them
+    if [ -e "${XDG_STATE_HOME:-$HOME/.local/state}/notifd/takeover.json" ]; then
+        echo "notifd is still installed: run 'notify restore' first (it removes notifd and the job bridge and hands notifications back to Plasma), then run this again" >&2
+        exit 1
+    fi
     rm -f "$prefix/bin/notify" "$prefix/bin/notify-panel" "$prefix/share/applications/org.notify.Panel.desktop" "$prefix/share/metainfo/org.notify.Panel.metainfo.xml" "$prefix/share/icons/hicolor/scalable/apps/org.notify.Panel.svg"
     rm -rf "$prefix/share/doc/noti-fi"
-    echo "removed noti-fi from $prefix (notifd itself is removed with: notify restore)"
+    echo "removed noti-fi from $prefix"
     exit 0
 fi
 

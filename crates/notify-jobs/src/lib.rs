@@ -9,6 +9,7 @@
 pub mod apps;
 pub mod model;
 mod server;
+mod url;
 mod worker;
 
 use std::sync::{Arc, mpsc};
