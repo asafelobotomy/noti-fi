@@ -38,7 +38,7 @@ Scope {
                  focus: s.ctl.focus in s.cfg.focus.modes ? s.ctl.focus : "", perZone: per, stacks: s.layout.stackList(), cap: s.layout.cap(),
                  history: s.history.length, cfgError: s.cfgError, auto: s.auto, holding: s.holdReason(), previewing: s.preview.ids.length > 0,
                  unread: unread.all, unreadPerZone: unread.perZone, center: s.centerOpen, kept: s.kept.count, inhibitors: s.inhibitors,
-                 sharing: s.sharing, latest: latest(),
+                 sharing: s.sharing, sharingBy: s.autoDnd.readers, latest: latest(),
                  screens: { popups: s.screens.popups ? s.screens.popups.name : "", osd: s.screens.osd ? s.screens.osd.name : "", focused: s.screens.focusedName } }
     }
     // the newest notification, for a bar or a dock: no title while the screen is being shared

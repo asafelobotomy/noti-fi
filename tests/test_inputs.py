@@ -140,12 +140,20 @@ def make_tests(check, BASE_CONFIG, ROOT, SRC):
         block = src[src.index("readonly property string shareScript:"):src.index("id: shareWatch")]
         script = "".join(bytes(p, "utf-8").decode("unicode_escape") for p in re.findall(r'"((?:[^"\\]|\\.)*)"', block))
         node = lambda i, props: {"id": i, "type": "PipeWire:Interface:Node", "info": {"props": props}}
+        client = lambda i, binary: {"id": i, "type": "PipeWire:Interface:Client", "info": {"props": {"application.process.binary": binary}}}
+        link = lambda i, out, inp: {"id": i, "type": "PipeWire:Interface:Link", "info": {"output-node-id": out, "input-node-id": inp}}
+        # recorded live: OBS's capture, and the Claude app's (its computer use) read through a stream named after it
         kwin = node(3, {"media.class": "Stream/Output/Video", "media.name": "kwin-screencast-eDP-1", "node.name": "kwin_wayland"})
-        obs = node(4, {"media.class": "Stream/Input/Video", "media.name": "OBS Studio", "node.name": "obs"})
+        obs = node(4, {"media.class": "Stream/Input/Video", "media.name": "OBS Studio", "node.name": "obs", "client.id": 20})
         cam = node(5, {"media.class": "Video/Source", "node.name": "v4l2_input.usb", "node.description": "HD Webcam"})
+        claude_cast = node(6, {"media.class": "Stream/Output/Video", "media.name": "kwin-screencast-com.anthropic.Claude", "node.name": "kwin_wayland"})
+        claude_in = node(7, {"media.class": "Stream/Input/Video", "node.name": "lamco-pw-76", "client.id": 21})
         gone = {"id": 3, "info": None}                   # how `pw-dump --monitor` reports a removed object
-        cases = (([[cam, obs, kwin]], "1", "KWin producing a screencast stream"), ([[cam, obs]], "0", "no KWin stream (a webcam and a reader)"),
-                 ([[cam], [kwin], [gone]], "0\n1\n0", "a share starting and ending is reported as it happens"), (None, "0", "pw-dump failing"))
+        cases = (([[client(20, "obs"), cam, obs, kwin, link(30, 3, 4)]], '["obs"]', "KWin's capture read by OBS names OBS"),
+                 ([[cam, obs]], "[]", "no KWin stream (a webcam and a reader)"),
+                 ([[cam], [kwin], [gone]], '[]\n["?"]\n[]', "a share starting (nobody reading yet) and ending is reported as it happens"),
+                 ([[client(21, "claude"), claude_cast, claude_in, link(31, 6, 7)]], '["claude"]', "a capture by the Claude app (computer use) names it"),
+                 (None, "[]", "pw-dump failing"))
         for updates, want, what in cases:
             with tempfile.TemporaryDirectory() as bin_dir:
                 fake = os.path.join(bin_dir, "pw-dump")
@@ -155,5 +163,10 @@ def make_tests(check, BASE_CONFIG, ROOT, SRC):
                 os.chmod(fake, 0o755)
                 r = subprocess.run(["sh", "-c", script], env=dict(os.environ, PATH=bin_dir + ":" + os.environ["PATH"]), capture_output=True, text=True, timeout=20)
             check(f"screen sharing: {what}", r.stdout.strip() == want, r.stdout + r.stderr[-200:])
+        for bad in (["claude", 3], "claude", [""]):
+            v = d.ipc("validate", json.dumps({**BASE_CONFIG, "autoDnd": {**BASE_CONFIG["autoDnd"], "ignoreCaptureBy": bad}}))
+            check(f"autoDnd.ignoreCaptureBy {bad!r} is refused", isinstance(v, dict) and v.get("ok") is False, str(v))
+        v = d.ipc("validate", json.dumps({**BASE_CONFIG, "autoDnd": {**BASE_CONFIG["autoDnd"], "ignoreCaptureBy": ["claude"]}}))
+        check("autoDnd.ignoreCaptureBy [\"claude\"] is accepted", isinstance(v, dict) and v.get("ok") is True, str(v))
 
     return [test_markup_cannot_fetch, test_bad_config_never_drops_notifications, test_auto_dnd, test_inline_reply, test_share_detection]

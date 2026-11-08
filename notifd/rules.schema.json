@@ -97,6 +97,16 @@
         "watch": {
           "type": "boolean",
           "description": "Internal: false stops the watchers (tests)."
+        },
+        "ignoreCaptureBy": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "description": "Programs whose screen captures do not count as sharing (their binary or application name, as `notify status` shows under sharing by), e.g. a screen-reading assistant. Captures by any other program still hide notification text and hold popups."
         }
       }
     },

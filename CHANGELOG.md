@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Who is capturing the screen:** the screen-share watch now names the programs reading KWin's capture (`sharingBy` in `status`), and `autoDnd.ignoreCaptureBy` lists programs whose captures do not count as sharing. Found because Claude's computer use (`kwin-portal-bridge`) captures the screen and so hid notifications, which looked like another app's doing.
+
 - **Hyprland: screen sharing and full screen hold popups.** notifd follows Hyprland's own events (`HyprlandWatch.qml`, which also gives the focused monitor): a screen capture counts as sharing (text hidden, popups held) until 1.5 s after its last frame, and a full-screen window (not a maximised one) holds popups as the KWin script does on Plasma. Tested on a real Hyprland with `wf-recorder` and a full-screen terminal.
 - **The notification list from the keyboard:** arrow keys, Home/End and PageUp/PageDown move; Enter or Space opens a notification or folds a group; Delete removes one; 1-9 press its buttons; Tab reaches the header buttons (Enter presses them). Tested with real key presses on Hyprland (`wtype`) and in `tst_centernav.qml`.
 

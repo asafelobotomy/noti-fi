@@ -10,7 +10,10 @@ Scope {
     required property var shell          // cfg, auto, setAuto(), screens.hypr
     readonly property bool watching: shell.cfg.autoDnd.watch !== false      // off in tests, which drive the state by hand
     readonly property var hypr: shell.screens.hypr
-    property bool pwShare: false
+    property var readers: []              // programs reading a KWin screen capture right now ("?" = not yet known)
+    // captures by programs in autoDnd.ignoreCaptureBy (a screen-reading assistant, a remote-support tool you trust) do not count
+    readonly property var ignored: (shell.cfg.autoDnd.ignoreCaptureBy || []).map(x => String(x).toLowerCase())
+    readonly property bool pwShare: readers.some(r => ignored.indexOf(r.toLowerCase()) < 0)
     readonly property bool shareNow: pwShare || (hypr !== null && hypr.screencast === true)
     readonly property bool hyprFull: hypr !== null && hypr.fullscreen === true
     onShareNowChanged: if (watching && shell.cfg.autoDnd.screenShare) shell.setAuto("share", shareNow)
@@ -31,17 +34,27 @@ Scope {
     }
     // Screen sharing: a PipeWire video stream produced by KWin means something is capturing the screen. `pw-dump --monitor`
     // prints the whole graph, then an array of changes whenever something changes (a removed object has "info": null), so a
-    // share is seen the moment its stream appears, not on a poll. Prints 1 or 0 on every change of state (0 if pw-dump fails).
+    // share is seen the moment its stream appears, not on a poll. On every change it prints, as a JSON list, the programs reading
+    // those streams (found through the links from KWin's stream to their own); "?" for a stream nobody reads yet. [] = none.
     readonly property string shareScript:
         "pw-dump --monitor 2>/dev/null | python3 -u -c '" +
         "import json,sys\n" +
-        "nodes={}; last=None; buf=[]\n" +
-        "def hit():\n" +
-        "  for p in nodes.values():\n" +
+        "objs={}; last=None; buf=[]\n" +
+        "def props(o): return (o.get(\"info\") or {}).get(\"props\") or {}\n" +
+        "def readers():\n" +
+        "  out=set()\n" +
+        "  for i,o in objs.items():\n" +
+        "    p=props(o); c=str(p.get(\"media.class\",\"\"))\n" +
         "    who=\" \".join(str(p.get(k,\"\")) for k in (\"application.name\",\"application.process.binary\",\"node.name\",\"media.name\")).lower()\n" +
-        "    c=str(p.get(\"media.class\",\"\"))\n" +
-        "    if \"Video\" in c and c.startswith(\"Stream/Output\") and \"kwin\" in who: return 1\n" +
-        "  return 0\n" +
+        "    if o.get(\"type\")!=\"PipeWire:Interface:Node\" or not c.startswith(\"Stream/Output/Video\") or \"kwin\" not in who: continue\n" +
+        "    names=set()\n" +
+        "    for l in objs.values():\n" +
+        "      li=l.get(\"info\") or {}\n" +
+        "      if l.get(\"type\")!=\"PipeWire:Interface:Link\" or li.get(\"output-node-id\")!=i: continue\n" +
+        "      n=objs.get(li.get(\"input-node-id\"),{}); cl=objs.get(props(n).get(\"client.id\"),{}); cp=props(cl)\n" +
+        "      names.add(str(cp.get(\"application.process.binary\") or cp.get(\"application.name\") or props(n).get(\"node.name\") or \"?\"))\n" +
+        "    out|=names or {\"?\"}\n" +
+        "  return sorted(out)\n" +
         "for line in sys.stdin:\n" +
         "  buf.append(line)\n" +
         "  if line.rstrip() != \"]\": continue\n" +
@@ -49,15 +62,21 @@ Scope {
         "  except Exception: d=[]\n" +
         "  buf=[]\n" +
         "  for o in d:\n" +
-        "    if o.get(\"info\") is None: nodes.pop(o.get(\"id\"),None)\n" +
-        "    elif o.get(\"type\")==\"PipeWire:Interface:Node\": nodes[o.get(\"id\")]=(o[\"info\"].get(\"props\") or nodes.get(o.get(\"id\")) or {})\n" +
-        "  h=hit()\n" +
-        "  if h!=last: last=h; print(h)\n" +
-        "if last is None: print(0)'"
+        "    if o.get(\"info\") is None: objs.pop(o.get(\"id\"),None)\n" +
+        "    else: objs[o.get(\"id\")]=o\n" +
+        "  r=readers()\n" +
+        "  if r!=last: last=r; print(json.dumps(r))\n" +
+        "if last is None: print(\"[]\")'"
     Process {
         id: shareWatch
         command: ["sh", "-c", autoDnd.shareScript]
-        stdout: SplitParser { onRead: line => autoDnd.pwShare = line.trim() === "1" }
+        stdout: SplitParser {
+            onRead: line => {
+                let r = []
+                try { r = JSON.parse(line) } catch (e) {}
+                autoDnd.readers = Array.isArray(r) ? r.map(String) : []
+            }
+        }
     }
     Timer {
         // keeps the watchers alive (respawns journalctl or pw-dump if one ever exits)

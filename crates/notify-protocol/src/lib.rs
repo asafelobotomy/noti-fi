@@ -232,6 +232,9 @@ pub struct Status {
     /// The screen is being shared (automatic Do Not Disturb's screen-share watch): notification text is hidden.
     #[serde(default)]
     pub sharing: bool,
+    /// The programs reading a screen capture right now (including ignored ones; "?" = not yet known).
+    #[serde(default)]
+    pub sharing_by: Vec<String>,
     /// The newest notification (its title is empty while the screen is shared); None with an empty history.
     #[serde(default)]
     pub latest: Option<Latest>,

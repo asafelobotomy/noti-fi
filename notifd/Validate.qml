@@ -89,6 +89,9 @@ QtObject {
         for (const k of ["fullscreen", "screenShare"])
             if (typeof c.autoDnd[k] !== "boolean") return "autoDnd." + k + " must be true or false"
         if (c.autoDnd.watch !== undefined && typeof c.autoDnd.watch !== "boolean") return "autoDnd.watch must be true or false"
+        const ig = c.autoDnd.ignoreCaptureBy
+        if (ig !== undefined && (!Array.isArray(ig) || ig.length > 20 || ig.some(x => typeof x !== "string" || x === "" || x.length > 100)))
+            return "autoDnd.ignoreCaptureBy must be a list of program names (at most 20)"
         if (!Array.isArray(c.rules)) return "rules must be a list"
         for (let i = 0; i < c.rules.length; i++) {
             const r = c.rules[i]

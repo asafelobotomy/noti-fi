@@ -185,6 +185,7 @@ mod tests {
             kept: 0,
             inhibitors: vec![],
             sharing: false,
+            sharing_by: vec![],
             latest: None,
             screens: Default::default(),
         }

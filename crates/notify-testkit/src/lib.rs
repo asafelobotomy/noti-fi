@@ -165,7 +165,7 @@ pub fn test_config() -> Config {
         default_timeout: 1500.0,
         max_visible: 3,
         history: HistorySettings { limit: 50, persist: false },
-        auto_dnd: AutoDndSettings { fullscreen: true, screen_share: true, watch: Some(false) },
+        auto_dnd: AutoDndSettings { fullscreen: true, screen_share: true, watch: Some(false), ignore_capture_by: vec![] },
         zones,
         rules: vec![
             rule("business sites", "origin", "example-shop|example-chat", Some("business"), None, None),
@@ -211,6 +211,7 @@ pub mod fake {
             kept: 0,
             inhibitors: vec![],
             sharing: false,
+            sharing_by: vec![],
             latest: None,
             screens: Default::default(),
         };

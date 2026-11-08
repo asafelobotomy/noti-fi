@@ -190,10 +190,13 @@ pub struct AutoDndSettings {
     /// Internal: false stops the watchers (tests).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub watch: Option<bool>,
+    /// Programs whose screen captures do not count as sharing (binary or application name).
+    #[serde(rename = "ignoreCaptureBy", default, skip_serializing_if = "Vec::is_empty")]
+    pub ignore_capture_by: Vec<String>,
 }
 impl Default for AutoDndSettings {
     fn default() -> Self {
-        Self { fullscreen: true, screen_share: true, watch: None }
+        Self { fullscreen: true, screen_share: true, watch: None, ignore_capture_by: vec![] }
     }
 }
 

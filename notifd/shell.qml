@@ -16,7 +16,7 @@ ShellRoot {
     readonly property Api api: Api { shell: root }                 // the control API and `qs ipc call notifd ...`
     readonly property Control control: Control { shell: root }     // the control socket and its events
     readonly property Sound sound: Sound { shell: root }
-    AutoDnd { shell: root }                                         // full-screen and screen-sharing watchers
+    readonly property AutoDnd autoDnd: AutoDnd { shell: root }                                         // full-screen and screen-sharing watchers
     readonly property var rowList: rows                             // the on-screen rows, for the parts above
     readonly property var transfers: tx
     readonly property var validator: checks
