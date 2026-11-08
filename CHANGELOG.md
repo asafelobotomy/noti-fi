@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Dependencies:** rusqlite 0.40 and sha2 0.11 (the newest that build with Rust 1.85); GitHub Actions checkout 7, cache 6, upload-artifact 7, download-artifact 8 (Dependabot's updates, taken on main in one tested change).
+- **Hygiene:** the command-line definitions moved from `main.rs` (399 lines) to `cli.rs`, and a popup's buttons from `Popup.qml` (400) to `PopupButtons.qml`, so neither sits at the line limit; Python bytecode is no longer committed; the README lists every daemon file, crate and test suite.
+
 ## 0.18.0
 
 - **Screen sharing is seen at once:** notifd now follows PipeWire as it changes (`pw-dump --monitor`) instead of checking every 4 s, and KDE's screen-share portal's "Screen sharing in progress" inhibition counts as sharing too, so a notification arriving as a share starts no longer shows its text.

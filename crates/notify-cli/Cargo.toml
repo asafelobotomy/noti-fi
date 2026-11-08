@@ -22,7 +22,7 @@ anyhow.workspace = true
 clap = { version = "4", features = ["derive"] }
 regress = "0.12"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
-rusqlite = "0.37"   # links the system libsqlite3 (qt6-base already needs it)
+rusqlite = "0.40"   # links the system libsqlite3 (qt6-base already needs it)
 
 [dev-dependencies]
 notify-testkit = { path = "../notify-testkit" }

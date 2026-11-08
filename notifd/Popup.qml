@@ -107,7 +107,7 @@ Rectangle {
     Accessible.description: notif ? card.safeBody(notif.body).replace(/<[^>]*>/g, "") : ""
     HoverHandler { id: hover }
     TapHandler { enabled: card.active && !card.clickThrough; onTapped: {
-        if (actionsHover.hovered || replyBox.hovered || pinHover.hovered || mediaHover.hovered || graphBox.hovered || gripArea.containsMouse || gripArea.pressed) return
+        if (actionsRow.hovered || replyBox.hovered || pinHover.hovered || mediaHover.hovered || graphBox.hovered || gripArea.containsMouse || gripArea.pressed) return
         // a collapsed stack opens when clicked; anything else is dismissed
         if (card.stackCount > 1 && !card.stackExpanded) card.stackToggled(); else card.dismissed()
     } }
@@ -333,36 +333,11 @@ Rectangle {
             onCancelled: card.dismissed()
         }
 
-        Flow {
+        PopupButtons {
+            id: actionsRow
+            popup: card
             visible: card.acts.length > 0
             Layout.fillWidth: true
-            spacing: 6
-            HoverHandler { id: actionsHover }      // a tap on a button is the button's, not the card's (a resident notification stays)
-            Repeater {
-                model: card.acts
-                delegate: Rectangle {
-                    id: btnRect
-                    required property var modelData
-                    radius: 6
-                    color: btn.hovered ? card.cButtonHover : card.cButton
-                    implicitWidth: btnLabel.implicitWidth + 20
-                    implicitHeight: 26
-                    HoverHandler { id: btn }
-                    TapHandler {
-                        enabled: card.active
-                        onTapped: { btnRect.modelData.invoke(); if (!card.resident) card.dismissed() }
-                    }
-                    Text {
-                        id: btnLabel
-                        anchors.centerIn: parent
-                        text: btnRect.modelData.text
-                        textFormat: Text.PlainText
-                        color: card.cText
-                        font.pixelSize: card.fontSize
-                        font.family: card.fontFamily
-                    }
-                }
-            }
         }
     }
 

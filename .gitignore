@@ -12,3 +12,7 @@
 *.log
 *.tmp
 /dist/
+
+# Python bytecode
+__pycache__/
+*.pyc

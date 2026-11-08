@@ -54,13 +54,15 @@ The `release` workflow builds on Arch, packages the archive with `packaging/buil
 | `crates/notify-bus` | `notify serve`, what `notifd.service` runs: owns `org.freedesktop.Notifications` and runs Quickshell on a private bus behind it, passing every call and signal through and answering `Inhibit` (apps asking for notifications to be held), which Quickshell cannot |
 | `crates/notify-jobs` | the job bridge (`notify jobs`, run by `notifd-jobs.service`): shows KDE file operations (Dolphin's copy, move, delete, extract; any KIO job) as notifd popups with live progress |
 | `crates/notify-testkit` | test harness: a throwaway daemon on a private D-Bus session |
+| `crates/notify-update` | `notify upgrade`: finds the newest GitHub release, checks the archive against its published sha256, and replaces the installed files |
 | `crates/notify-apps` | finds apps that send, or could send, notifications (launchers, KDE events, Plasma's list, Flatpak permissions) and merges them with the daemon's `seenApps` |
 | `crates/notify-panel-core` | the panel's Qt-free logic: connection worker (reconnects, coalesces events), view data, history filtering |
 | `crates/notify-panel` | the control panel app (Rust + cxx-qt + Kirigami): Overview (with the focus switch), History, Appearance, Focus modes, Apps, Groups, Rules, General and System; `cargo run -p notify-panel` |
 | `crates/notify-panel-smoke` | headless tests of the real panel app (asserts what the UI displays) |
-| `notifd/*.qml` | the daemon (QML on Quickshell): `shell.qml` (state, history, incoming notifications), `Config.qml` (rules.json), `Route.qml` (rules), `Validate.qml` (config checks), `Rows.qml` (ranking, stacks), `Api.qml` and `Control.qml` (control API, `qs ipc` and the socket), `Preview.qml`, `Sound.qml`, `AutoDnd.qml`, `ZoneWindows.qml`/`Popup*.qml` (popups), `Transfers.qml`/`TransferChart.qml` (progress graphs), `Osd.qml`; `Media.qml` (audio/video players) needs the optional `qt6-multimedia` |
+| `notifd/*.qml` | the daemon (QML on Quickshell): `shell.qml` (state, history, incoming notifications), `Config.qml` (rules.json), `Route.qml` (rules), `Validate.qml` (config checks), `Rows.qml` (ranking, stacks), `Api.qml` and `Control.qml` (control API, `qs ipc` and the socket), `Preview.qml`, `Sound.qml`, `AutoDnd.qml`, `ZoneWindows.qml`/`Popup*.qml`/`Timer*.qml`/`MediaFile.qml` (popups), `Center*.qml` (the notification list) and `Kept.qml` (notifications kept open for its buttons), `Transfers.qml`/`TransferChart.qml` (progress graphs), `Osd.qml` (pill and level OSD), `Screens.qml`/`FocusedMonitor.qml` (which monitor; Hyprland's focus), `Tokens.qml` (design tokens under the theme); `Media.qml` (audio/video players) needs the optional `qt6-multimedia` |
 | `notifd/rules.json`, `rules.schema.json` | default config and its JSON Schema |
-| `tests/test_notifd.py` | daemon regression suite on a private bus; runs `test_rules.py`, `test_features.py`, `test_inputs.py` and `test_socket.py` (socket stress tests); `test_sound.py` separately |
+| `tests/test_notifd.py` | daemon regression suite on a private bus; runs `test_rules.py`, `test_features.py`, `test_inputs.py`, `test_desktop.py` (what desktop shells use: socket state, OSD, design tokens) and `test_socket.py` (socket stress tests); `test_sound.py` separately |
+| `tests/hyprland/run.sh` | notifd on a real Hyprland, nested in a podman container (`/dev/dri` needed); not run in CI |
 | `tests/qml` | QML unit tests (`cargo test -p notify-cli --test qml`) |
 | `docs/protocol.md` | the control socket |
 
@@ -213,7 +215,7 @@ notify update --payload notifd   # deploy the checkout's daemon files instead of
 - Start-up ordering at a real login and Brave web push arriving through notifd are unconfirmed; these need a live desktop session to prove.
 - The panel is built against one Qt minor version. Release archives record it (`qt-version`) and `notify upgrade` refuses a panel that does not match; a `portable-qml` archive works across Qt versions.
 - Release archives are x86_64 Linux only and are not signed (they are checked against a published sha256).
-- CI runs the unit, CLI, QML, job bridge and offscreen-panel tests, and the daemon and sound suites under a headless labwc compositor (`tests/ci-daemon.sh`).
+- CI runs the unit, CLI (including takeover/restore in a fake home and `notify serve` on a throwaway bus), QML, job bridge and offscreen-panel tests, and the daemon and sound suites under a headless labwc compositor (`tests/ci-daemon.sh`). The Hyprland test needs a GPU and runs by hand.
 
 ## Licence
 
