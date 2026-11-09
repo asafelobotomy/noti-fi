@@ -35,6 +35,8 @@ def main():
         T.check("a sound name with shell characters is never run", not (stub / "pwned").exists())
         # a flood plays at most two sounds at once: the player now lasts a few seconds
         player.write_text(f'#!/bin/sh\necho "$@" >> {log}\nsleep 3\n')
+        for other in ("paplay", "canberra-gtk-play"):   # a named sound goes to canberra-gtk-play
+            (stub / other).write_text(f'#!/bin/sh\necho "{other} $@" >> {log}\nsleep 3\n')
         n = len(played())
         for i in range(5):
             d.send(f"flood {i}", t=300, hints=[f"string:sound-name:flood-{i}"])
