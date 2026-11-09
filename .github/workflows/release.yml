@@ -36,8 +36,8 @@ jobs:
           echo "version=$have" >> "$GITHUB_OUTPUT"
       - name: Test the parts that need no desktop
         run: |
-          cargo test --locked -p notify-protocol -p notify-apps -p notify-panel-core -p notify-jobs --lib
-          cargo test --locked -p notify-cli --test loc --test version --test qml
+          cargo test --locked -p notify-protocol -p notify-apps -p notify-panel-core -p notify-jobs -p notify-update -p notify-bus --lib
+          cargo test --locked -p notify-cli --test loc --test version --test qml --test lifecycle
           cargo test --locked -p notify-jobs --test bridge
       - name: Build release binaries
         run: cargo build --release --locked -p notify-cli -p notify-panel
@@ -94,5 +94,5 @@ jobs:
         run: |
           cd dist
           gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "noti-fi $TAG" --generate-notes \
-            --notes "Install: extract the archive and run ./install.sh (into ~/.local), then notify takeover --dry-run. Runtime needs: quickshell, qt6-declarative, kirigami, qqc2-desktop-style. Verify with the .sha256 file." \
+            --notes "Install: extract the archive and run ./install.sh (into ~/.local), then notify takeover --dry-run. Runtime needs: quickshell, qt6-declarative, kirigami, qqc2-desktop-style, dbus, pipewire, python. Verify with the .sha256 file." \
             ./*.tar.gz ./*.sha256

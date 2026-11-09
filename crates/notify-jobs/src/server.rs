@@ -22,6 +22,8 @@ pub(crate) enum Ev {
     Action(u32, String),
     Closed(u32, u32),
     OwnerGone(String),
+    /// org.freedesktop.Notifications has a new owner (notifd restarted): its ids start again, so ours are void.
+    ServerChanged,
 }
 
 pub(crate) struct Entry {

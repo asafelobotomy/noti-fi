@@ -23,21 +23,39 @@ impl PrivateBus {
         let socket = dir.join("bus");
         let config = dir.join("bus.conf");
         std::fs::write(&config, config_text(&socket.display().to_string()))?;
-        let mut child = Command::new("dbus-daemon")
+        let child = match Command::new("dbus-daemon")
             .args(["--nofork", "--nopidfile", "--print-address=1"])
             .arg(format!("--config-file={}", config.display()))
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .spawn()
-            .context("starting dbus-daemon (package dbus)")?;
+        {
+            Ok(c) => c,
+            Err(e) => {
+                let _ = std::fs::remove_dir_all(&dir);
+                return Err(e).context("starting dbus-daemon (package dbus)");
+            }
+        };
+        // from here on, Drop stops the daemon and removes the folder, whatever goes wrong
+        let mut bus = PrivateBus { child, address: String::new(), dir };
         let mut line = String::new();
-        BufReader::new(child.stdout.take().expect("piped")).read_line(&mut line)?;
-        let address = line.trim().to_string();
-        if address.is_empty() {
-            let _ = child.kill();
+        BufReader::new(bus.child.stdout.take().expect("piped")).read_line(&mut line)?;
+        bus.address = line.trim().to_string();
+        if bus.address.is_empty() {
             bail!("dbus-daemon did not print its address");
         }
-        Ok(PrivateBus { child, address, dir })
+        Ok(bus)
+    }
+
+    /// Remove the folders of earlier runs that ended without cleaning up (a SIGTERM skips Drop; systemd still kills the processes).
+    pub fn sweep(runtime: &std::path::Path) {
+        for e in std::fs::read_dir(runtime).into_iter().flatten().flatten() {
+            let name = e.file_name().to_string_lossy().into_owned();
+            let Some(pid) = name.strip_prefix("notifd-bus-").and_then(|p| p.parse::<u32>().ok()) else { continue };
+            if pid != std::process::id() && !std::path::Path::new(&format!("/proc/{pid}")).exists() {
+                let _ = std::fs::remove_dir_all(e.path());
+            }
+        }
     }
 }
 

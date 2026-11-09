@@ -210,6 +210,29 @@ pub fn lint_config(cfg: &Value) -> Vec<String> {
         if !ok {
             errs.push("autoDnd.fullscreen and autoDnd.screenShare must be true or false".into());
         }
+        if let Some(ig) = a.get("ignoreCaptureBy") {
+            let ok = ig.as_array().is_some_and(|l| l.len() <= 20 && l.iter().all(|x| x.as_str().is_some_and(|s| !s.is_empty() && s.len() <= 100)));
+            if !ok {
+                errs.push("autoDnd.ignoreCaptureBy must be a list of program names (at most 20)".into());
+            }
+        }
+    }
+    // the same limits notifd/Validate.qml applies (without a daemon, `notify rules` must not pass what notifd refuses)
+    if let Some(c) = obj.get("center") {
+        if !c.get("anchor").is_none_or(|a| a.as_str().is_some_and(|a| a != "free" && ANCHORS.contains(&a))) {
+            errs.push("center.anchor must be one of the nine places (not free)".into());
+        }
+        if !c.get("keep").is_none_or(|k| k.as_u64().is_some_and(|k| k <= 1000)) {
+            errs.push("center.keep must be a whole number from 0 to 1000".into());
+        }
+    }
+    if let Some(th) = obj.get("theme") {
+        if !th.get("tokens").is_none_or(|t| t.as_str().is_some_and(|t| t.len() <= 500)) {
+            errs.push("theme.tokens must be \"auto\", \"off\", \"\" or a file path".into());
+        }
+        if !th.get("radius").is_none_or(|r| r.as_f64().is_some_and(|r| (0.0..=40.0).contains(&r))) {
+            errs.push("theme.radius must be a number from 0 to 40".into());
+        }
     }
     let rules = match obj.get("rules") {
         None => return errs,
@@ -236,6 +259,9 @@ pub fn lint_config(cfg: &Value) -> Vec<String> {
             if !non_negative_number(t) {
                 errs.push(format!("rule '{name}': timeout must be a number >= 0"));
             }
+        }
+        if ro.get("silent").is_some_and(|s| !s.is_boolean()) {
+            errs.push(format!("rule '{name}': silent must be true or false"));
         }
         let Some(m) = ro.get("match") else { continue };
         let Some(m) = m.as_object() else {
@@ -299,73 +325,5 @@ fn walk(val: &Value, sch: &Value, path: &str, out: &mut Vec<String>) {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-
-    #[test]
-    fn shipped_defaults_lint_clean() {
-        let v: Value = serde_json::from_str(payload::DEFAULT_RULES).unwrap();
-        assert!(lint_config(&v).is_empty(), "{:?}", lint_config(&v));
-        assert!(lint_warnings(&v).is_empty(), "{:?}", lint_warnings(&v));
-    }
-
-    #[test]
-    fn catches_what_the_daemon_rejects() {
-        let mut v: Value = serde_json::from_str(payload::DEFAULT_RULES).unwrap();
-        v["zones"]["system"]["anchor"] = json!("middle");
-        v["rules"] = json!([
-            {"name": "py", "match": {"appName": "(?P<x>steam)"}},
-            {"name": "flag", "match": {"appName": "(?i)steam"}},
-            {"name": "zone", "zone": "ghost"},
-            {"name": "open", "match": {"summary": "(abc"}},
-            {"name": "field", "match": {"nope": "a"}}
-        ]);
-        let e = lint_config(&v).join("\n");
-        for want in ["anchor must be", "(?P<name>", "inline flags", "unknown zone 'ghost'", "bad regex for summary", "unknown match field 'nope'"] {
-            assert!(e.contains(want) || e.contains(&want.replace("(?P<name>", "(?<name>")), "missing `{want}` in:\n{e}");
-        }
-    }
-
-    #[test]
-    fn checks_look_and_behavior_keys_like_the_daemon() {
-        let mut v: Value = serde_json::from_str(payload::DEFAULT_RULES).unwrap();
-        v["theme"]["opacity"] = json!(5);
-        v["zones"]["system"]["group"] = json!("x");
-        v["zones"]["system"]["width"] = json!(10);
-        v["rules"] = json!([
-            {"name": "a", "opacity": 0, "match": {"category": "^email"}},
-            {"name": "b", "clickThrough": "yes", "fontSize": 400, "group": 5, "timerStyle": "sparkle"},
-            {"name": "ok", "opacity": 0.5, "clickThrough": false, "noFocus": true, "width": 400, "fontFamily": "Serif", "fontSize": 14, "group": "g", "match": {"channel": "web"}}
-        ]);
-        let e = lint_config(&v);
-        for want in ["theme: opacity must be", "zone 'system': group can only be set on a rule", "zone 'system': width must be", "rule 'a': opacity must be", "rule 'b': clickThrough must be", "rule 'b': fontSize must be", "rule 'b': group must be", "rule 'b': timerStyle must be"] {
-            assert!(e.iter().any(|x| x.contains(want)), "missing `{want}` in {e:?}");
-        }
-        assert!(!e.iter().any(|x| x.contains("rule 'ok'")), "a valid rule must pass: {e:?}");
-        assert!(lint_warnings(&json!({"rules": [{"name": "ok", "opacity": 0.5, "group": "g", "match": {"category": "x"}}]})).is_empty(), "the schema must know the new keys");
-    }
-
-    #[test]
-    fn refuses_patterns_the_daemon_refuses() {
-        assert!(regex_problem(&"a".repeat(500)).is_none());
-        assert!(regex_problem(&"a".repeat(501)).is_some_and(|w| w.contains("longer than 500")));
-    }
-
-    #[test]
-    fn accepts_javascript_only_regex_features() {
-        // lookbehind and named groups are valid ES (the daemon's regex engine)
-        assert!(regex_problem(r"(?<=a)b").is_none());
-        assert!(regex_problem(r"(?<name>steam)").is_none());
-        assert!(regex_problem(r"\b(example-shop|example-chat)\b").is_none());
-        assert!(regex_problem("(").is_some());
-    }
-
-    #[test]
-    fn warns_about_typos_but_not_errors() {
-        let mut v: Value = serde_json::from_str(payload::DEFAULT_RULES).unwrap();
-        v["defualtZone"] = json!("x");
-        assert!(lint_config(&v).is_empty());
-        assert!(lint_warnings(&v).iter().any(|w| w.contains("defualtZone")));
-    }
-}
+#[path = "lint_tests.rs"]
+mod tests;

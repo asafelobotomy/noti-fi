@@ -15,11 +15,13 @@ Kirigami.ScrollablePage {
     property var ui
     signal openPage(string name)
     // the entry opened for changing how notifications like it are shown (one at a time), and what rules are tried against
-    property int expandedId: -1
+    // the open row, as "id:time": ids start again at 1 when notifd restarts, and history can be kept across restarts
+    property string expandedKey: ""
+    function keyOf(e) { return e.id + ":" + e.t }
     property var recent: []
     // test/screenshot hook: --open-details opens the newest entry
-    onItemsChanged: if (page.expandedId < 0 && page.items.length && Qt.application.arguments.indexOf("--open-details") >= 0) page.expandedId = page.items[0].id
-    onExpandedIdChanged: if (expandedId >= 0 && page.model) page.recent = Json.parse(page.model.recentNotifications(), [])
+    onItemsChanged: if (page.expandedKey === "" && page.items.length && Qt.application.arguments.indexOf("--open-details") >= 0) page.expandedKey = page.keyOf(page.items[0])
+    onExpandedKeyChanged: if (expandedKey !== "" && page.model) page.recent = Json.parse(page.model.recentNotifications(), [])
     readonly property bool showText: ui ? ui.showText : false
     readonly property bool missedOnly: ui ? ui.missedOnly : false
 
@@ -78,7 +80,7 @@ Kirigami.ScrollablePage {
         delegate: QQC2.ItemDelegate {
             id: row
             required property var modelData
-            readonly property bool expanded: page.expandedId === modelData.id
+            readonly property bool expanded: page.expandedKey === page.keyOf(modelData)
             width: ListView.view.width
             Accessible.name: (expanded ? "Close " : "Open ") + modelData.app + ": " + modelData.summary
             contentItem: ColumnLayout {
@@ -86,7 +88,7 @@ Kirigami.ScrollablePage {
                 RowLayout {
                     Layout.fillWidth: true
                     // only the entry's own line opens and closes it, so clicks inside the opened editor never close it
-                    TapHandler { onTapped: page.expandedId = row.expanded ? -1 : row.modelData.id }
+                    TapHandler { onTapped: page.expandedKey = row.expanded ? "" : page.keyOf(row.modelData) }
                     Kirigami.Icon { source: row.expanded ? "arrow-down" : "arrow-right"; Layout.preferredWidth: Kirigami.Units.iconSizes.small; Layout.preferredHeight: Layout.preferredWidth; opacity: 0.6 }
                     QQC2.Label {
                         Layout.fillWidth: true
@@ -99,8 +101,9 @@ Kirigami.ScrollablePage {
                         visible: !modelData.shown
                         color: Kirigami.Theme.neutralTextColor
                         text: "held: " + modelData.why
+                        textFormat: Text.PlainText
                     }
-                    QQC2.Label { opacity: 0.7; text: modelData.zone }
+                    QQC2.Label { opacity: 0.7; text: modelData.zone; textFormat: Text.PlainText }
                     QQC2.Label { opacity: 0.7; text: Qt.formatTime(new Date(modelData.t), "hh:mm:ss") }
                 }
                 QQC2.Label {

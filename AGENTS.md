@@ -5,7 +5,7 @@ Notification daemon for KDE Plasma on Wayland (`notifd`, QML on Quickshell) plus
 ## Commands
 - Build: `cargo build --workspace --locked`; CLI only: `cargo build --release -p notify-cli`.
 - Test (full, as CONTRIBUTING says): `cargo test --workspace --no-fail-fast -- --test-threads=1` (starts a throwaway daemon on a private D-Bus).
-- Test (CI's unit tests, no desktop needed): `cargo test --locked -p notify-protocol -p notify-apps -p notify-panel-core -p notify-jobs --lib` and `cargo test --locked -p notify-cli --test loc --test version --test lifecycle` (lifecycle: takeover, update and restore in a fake home).
+- Test (CI's unit tests, no desktop needed): `cargo test --locked -p notify-protocol -p notify-apps -p notify-panel-core -p notify-jobs -p notify-update -p notify-bus --lib` and `cargo test --locked -p notify-cli --test loc --test version --test lifecycle` (lifecycle: takeover, update and restore in a fake home).
 - Job bridge on a private bus (needs `dbus-daemon` only): `cargo test -p notify-jobs --test bridge`. The proxy (`notify serve`) end to end: `cargo test -p notify-cli --test serve` (needs Quickshell and a display). On a real Hyprland (nested, in a podman container; needs `/dev/dri`): `tests/hyprland/run.sh`.
 - No desktop (CI): `tests/ci-daemon.sh` runs the daemon and sound suites under a headless labwc compositor. CI also runs the QML tests (`--test qml`, needs `kirigami`) and the job bridge test.
 - Daemon suites (need Quickshell, `dbus-run-session`, `notify-send`): `python3 tests/test_notifd.py` (includes features and socket suites), `python3 tests/test_sound.py`.
@@ -21,7 +21,7 @@ Notification daemon for KDE Plasma on Wayland (`notifd`, QML on Quickshell) plus
 - Every source file is at most 400 lines (`cargo test -p notify-cli --test loc`); files in `tests/loc-baseline.txt` may only shrink.
 - `notifd/*.qml` is embedded into `notify` at build time; no list needs editing when you add a file.
 - Tests use a private D-Bus session and must never touch real notifications.
-- Release: bump `version` in the root `Cargo.toml` AND `daemonVersion` in `notifd/shell.qml` (a test checks they agree), update `CHANGELOG.md`, commit, then push tag `vX.Y.Z`. The release workflow (Arch container) fails if the tag differs from the crate version, then publishes the tarball, a source archive (`noti-fi-X.Y.Z.tar.gz`, what the AUR package builds from) and their `.sha256` files. Its `aur` artifact holds the PKGBUILD with the real checksum and a `.SRCINFO`; pushing that to the AUR is the user's step, never an agent's. Bump `pkgver` in `packaging/PKGBUILD` with the version.
+- Release: bump `version` in the root `Cargo.toml`, `daemonVersion` in `notifd/shell.qml` and `pkgver` in `packaging/PKGBUILD`, add the metainfo `<release>` line and a `## X.Y.Z` CHANGELOG section (the `version` test checks they all agree), commit, then push tag `vX.Y.Z`. The release workflow (Arch container) fails if the tag differs from the crate version, then publishes the tarball, a source archive (`noti-fi-X.Y.Z.tar.gz`, what the AUR package builds from) and their `.sha256` files. Its `aur` artifact holds the PKGBUILD with the real checksum and a `.SRCINFO`; pushing that to the AUR is the user's step, never an agent's. Bump `pkgver` in `packaging/PKGBUILD` with the version.
 - Rust edition 2024, MSRV 1.85, MIT. Work on `main`.
 
 ## Gotchas

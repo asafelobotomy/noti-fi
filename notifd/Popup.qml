@@ -103,8 +103,8 @@ Rectangle {
     NumberAnimation { id: slideIn; target: slide; property: "x"; to: 0; duration: 220; easing.type: Easing.OutCubic }
 
     Accessible.role: Accessible.AlertMessage      // read out by screen readers
-    Accessible.name: notif ? ((notif.appName || notif.desktopEntry || "Notification") + ": " + notif.summary) : "Notification"
-    Accessible.description: notif ? card.safeBody(notif.body).replace(/<[^>]*>/g, "") : ""
+    Accessible.name: notif ? ((notif.appName || notif.desktopEntry || "Notification") + (hideText ? "" : ": " + notif.summary)) : "Notification"
+    Accessible.description: notif && !hideText ? card.safeBody(notif.body).replace(/<[^>]*>/g, "") : ""
     HoverHandler { id: hover }
     TapHandler { enabled: card.active && !card.clickThrough; onTapped: {
         if (actionsRow.hovered || replyBox.hovered || pinHover.hovered || mediaHover.hovered || graphBox.hovered || gripArea.containsMouse || gripArea.pressed) return
@@ -327,7 +327,7 @@ Rectangle {
             id: replyBox
             visible: card.notif !== null && card.notif.hasInlineReply === true && !card.noFocus
             Layout.fillWidth: true
-            active: card.active; placeholder: card.notif && card.notif.inlineReplyPlaceholder ? card.notif.inlineReplyPlaceholder : "Reply…"
+            active: card.active; placeholder: card.notif && card.notif.inlineReplyPlaceholder && !card.hideText ? card.notif.inlineReplyPlaceholder : "Reply…"
             cText: card.cText; cSub: card.cSub; cButton: card.cButton; accent: card.accent; fontFamily: card.fontFamily; fontSize: card.fontSize
             onSubmitted: text => card.sendReply(text)
             onCancelled: card.dismissed()
@@ -336,7 +336,7 @@ Rectangle {
         PopupButtons {
             id: actionsRow
             popup: card
-            visible: card.acts.length > 0
+            visible: card.acts.length > 0 && !card.hideText        // button labels are app text too
             Layout.fillWidth: true
         }
     }

@@ -28,8 +28,8 @@ Scope {
             if (val.startsWith("/")) kind = "file"
         } else if (h["sound-name"]) {
             val = String(h["sound-name"])
-            if (/^[A-Za-z0-9._-]+$/.test(val)) kind = "name"
-        } else if (c.sound.defaultName && /^[A-Za-z0-9._-]+$/.test(c.sound.defaultName)) {
+            if (/^[A-Za-z0-9_][A-Za-z0-9._-]*$/.test(val)) kind = "name"
+        } else if (c.sound.defaultName && /^[A-Za-z0-9_][A-Za-z0-9._-]*$/.test(c.sound.defaultName)) {
             kind = "name"; val = c.sound.defaultName
         }
         if (kind === "") return

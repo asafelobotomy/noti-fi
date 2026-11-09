@@ -59,7 +59,7 @@ Kirigami.ApplicationWindow {
         target: panelModel
         // another launch of the program (the app menu, login) or the tray's Open brings this window forward
         function onShowRequested() { console.log("SHOW requested by another launch"); root.showWindow() }
-        // a click on the tray icon toggles the window
+        // the tray asks for the window: when notifd is not running (a left click otherwise toggles notifd's notification list)
         function onToggleRequested() { if (root.visible && root.active) root.hide(); else root.showWindow() }
         function onPageRequested(page) { root.go(page); root.showWindow() }
         function onQuitRequested() { root.quitApp() }

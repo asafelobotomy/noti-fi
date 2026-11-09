@@ -20,7 +20,8 @@ ShellRoot {
     readonly property var rowList: rows                             // the on-screen rows, for the parts above
     readonly property var transfers: tx
     readonly property var validator: checks
-    function emit(event, data) { control.emit(event, data) }
+    // while the screen is shared no client gets notification text either (a bar or the panel would draw it on the shared screen)
+    function emit(event, data) { control.emit(event, sharing && data && "summary" in data ? Object.assign({}, data, { summary: "", body: "", hidden: true }) : data) }
     function scheduleState() { control.scheduleState() }
     onCtlChanged: scheduleState()          // Do Not Disturb, mutes and focus are pushed to subscribers as state events
     onAutoChanged: scheduleState()
@@ -115,7 +116,7 @@ ShellRoot {
         const limit = cfg.history.limit || 200
         const h = history.slice(0, limit - 1)
         h.unshift({
-            t: Date.now(), id: n.id, app: f.appName, icon: String(n.appIcon || "").slice(0, 500), summary: f.summary, body: (f.body || "").slice(0, 300),
+            t: Date.now(), id: n.id, app: String(f.appName || "").slice(0, 200), icon: String(n.appIcon || "").slice(0, 500), summary: String(f.summary || "").slice(0, 300), body: (f.body || "").slice(0, 300),
             zone: r.zone, origin: f.origin, urgency: f.urgency, shown: why === "", why: why, desktopEntry: f.desktopEntry || "", category: f.category || "", channel: f.channel || "app",
             read: false
         })
@@ -143,7 +144,7 @@ ShellRoot {
         const key = String(f.desktopEntry || f.appName || "").toLowerCase().slice(0, 200)
         if (key === "") return
         const now = Date.now()
-        const prev = seen[key]
+        const prev = Object.prototype.hasOwnProperty.call(seen, key) ? seen[key] : undefined
         if (!prev && Object.keys(seen).length >= 500) return      // bounded: never grows without limit
         // updated in place: nothing binds to `seen`, and copying up to 500 entries per notification is wasted work
         const types = prev && prev.types ? prev.types : {}
@@ -161,11 +162,13 @@ ShellRoot {
 
     // a replaced notification updates its history entry instead of adding a new one
     function recordUpdate(f, n, r) {
-        const i = history.findIndex(x => x.id === n.id)
+        // ids start again at 1 when notifd restarts: only an entry from this run can be this notification's
+        const i = history.findIndex(x => x.id === n.id && x.t >= kept.startedAt)
         if (i < 0) return
         const h = history.slice()
-        h[i] = Object.assign({}, h[i], { t: Date.now(), summary: f.summary, body: (f.body || "").slice(0, 300),
-                                          zone: r.zone, updates: (h[i].updates || 0) + 1 })
+        h[i] = Object.assign({}, h[i], { t: Date.now(), summary: String(f.summary || "").slice(0, 300), body: (f.body || "").slice(0, 300),
+                                          zone: r.zone, urgency: f.urgency, icon: String(n.appIcon || "").slice(0, 500),
+                                          shown: r.why === "", why: r.why, read: false, updates: (h[i].updates || 0) + 1 })
         history = h
         if (cfg.history.persist === true) saveSoon()
     }
@@ -177,7 +180,7 @@ ShellRoot {
     //   c    config            comp  compiled rules for c
     //   f    fields (see fields())
     //   exp  the app's requested timeout (-1 default, 0 never, >0 ms)
-    //   st   { dnd, muted[], auto: { fullscreen, share } }
+    //   st   { dnd, muted[], auto: { fullscreen, share }, focus, inhibited }
     // First matching rule wins, per field (zone, timeout, silent).
     // =====================================================================
     // Focus mode: a notification passes when it is important enough, or matches one of the mode's allow entries
@@ -266,7 +269,7 @@ ShellRoot {
     function applyUpdate(n) {
         const i = layout.rowIndex(n.id)
         if ((i < 0 || rows.get(i).leaving) && kept.byId[n.id]) {   // replaced after its popup left: show it again (as a new notification would be)
-            if (i >= 0) { rows.remove(i); reapQueue = reapQueue.filter(x => x !== n.id) }    // still fading out: take it away now
+            if (i >= 0) { rows.remove(i); reapQueue = reapQueue.filter(x => x !== n.id); delete byId[n.id]; tx.drop(n.id) }   // still fading: take it away now
             kept.release(n.id)
             const f = fields(n), r = decide(cfg, compiled, f, n.expireTimeout, liveState())
             recordUpdate(f, n, r)
@@ -305,7 +308,7 @@ ShellRoot {
     property var reapQueue: []
     function drop(nid) {
         const i = layout.rowIndex(nid)
-        if (i < 0) return
+        if (i < 0 || rows.get(i).leaving) return          // already going (timed out, then closed by its app): one closed event
         rows.setProperty(i, "leaving", true)
         if (nid > 0) emit("closed", { id: nid })
         touch()

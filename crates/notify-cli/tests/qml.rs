@@ -32,6 +32,8 @@ fn rule_match_tags() {
 fn run_qml(file: &str) {
     let runner = ["/usr/lib/qt6/bin/qmltestrunner", "/usr/lib64/qt6/bin/qmltestrunner"].into_iter().find(|p| Path::new(p).exists());
     let Some(runner) = runner else {
+        // in CI the runner is installed on purpose: a missing one means the tests silently stopped running
+        assert!(std::env::var_os("CI").is_none(), "Qt 6 qmltestrunner not found, but CI is set");
         eprintln!("skipped: Qt 6 qmltestrunner not found");
         return;
     };

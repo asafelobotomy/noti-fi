@@ -43,7 +43,7 @@ Kirigami.Page {
     }
     function zonesAt(anchor) { return page.zones.filter(z => z.anchor === anchor) }
     function screenNames() {
-        const n = ["(first screen)"]
+        const n = ["(first screen)", "(focused monitor, Hyprland)"]
         for (const s of Qt.application.screens) n.push(s.name)
         if (page.vals.screen && n.indexOf(page.vals.screen) < 0) n.push(page.vals.screen)
         return n
@@ -247,8 +247,8 @@ Kirigami.Page {
                     QQC2.ComboBox {
                         Kirigami.FormData.label: "Show popups on:"
                         model: page.screenNames()
-                        currentIndex: page.vals.screen ? Math.max(0, model.indexOf(page.vals.screen)) : 0
-                        onActivated: index => page.model.settingSet("screen", index === 0 ? "" : model[index])
+                        currentIndex: page.vals.screen === "focused" ? 1 : page.vals.screen ? Math.max(0, model.indexOf(page.vals.screen)) : 0
+                        onActivated: index => page.model.settingSet("screen", index === 0 ? "" : index === 1 ? "focused" : model[index])
                         Accessible.name: "Screen"
                     }
                     QQC2.ComboBox {

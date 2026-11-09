@@ -2,7 +2,8 @@
 //! and Brave's profile (global shortcuts are in hotkey.rs).
 
 use std::fs;
-use std::path::PathBuf;
+use std::os::unix::fs::PermissionsExt;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Result, bail};
 use chrono::Local;
@@ -268,10 +269,16 @@ pub fn adapt(ctx: &Ctx, a: AdaptArgs) -> Result<()> {
                     continue;
                 }
                 let stamp = paths().backups.join(Local::now().format("%Y%m%d-%H%M%S").to_string()).join(name.replace(' ', "-"));
+                // the profile files can hold account details: the backups are private (folder 0700, files 0600)
                 fs::create_dir_all(&stamp)?;
+                for d in [paths().backups, stamp.parent().map(Path::to_path_buf).unwrap_or_default(), stamp.clone()] {
+                    let _ = fs::set_permissions(&d, fs::Permissions::from_mode(0o700));
+                }
                 for f in [&prefs_f, &ls_f] {
                     if changes.iter().any(|c| &c.file == f) {
-                        fs::copy(f, stamp.join(f.file_name().unwrap()))?;
+                        let to = stamp.join(f.file_name().unwrap());
+                        fs::copy(f, &to)?;
+                        fs::set_permissions(&to, fs::Permissions::from_mode(0o600))?;
                     }
                 }
                 for c in &changes {

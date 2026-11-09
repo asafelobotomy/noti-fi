@@ -260,6 +260,10 @@ impl qobject::PanelModel {
         self.as_mut().set_state(QString::from(c.code()));
         self.as_mut().set_state_message(QString::from(&c.message_with(view::daemon_installed())));
         self.as_mut().push_tray();
+        // a check sent before the connection dropped was thrown away with it: ask again, or Save stays disabled
+        if connected && *self.as_ref().checking() {
+            self.after_edit();
+        }
     }
 
     pub fn start(mut self: Pin<&mut Self>) {

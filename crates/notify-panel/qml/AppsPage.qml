@@ -351,7 +351,7 @@ Kirigami.Page {
         onClicked: page.toggleGroup(gh.group.name)
         contentItem: RowLayout {
             Kirigami.Icon { source: gh.group.open ? "arrow-down" : "arrow-right"; Layout.preferredWidth: Kirigami.Units.iconSizes.small; Layout.preferredHeight: Layout.preferredWidth }
-            QQC2.Label { font.bold: true; text: gh.group.name }
+            QQC2.Label { font.bold: true; text: gh.group.name; textFormat: Text.PlainText }
             QQC2.Label { opacity: 0.7; text: gh.group.count + (gh.group.count === 1 ? " app" : " apps") + (gh.group.sending > 0 ? " · " + gh.group.sending + " sending" : "") }
             Item { Layout.fillWidth: true }
         }

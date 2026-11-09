@@ -108,3 +108,19 @@ pub fn notifd_owns() -> bool {
 pub fn sleep_ms(ms: u64) {
     std::thread::sleep(Duration::from_millis(ms));
 }
+
+/// A new folder only this user can use (mode 0700, created fresh: an existing one is refused, never reused), in
+/// $XDG_RUNTIME_DIR or else ~/.cache. For downloads and test daemons, which a shared /tmp would let other users tamper with.
+pub fn private_dir(prefix: &str) -> Result<std::path::PathBuf> {
+    use std::os::unix::fs::DirBuilderExt;
+    let base = std::env::var_os("XDG_RUNTIME_DIR")
+        .filter(|v| !v.is_empty())
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".cache")))
+        .context("neither XDG_RUNTIME_DIR nor HOME is set")?;
+    fs::create_dir_all(&base)?;
+    let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
+    let dir = base.join(format!("{prefix}-{}-{nanos}", std::process::id()));
+    fs::DirBuilder::new().mode(0o700).create(&dir).with_context(|| format!("creating {}", dir.display()))?;
+    Ok(dir)
+}

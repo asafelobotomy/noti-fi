@@ -65,6 +65,14 @@ impl Worker<'_> {
                     }
                 }
             }
+            Ev::ServerChanged => {
+                // the old ids now belong to nobody (or to someone else's notification): running jobs start a new popup on their
+                // next update, and finished ones lose "Open folder" rather than open the wrong one
+                for e in self.lock().values_mut() {
+                    e.nid = 0;
+                }
+                self.finished.clear();
+            }
             Ev::OwnerGone(name) => {
                 let ids: Vec<u32> = self.lock().iter().filter(|(_, e)| e.owner == name && !e.job.is_done()).map(|(id, _)| *id).collect();
                 for id in ids {

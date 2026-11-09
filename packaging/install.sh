@@ -58,5 +58,5 @@ Next:
   notify takeover --now         make notifd your notification service (undo any time: notify restore)
   notify-panel                  open the control panel
 
-Needs at run time: quickshell, qt6-declarative, kirigami, qqc2-desktop-style (qt6-multimedia is optional, for audio/video players).
+Needs at run time: quickshell, qt6-declarative, kirigami, qqc2-desktop-style, dbus, pipewire (pw-dump) and python (screen-share detection); qt6-multimedia is optional, for audio/video players.
 MSG

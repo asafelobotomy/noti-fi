@@ -19,6 +19,8 @@ pub struct TrayState {
     pub recent: Vec<String>,
     /// Unread notifications per group: (label, accent colour, count), in the config's order.
     pub unread: Vec<(String, String, u32)>,
+    /// Why popups are held, as the daemon says ("" = they show; "dnd", "focus", "fullscreen", "screen sharing", "inhibited").
+    pub holding: String,
 }
 
 /// What a click asks for.
@@ -55,6 +57,12 @@ impl Tray {
         if !s.focus.is_empty() {
             let label = s.focus_modes.iter().find(|(n, _)| *n == s.focus).map(|(_, l)| l.clone()).unwrap_or_else(|| s.focus.clone());
             parts.push(format!("Focus: {label}"));
+        }
+        match s.holding.as_str() {
+            "fullscreen" => parts.push("popups held: a window is full screen".into()),
+            "screen sharing" => parts.push("popups held: the screen is being shared".into()),
+            "inhibited" => parts.push("popups held: an app asked for quiet".into()),
+            _ => {}
         }
         parts.push(format!("{} on screen", s.active));
         let unread: u32 = s.unread.iter().map(|u| u.2).sum();
@@ -240,6 +248,18 @@ mod tests {
             zones: vec![("business".into(), "Business".into(), true), ("personal".into(), "Personal".into(), false)],
             recent: vec![recent_line("2 min", "Steam", "New message", true, true), recent_line("1 h", "Brave", "x", false, false)],
             unread: vec![("Personal".into(), "#60a5fa".into(), 2), ("System".into(), "#fbbf24".into(), 1)],
+            holding: "dnd".into(),
+        }
+    }
+
+    #[test]
+    fn the_tooltip_says_why_popups_are_held() {
+        for (holding, says) in [("screen sharing", "the screen is being shared"), ("inhibited", "an app asked"), ("fullscreen", "full screen")] {
+            let mut s = state();
+            s.dnd = false;
+            s.holding = holding.into();
+            let t = Tray::new(s, |_| {});
+            assert!(t.status_line().contains(says), "{holding}: {}", t.status_line());
         }
     }
 

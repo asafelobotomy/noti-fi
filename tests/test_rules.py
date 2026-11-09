@@ -1,5 +1,6 @@
 """Rule validation, simulation, preview, schema and CLI tests. Run through test_notifd.py, which passes in its `check`, BASE_CONFIG and paths."""
-import json, os, signal, socket, subprocess, sys, time
+import json, os, shutil, signal, socket, subprocess, sys, tempfile, time
+from pathlib import Path
 
 
 def make_tests(check, BASE_CONFIG, ROOT, SRC):
@@ -156,10 +157,21 @@ def make_tests(check, BASE_CONFIG, ROOT, SRC):
             return [f"{path}: expected integer"]
         if t in kinds and not isinstance(v, kinds[t]):
             return [f"{path}: expected {t}"]
+        if "const" in sch and v != sch["const"]:
+            errs.append(f"{path}: {v!r} is not {sch['const']!r}")
         if "enum" in sch and v not in sch["enum"]:
             errs.append(f"{path}: {v!r} not in {sch['enum']}")
-        if "minimum" in sch and isinstance(v, (int, float)) and v < sch["minimum"]:
+        num = isinstance(v, (int, float)) and not isinstance(v, bool)
+        if "minimum" in sch and num and v < sch["minimum"]:
             errs.append(f"{path}: below minimum")
+        if "maximum" in sch and num and v > sch["maximum"]:
+            errs.append(f"{path}: above maximum")
+        if isinstance(v, str) and ("minLength" in sch and len(v) < sch["minLength"] or "maxLength" in sch and len(v) > sch["maxLength"]):
+            errs.append(f"{path}: length out of range")
+        if isinstance(v, list) and ("minItems" in sch and len(v) < sch["minItems"] or "maxItems" in sch and len(v) > sch["maxItems"]):
+            errs.append(f"{path}: item count out of range")
+        if "if" in sch and not mini_schema_errors(v, sch["if"], path):
+            errs += mini_schema_errors(v, sch.get("then", {}), path)
         if "pattern" in sch and isinstance(v, str):
             import re
             if not re.search(sch["pattern"], v):
@@ -197,30 +209,41 @@ def make_tests(check, BASE_CONFIG, ROOT, SRC):
         check("the schema catches a typo'd setting name", any("defualtZone" in e for e in mini_schema_errors(typo, schema)))
         bad_anchor = json.loads(json.dumps(shipped)); bad_anchor["zones"]["system"]["anchor"] = "middle"
         check("the schema catches a bad anchor", bool(mini_schema_errors(bad_anchor, schema)))
+        for what, change in (("an opacity above 1", lambda c: c["theme"].__setitem__("opacity", 2)),
+                             ("center.keep above 1000", lambda c: c.setdefault("center", {}).__setitem__("keep", 5000)),
+                             ("21 ignoreCaptureBy entries", lambda c: c["autoDnd"].__setitem__("ignoreCaptureBy", ["x"] * 21))):
+            c = json.loads(json.dumps(shipped)); c.setdefault("theme", {}); change(c)
+            check(f"the schema catches {what}", bool(mini_schema_errors(c, schema)))
         # whatever the schema accepts structurally, the daemon must accept too (shipped file)
         v = d.ipc("validate", json.dumps(shipped))
         check("the daemon accepts the shipped config the schema accepts", v and v.get("ok") is True, str(v))
 
     def test_cli_smoke(d):
-        """Every read-only CLI command must run to completion without a traceback (against this machine's real setup)."""
-        rust = next((p for p in (ROOT / "target/release/notify", ROOT / "target/debug/notify") if p.exists()), None)
-        if not rust:
+        """Every read-only CLI command runs to completion, against the test daemon's private bus and a throwaway home (never your own)."""
+        built = [p for p in (ROOT / "target/release/notify", ROOT / "target/debug/notify") if p.exists()]
+        if not built:
             check("a built notify exists (cargo build -p notify-cli)", False)
             return
-        notify = [str(rust)]
-        for args in (["status"], ["status", "--json"], ["apps"], ["apps", "--json"], ["rules"], ["rules", "--json"],
-                     ["rules", "--file", str(SRC / "rules.json")], ["doctor"], ["doctor", "--json"], ["autodnd", "status"], ["tray", "status"],
-                     ["restore", "--dry-run"], ["takeover", "--dry-run"], ["portal", "--dry-run"],
-                     ["hotkey", "--dry-run"], ["adapt"], ["--help"]):
-            r = subprocess.run([*notify, *args], capture_output=True, text=True, timeout=60)
-            ok = "Traceback" not in r.stderr and "Traceback" not in r.stdout
-            check(f"notify {' '.join(args)} runs without crashing", ok, (r.stderr or r.stdout)[-300:])
-        r = subprocess.run([*notify, "status", "--json"], capture_output=True, text=True, timeout=30)
+        notify = [str(max(built, key=lambda p: p.stat().st_mtime)), "--no-systemctl"]          # the newest build
+        home = Path(tempfile.mkdtemp(prefix="notify-smoke-"))
+        env = dict(d.env, HOME=str(home), XDG_CONFIG_HOME=str(home / "config"), XDG_DATA_HOME=str(home / "data"),
+                   XDG_STATE_HOME=str(home / "state"))
         try:
-            j = json.loads(r.stdout)
-            check("status --json is valid JSON with the expected keys", {"owner", "notifd_owns", "daemon", "config"} <= set(j))
-        except ValueError:
-            check("status --json is valid JSON with the expected keys", False, r.stdout[:200])
+            for args in (["status"], ["status", "--json"], ["apps"], ["apps", "--json"], ["rules"], ["rules", "--json"],
+                         ["rules", "--file", str(SRC / "rules.json")], ["doctor"], ["doctor", "--json"], ["autodnd", "status"], ["tray", "status"],
+                         ["restore", "--dry-run"], ["takeover", "--dry-run"], ["portal", "--dry-run"],
+                         ["hotkey", "--dry-run"], ["hotkey", "--center", "--dry-run"], ["adapt"], ["--help"]):
+                r = subprocess.run([*notify, *args], capture_output=True, text=True, timeout=60, env=env)
+                ok = r.returncode in (0, 1) and "panicked at" not in r.stderr
+                check(f"notify {' '.join(args)} runs to completion (exit {r.returncode})", ok, (r.stderr or r.stdout)[-300:])
+            r = subprocess.run([*notify, "status", "--json"], capture_output=True, text=True, timeout=30, env=env)
+            try:
+                j = json.loads(r.stdout)
+                check("status --json is valid JSON with the expected keys", {"owner", "notifd_owns", "daemon", "config"} <= set(j) and j["daemon"] is not None, str(j)[:200])
+            except ValueError:
+                check("status --json is valid JSON with the expected keys", False, r.stdout[:200])
+        finally:
+            shutil.rmtree(home, ignore_errors=True)
 
 
     # ------------------------------------------------------------------ control socket

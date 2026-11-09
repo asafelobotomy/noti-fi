@@ -87,6 +87,7 @@ Kirigami.ScrollablePage {
                 }
                 QQC2.Label {
                     text: modelData.group + ": " + modelData.message
+                    textFormat: Text.PlainText          // the checks quote app names and paths
                     wrapMode: Text.Wrap
                     Layout.fillWidth: true
                     Accessible.name: modelData.level + ", " + modelData.group + ": " + modelData.message

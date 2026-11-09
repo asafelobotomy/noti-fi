@@ -11,6 +11,7 @@ mod private;
 use std::path::Path;
 use std::process::{Child, Command};
 use std::sync::mpsc::{Receiver, channel};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -27,8 +28,25 @@ use private::PrivateBus;
 /// The signals apps listen for, and their argument types.
 const SIGNALS: [&str; 4] = ["ActionInvoked", "NotificationClosed", "ActivationToken", "NotificationReplied"];
 
-fn runtime_dir() -> std::path::PathBuf {
-    std::env::var_os("XDG_RUNTIME_DIR").filter(|v| !v.is_empty()).map(Into::into).unwrap_or_else(std::env::temp_dir)
+/// The per-user runtime folder (mode 0700). Without it there is no safe place for the private bus: a shared /tmp is not one.
+fn runtime_dir() -> Result<std::path::PathBuf> {
+    std::env::var_os("XDG_RUNTIME_DIR").filter(|v| !v.is_empty()).map(Into::into).context("XDG_RUNTIME_DIR is not set: no private place for notifd's bus")
+}
+
+/// Quickshell, stopped and reaped however `serve` ends (an error part-way through start-up included).
+struct KillOnDrop(Child);
+impl Drop for KillOnDrop {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
+/// Set while a helper thread runs; the supervisor stops `serve` when one ends (a dead forwarder would leave apps without
+/// ActionInvoked, a dead watcher would keep inhibitions forever), and systemd starts it again.
+fn running(flag: &Arc<AtomicBool>) -> Arc<AtomicBool> {
+    flag.store(true, Ordering::SeqCst);
+    flag.clone()
 }
 
 /// Where Qt's accessibility (screen readers) lives: asked of the session bus, since Quickshell no longer sees it.
@@ -45,10 +63,11 @@ fn owner_on(conn: &Connection, name: &str) -> bool {
 }
 
 /// Pass Quickshell's signals on to the apps on the session bus, unchanged.
-fn forward_signals(inner: &Connection, session: Connection) -> Result<()> {
+fn forward_signals(inner: &Connection, session: Connection, alive: Arc<AtomicBool>) -> Result<()> {
     let rule = MatchRule::builder().msg_type(MessageType::Signal).interface(NAME)?.path(PATH)?.build();
     let it = MessageIterator::for_match_rule(rule, inner, Some(64))?;
     std::thread::spawn(move || {
+        let _done = Flag(alive);
         for m in it.flatten() {
             let h = m.header();
             let Some(member) = h.member().map(|m| m.to_string()) else { continue };
@@ -69,10 +88,11 @@ fn forward_signals(inner: &Connection, session: Connection) -> Result<()> {
 }
 
 /// Apps that leave the bus lose their inhibitions.
-fn watch_departures(session: &Connection, inh: Arc<Mutex<Inhibitions>>, changed: std::sync::mpsc::Sender<()>) -> Result<()> {
+fn watch_departures(session: &Connection, inh: Arc<Mutex<Inhibitions>>, changed: std::sync::mpsc::Sender<()>, alive: Arc<AtomicBool>) -> Result<()> {
     let rule = MatchRule::builder().msg_type(MessageType::Signal).sender("org.freedesktop.DBus")?.interface("org.freedesktop.DBus")?.member("NameOwnerChanged")?.build();
     let it = MessageIterator::for_match_rule(rule, session, Some(64))?;
     std::thread::spawn(move || {
+        let _done = Flag(alive);
         for m in it.flatten() {
             let Ok((name, _old, new)) = m.body().deserialize::<(String, String, String)>() else { continue };
             if name.starts_with(':') && new.is_empty() && inh.lock().unwrap().drop_sender(&name) {
@@ -90,13 +110,18 @@ fn tell_notifd(rx: Receiver<()>, inh: Arc<Mutex<Inhibitions>>, session: Connecti
         let mut last = None;
         while rx.recv().is_ok() {
             while rx.try_recv().is_ok() {} // coalesce bursts
-            let list = inh.lock().unwrap().list();
-            for attempt in 0..20 {
-                let r = notify_client::Client::connect_default().and_then(|mut c| c.call_raw("inhibit", serde_json::json!({ "by": list })));
-                match r {
+            // keep trying until notifd takes the list (it may be starting or reloading); a newer change replaces it
+            for attempt in 0u32.. {
+                while rx.try_recv().is_ok() {}
+                let list = inh.lock().unwrap().list();
+                match notify_client::Client::connect_default().and_then(|mut c| c.call_raw("inhibit", serde_json::json!({ "by": list }))) {
                     Ok(_) => break,
-                    Err(e) if attempt == 19 => eprintln!("notify-bus: could not tell notifd about inhibitions: {e}"),
-                    Err(_) => std::thread::sleep(Duration::from_millis(250)),
+                    Err(e) => {
+                        if attempt == 20 {
+                            eprintln!("notify-bus: notifd does not take the inhibitions yet ({e}); still trying");
+                        }
+                        std::thread::sleep(Duration::from_millis(if attempt < 20 { 250 } else { 1000 }));
+                    }
                 }
             }
             let now = !inh.lock().unwrap().by_cookie.is_empty();
@@ -111,19 +136,29 @@ fn tell_notifd(rx: Receiver<()>, inh: Arc<Mutex<Inhibitions>>, session: Connecti
     });
 }
 
+/// Clears its flag when the thread that holds it ends, however it ends.
+struct Flag(Arc<AtomicBool>);
+impl Drop for Flag {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::SeqCst);
+    }
+}
+
 fn alive(c: &mut Child) -> bool {
     matches!(c.try_wait(), Ok(None))
 }
 
 /// Run notifd from `payload` with Quickshell at `qs`, until either stops.
 pub fn serve(payload: &Path, qs: &Path) -> Result<()> {
+    let runtime = runtime_dir()?;
+    PrivateBus::sweep(&runtime);
     // a second notifd would take over the control socket's path (Quickshell deletes the file in its way) and leave the
     // running one unreachable: refuse while one answers there
     if notify_client::Client::connect_default().and_then(|mut c| c.ping()).is_ok() {
         bail!("notifd is already running (its control socket at {} answers); stop it first", notify_client::default_socket_path().display());
     }
     let session = Connection::session().context("connecting to the session bus")?;
-    let bus = PrivateBus::start(&runtime_dir())?;
+    let bus = PrivateBus::start(&runtime)?;
     let inner = zbus::blocking::connection::Builder::address(bus.address.as_str())?.build().context("connecting to the private bus")?;
 
     let mut cmd = Command::new(qs);
@@ -131,14 +166,14 @@ pub fn serve(payload: &Path, qs: &Path) -> Result<()> {
     if let Some(a) = a11y_address(&session) {
         cmd.env("AT_SPI_BUS_ADDRESS", a);
     }
-    let mut qs_child = cmd.spawn().with_context(|| format!("starting {}", qs.display()))?;
+    let mut qs = KillOnDrop(cmd.spawn().with_context(|| format!("starting {}", qs.display()))?);
+    let qs_child = &mut qs.0;
     let deadline = Instant::now() + Duration::from_secs(20);
     while !owner_on(&inner, NAME) {
-        if !alive(&mut qs_child) {
+        if !alive(qs_child) {
             bail!("Quickshell exited before it took the notification name on the private bus");
         }
         if Instant::now() > deadline {
-            let _ = qs_child.kill();
             bail!("Quickshell did not take the notification name on the private bus within 20 s");
         }
         std::thread::sleep(Duration::from_millis(100));
@@ -147,8 +182,9 @@ pub fn serve(payload: &Path, qs: &Path) -> Result<()> {
     let inh = Arc::new(Mutex::new(Inhibitions::default()));
     let (changed, rx) = channel();
     session.object_server().at(PATH, Front { inner: inner.clone(), inhibitions: inh.clone(), changed: changed.clone() })?;
-    forward_signals(&inner, session.clone())?;
-    watch_departures(&session, inh.clone(), changed.clone())?;
+    let (forwarding, watching) = (Arc::new(AtomicBool::new(false)), Arc::new(AtomicBool::new(false)));
+    forward_signals(&inner, session.clone(), running(&forwarding))?;
+    watch_departures(&session, inh.clone(), changed.clone(), running(&watching))?;
     tell_notifd(rx, inh, session.clone());
     // queue if someone (Plasma) holds the name, and do not let it be taken from us (no AllowReplacement), as the job bridge does
     let reply = session.request_name_with_flags(NAME, RequestNameFlags::ReplaceExisting.into()).context("requesting org.freedesktop.Notifications")?;
@@ -157,12 +193,14 @@ pub fn serve(payload: &Path, qs: &Path) -> Result<()> {
 
     let mut bus = bus;
     loop {
-        if !alive(&mut qs_child) {
+        if !alive(qs_child) {
             bail!("Quickshell stopped");
         }
         if !alive(&mut bus.child) {
-            let _ = qs_child.kill();
             bail!("the private bus stopped");
+        }
+        if !forwarding.load(Ordering::SeqCst) || !watching.load(Ordering::SeqCst) {
+            bail!("a helper thread stopped (signals or departures are no longer followed)");
         }
         std::thread::sleep(Duration::from_millis(300));
     }

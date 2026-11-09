@@ -40,7 +40,7 @@ server -> client   {"id":1,"result":{...}}
 | method | params | result |
 |---|---|---|
 | `ping` | — | `{pong, t}` |
-| `status` | — | `Status`: `dnd`, `muted[]`, `zones[]`, `active`, `queued`, `perZone{}`, `cap`, `history`, `cfgError`, `auto{fullscreen,share}`, `holding`, `previewing`, `focus`, `stacks[]`, `unread`, `unreadPerZone{}`, `center` (the notification center is open), `kept` (notifications kept open for their apps after their popup left; see `center.keep`), `inhibitors[]` (`{app, reason}`: apps holding notifications through Inhibit; `holding` is then `inhibited` unless Do Not Disturb is on), `sharing` (the screen is being shared: notification text is hidden), `sharingBy` (the programs reading a screen capture, including ones in `autoDnd.ignoreCaptureBy`; "?" until known), `latest` (`{id, t, appName, appIcon, summary, read}` of the newest notification, `summary` empty while sharing; null with no history), `screens` (`{popups, osd, focused}`: the output names popups and the OSD use, and the monitor Hyprland has focused) |
+| `status` | — | `Status`: `dnd`, `muted[]`, `zones[]`, `active`, `queued`, `perZone{}`, `cap`, `history`, `cfgError`, `auto{fullscreen,share}`, `holding`, `previewing`, `focus`, `stacks[]`, `unread`, `unreadPerZone{}`, `center` (the notification center is open), `kept` (notifications kept open for their apps after their popup left; see `center.keep`), `inhibitors[]` (`{app, reason}`: apps holding notifications through Inhibit; `holding` is then `inhibited` unless Do Not Disturb is on), `sharing` (the screen is being shared: notification text is hidden), `sharingBy` (the programs reading a screen capture, including ones that do not count: plasmashell's window previews and `autoDnd.ignoreCaptureBy`), `latest` (`{id, t, appName, appIcon, summary, read}` of the newest notification, `summary` empty while sharing; null with no history), `screens` (`{popups, osd, focused}`: the output names popups and the OSD use, and the monitor Hyprland has focused) |
 | `configStatus` | — | `{ok, error, rules, zones[], screenFound}` |
 | `configGet` | — | `{raw, effective, error}`: the file text, and the merged config the daemon runs |
 | `dnd` | `{mode: "on"\|"off"\|"toggle"}` | `Status` |
@@ -69,7 +69,8 @@ server -> client   {"id":1,"result":{...}}
 
 `simulate` and `preview` run through the same `decide()` function as real notifications, so the answer is what will happen.
 `timeout` is milliseconds; `0` means the popup stays until dismissed. `hold` is why a notification would not be shown:
-`dnd`, `fullscreen`, `screen sharing`, `muted <zone>`, `silent rule`, or empty.
+`dnd`, `inhibited` (an app asked, see `inhibit`), `fullscreen`, `screen sharing`, `focus <mode>`, `muted <zone>`, `silent rule`, or
+empty. `status.holding` uses the same words, except that a focus mode is just `focus` there.
 
 ## Events (after `subscribe`)
 
@@ -92,7 +93,7 @@ whose `seq` is greater than the returned `seq`.
 
 `qs ipc call notifd <fn>` keeps working unchanged (`status`, `configStatus`, `dnd`, `mute`, `focus`, `stack`, `samples`,
 `setAuto`, `reply`, `validate`, `simulate`, `preview`, `endPreview`, `history`, `seenApps`, `clearHistory`, `dismissAll`,
-`center`, `markAllRead`);
+`center`, `markAllRead`, `invoke`);
 it shares the same implementation.
 Adding methods or event fields is not a protocol change; renaming or removing them, or changing a meaning, bumps `protocol`.
 

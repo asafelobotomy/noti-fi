@@ -3,7 +3,7 @@ import Quickshell
 import Quickshell.Io
 
 // A desktop's design tokens as the base of notifd's theme (theme.tokens): "auto" = uQ's tokens.json when it exists, a path = that
-// file, "" = none. Settings in rules.json's `theme` still win over the tokens. The file is read again every 2 s rather than
+// file, "" or "off" = none. Settings in rules.json's `theme` still win over the tokens. The file is read again every 2 s rather than
 // watched: uQ replaces its whole theme folder at once, which leaves a watch on the old file stale. A file that is missing,
 // unreadable or not valid keeps the last good tokens.
 Scope {
@@ -14,7 +14,7 @@ Scope {
     property string lastText: ""
     readonly property string setting: { const t = shell.cfg.theme; return t && typeof t.tokens === "string" ? t.tokens : "auto" }
     readonly property string path: {
-        if (setting === "") return ""
+        if (setting === "" || setting === "off") return ""
         if (setting !== "auto") return setting.startsWith("~/") ? (Quickshell.env("HOME") ?? "") + setting.slice(1) : setting
         const state = Quickshell.env("XDG_STATE_HOME") || ((Quickshell.env("HOME") ?? "") + "/.local/state")
         return state + "/uq/theme/tokens.json"
@@ -24,7 +24,8 @@ Scope {
     // uQ's token names -> notifd's theme keys; anything that is not a plain colour, size or name is ignored
     function map(t) {
         const out = {}
-        const hex = v => typeof v === "string" && /^#[0-9a-fA-F]{3,8}$/.test(v)
+        // #rgb or #rrggbb only: Qt reads 8 digits as #aarrggbb, so a CSS-style #rrggbbaa token would come out the wrong colour
+        const hex = v => typeof v === "string" && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v)
         const c = t.colors || {}
         for (const [k, from] of [["card", "surface"], ["border", "border"], ["text", "text"], ["subtext", "text_muted"], ["button", "surface_alt"], ["buttonHover", "overlay"]])
             if (hex(c[from])) out[k] = c[from]

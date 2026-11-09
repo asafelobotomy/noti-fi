@@ -169,7 +169,7 @@
         "tokens": {
           "type": "string",
           "maxLength": 500,
-          "description": "A desktop's design tokens (colours, radius, font) as the base of this theme: \"auto\" uses uQ's ~/.local/state/uq/theme/tokens.json when it exists, a path uses that file, \"\" none. Settings here still win."
+          "description": "A desktop's design tokens (colours, radius, font) as the base of this theme: \"auto\" uses uQ's ~/.local/state/uq/theme/tokens.json when it exists, a path uses that file, \"\" or \"off\" none. Settings here still win."
         }
       }
     },
@@ -429,7 +429,8 @@
                       "body",
                       "urgency",
                       "category",
-                      "channel"
+                      "channel",
+                      "group"
                     ]
                   },
                   "additionalProperties": {

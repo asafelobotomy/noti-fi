@@ -73,8 +73,7 @@ pub fn upgrade(ctx: &Ctx, apply: bool) -> Result<()> {
         Step::new(format!("replace notify, notify-panel and the launcher in {}", prefix.display()), {
             let prefix = prefix.clone();
             move || {
-                let work = std::env::temp_dir().join(format!("notify-upgrade-{}", std::process::id()));
-                fs::create_dir_all(&work)?;
+                let work = crate::sys::private_dir("notify-upgrade")?;
                 let r = notify_update::install_archive(&b2.borrow(), &rel2.version, &prefix, &work, notify_update::host_qt_version().as_deref()).map_err(|e| anyhow!(e));
                 let _ = fs::remove_dir_all(&work);
                 *skipped2.borrow_mut() = r?.panel_skipped;

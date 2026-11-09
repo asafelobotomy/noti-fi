@@ -77,6 +77,9 @@ def make_tests(check, BASE_CONFIG, Sock):
         d.write_config({**BASE_CONFIG, "theme": {**BASE_CONFIG.get("theme", {}), "tokens": ""}})
         t = d.wait_for(lambda: (x := effective()) and x.get("text") == "#f2f3f7" and x, 6) or {}
         check('theme.tokens "" turns the tokens off', t.get("text") == "#f2f3f7", str(t))
+        d.write_config({**BASE_CONFIG, "theme": {**BASE_CONFIG.get("theme", {}), "tokens": "off"}})
+        t = d.wait_for(lambda: (x := effective()) and x.get("tokens") == "off" and x, 6) or {}
+        check('...and so does "off" (what the panel writes: an empty setting is removed, which means auto)', t.get("text") == "#f2f3f7", str(t))
         d.write_config(BASE_CONFIG)
         shutil.rmtree(d.state / "uq")
         d.wait_for(lambda: d.ipc("configStatus"), 3)

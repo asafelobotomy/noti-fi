@@ -77,8 +77,10 @@ def make_tests(check, BASE_CONFIG, ROOT, SRC):
         check("popups resume when full screen ends", h[0].get("shown") is True, str(h[0]))
         d.ipc("setAuto", "share", "true")
         d.send("held while sharing", t=500)
-        h = d.wait_for(lambda: (x := d.ipc("history", 1)) and x[0]["summary"] == "held while sharing" and x) or [{}]
+        # while sharing, history hands out no titles: the newest entry is hidden, and held
+        h = d.wait_for(lambda: (x := d.ipc("history", 1)) and x[0].get("hidden") is True and x) or [{}]
         check("popups are held while the screen is being shared", h[0].get("why") == "screen sharing", str(h[0]))
+        check("...and history gives out no title or text meanwhile", h[0].get("summary") == "" and h[0].get("body") == "", str(h[0]))
         d.ipc("setAuto", "share", "false")
         # the setting turns it off
         cfg = json.loads(json.dumps(BASE_CONFIG)); cfg["autoDnd"]["fullscreen"] = False

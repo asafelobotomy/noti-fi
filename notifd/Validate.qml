@@ -100,6 +100,7 @@ QtObject {
             if (r.zone !== undefined && !(r.zone in zones)) return "rule '" + name + "': unknown zone '" + r.zone + "'"
             if (r.zone !== undefined && r.match && r.match.group !== undefined) return "rule '" + name + "': a rule for a group cannot move it to another group"
             if (r.timeout !== undefined && (typeof r.timeout !== "number" || r.timeout < 0)) return "rule '" + name + "': timeout must be a number >= 0"
+            if (r.silent !== undefined && typeof r.silent !== "boolean") return "rule '" + name + "': silent must be true or false"  // "false" is truthy
             const se = styleError(r, true)
             if (se !== "") return "rule '" + name + "': " + se
             if (r.match !== undefined && (typeof r.match !== "object" || r.match === null)) return "rule '" + name + "': match must be an object"

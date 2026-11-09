@@ -176,6 +176,21 @@ Kirigami.Page {
                         value: cur
                         onPicked: v => page.model.settingSet("theme.fontSize", v)
                     }
+                    Segmented {
+                        Kirigami.FormData.label: "Corners:"
+                        accessibleName: "Corner radius"
+                        readonly property string cur: page.vals["theme.radius"] !== undefined ? String(page.vals["theme.radius"]) : "12"
+                        options: [{ value: "0", label: "Square" }, { value: "6", label: "Slight" }, { value: "12", label: "Round" }, { value: "18", label: "Rounder" }]
+                        value: cur
+                        onPicked: v => page.model.settingSet("theme.radius", v)
+                    }
+                    QQC2.CheckBox {
+                        Kirigami.FormData.label: "Desktop theme:"
+                        text: "follow uQ's theme (colours, corners, font) when it is installed"
+                        checked: page.vals["theme.tokens"] !== "off" && page.vals["theme.tokens"] !== ""
+                        onToggled: page.model.settingSet("theme.tokens", checked ? "auto" : "off")
+                        Accessible.name: "Follow the desktop theme"
+                    }
 
                     Item { Layout.preferredHeight: Kirigami.Units.largeSpacing }
 
@@ -201,8 +216,8 @@ Kirigami.Page {
                     Kirigami.Heading { Kirigami.FormData.isSection: true; level: 3; text: "Notification list" }
                     QQC2.ComboBox {
                         Kirigami.FormData.label: "Opens in:"
-                        readonly property var ids: ["bottom-right", "bottom-center", "bottom-left", "top-right", "top-center", "top-left"]
-                        model: ["Bottom right", "Bottom centre", "Bottom left", "Top right", "Top centre", "Top left"]
+                        readonly property var ids: ["bottom-right", "bottom-center", "bottom-left", "top-right", "top-center", "top-left", "middle-right", "middle-left", "center"]
+                        model: ["Bottom right", "Bottom centre", "Bottom left", "Top right", "Top centre", "Top left", "Middle right", "Middle left", "Centre"]
                         currentIndex: Math.max(0, ids.indexOf(page.vals["center.anchor"] !== undefined ? page.vals["center.anchor"] : "bottom-right"))
                         onActivated: index => page.model.settingSet("center.anchor", ids[index])
                         Accessible.name: "Where the notification list opens"

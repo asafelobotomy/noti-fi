@@ -67,8 +67,10 @@ Scope {
     function markRead(ids) {
         const s = api.shell
         const all = !Array.isArray(ids)
-        if (!s.history.some(h => h.read !== true && (all || ids.indexOf(h.id) >= 0))) return status()
-        s.history = s.history.map(h => h.read !== true && (all || ids.indexOf(h.id) >= 0) ? Object.assign({}, h, { read: true }) : h)
+        // by id: only this run's entries (ids start again at 1 when notifd restarts, and history can be kept across restarts)
+        const hit = h => h.read !== true && (all || (ids.indexOf(h.id) >= 0 && h.t >= s.kept.startedAt))
+        if (!s.history.some(hit)) return status()
+        s.history = s.history.map(h => hit(h) ? Object.assign({}, h, { read: true }) : h)
         s.saveSoon()
         s.scheduleState()
         return status()
@@ -182,7 +184,9 @@ Scope {
         const s = api.shell
         return s.history.slice(0, Math.max(0, Math.min(1000, Number(limit) || 0))).map(h => {
             const n = s.kept.live(h)
-            return Object.assign({}, h, { live: n !== null, actions: n ? (n.actions || []).map(a => ({ key: a.identifier, text: a.text })) : [] })
+            const e = Object.assign({}, h, { live: n !== null, actions: n ? (n.actions || []).map(a => ({ key: a.identifier, text: a.text })) : [] })
+            // while the screen is shared: no title, text or button labels (whoever asks may draw them on the shared screen)
+            return s.sharing ? Object.assign(e, { summary: "", body: "", hidden: true, actions: e.actions.map(a => ({ key: a.key, text: "" })) }) : e
         })
     }
     function seenApps() {

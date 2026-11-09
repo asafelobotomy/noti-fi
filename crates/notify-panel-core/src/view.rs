@@ -75,6 +75,7 @@ pub fn hold_text(connected: bool, holding: &str) -> &'static str {
         "fullscreen" => "Held automatically while a window is full screen",
         "screen sharing" => "Held automatically while the screen is being shared",
         "inhibited" => "Held because an app asked (a presentation, a call, a recording)",
+        "focus" => "A focus mode is on: only notifications it allows show",
         _ => "Off: notifications show normally",
     }
 }

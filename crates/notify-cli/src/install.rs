@@ -139,7 +139,7 @@ pub fn portal(ctx: &Ctx, remove: bool, dry: bool) -> Result<()> {
 /// Start a daemon from `files` on a private D-Bus session and check it comes up and answers on its socket.
 /// This runs BEFORE the live daemon is touched, so a broken version can never take notifications down.
 pub fn preflight(payload: &Payload, rules_text: &str) -> bool {
-    let tmp = std::env::temp_dir().join(format!("notifd-preflight-{}-{}", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0)));
+    let Ok(tmp) = crate::sys::private_dir("notifd-preflight") else { return false };
     let dir = tmp.join("p");
     if fs::create_dir_all(&dir).is_err() || fs::create_dir_all(tmp.join("state")).is_err() {
         return false;

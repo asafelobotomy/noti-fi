@@ -69,6 +69,7 @@ impl qobject::PanelModel {
             TrayState {
                 online: *me.connected(),
                 dnd: *me.dnd(),
+                holding: me.holding().to_string(),
                 active: (*me.active()).max(0) as u32,
                 focus: me.focus_mode().to_string(),
                 focus_modes: json(me.focus_modes_json()).iter().map(|m| (text(m, "name"), text(m, "label"))).collect(),

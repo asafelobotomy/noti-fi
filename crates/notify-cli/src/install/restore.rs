@@ -31,7 +31,8 @@ fn restore_steps(ctx: &Ctx, purge: bool) -> Vec<Step> {
         let (c, st) = (ctx.clone(), state.clone());
         steps.push(Step::new("remove the portal routing (if notify created it) and the full-screen KWin script", move || {
             portal_disable(&c)?;
-            if st.autodnd && !c.no_systemctl {
+            // also a script whose files were written but which never loaded (takeover then recorded autodnd: false)
+            if (st.autodnd || paths().kwin_script.exists()) && !c.no_systemctl {
                 integrations::autodnd_remove();
             }
             // Plasma needs its notification tray item to take notifications back; show it if `notify tray hide` hid it
@@ -44,8 +45,11 @@ fn restore_steps(ctx: &Ctx, purge: bool) -> Vec<Step> {
     {
         let c = ctx.clone();
         steps.push(Step::new("remove the global shortcuts `notify hotkey` set up (Do Not Disturb, notification list)", move || {
+            // a launcher that cannot be removed must not stop Plasma from getting notifications back
             for t in [crate::hotkey::Target::Dnd, crate::hotkey::Target::Center] {
-                crate::hotkey::remove(t, c.no_systemctl)?;
+                if let Err(e) = crate::hotkey::remove(t, c.no_systemctl) {
+                    c.out.text(&format!("  ! could not remove the {} shortcut: {e}", t.desktop_file()));
+                }
             }
             Ok(())
         }));

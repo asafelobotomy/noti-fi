@@ -39,7 +39,9 @@ impl Fetch for Curl {
         let limit = if url.ends_with(".tar.gz") { "300" } else { "30" };
         let out = Command::new("curl")
             .args(["--fail", "--silent", "--show-error", "--location", "--proto", "=https", "--proto-redir", "=https", "--max-time", limit])
+            .args(["--max-filesize", "300000000"]) // a release archive is a few MB; never hold more in memory
             .args(["--header", "Accept: application/vnd.github+json", "--user-agent", &format!("noti-fi/{CURRENT}")])
+            .arg("--")
             .arg(url)
             .output()
             .map_err(|e| format!("cannot run curl (is it installed?): {e}"))?;

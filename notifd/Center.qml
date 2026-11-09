@@ -24,6 +24,7 @@ Scope {
     // the keyboard (see CenterNav.qml): move the selection, or act on the selected row
     readonly property CenterNav nav: CenterNav {}
     function key(event) {
+        if (!panel.activeFocus) return       // Tab is on a header button: keys belong to it, not to a selection you cannot see
         const d = nav.moveBy(event.key)
         if (d !== 0) {
             list.currentIndex = nav.step(list.count, list.currentIndex, d)
@@ -39,11 +40,16 @@ Scope {
         if (a.what === "fold") toggleFold(row.zone)
         else if (a.what === "open") open_(row.entry, card ? card.live : null)
         else if (a.what === "remove") shell.api.removeHistory(row.entry.id, row.entry.t)
-        else if (a.what === "button" && card && a.n < card.buttons.length) { shell.api.invoke(row.entry.id, card.buttons[a.n].identifier); close() }
+        else if (a.what === "button" && card && a.n < card.buttons.length) press(row.entry.id, card.buttons[a.n].identifier)
+    }
+    // press a notification's button and close the list; its app may have closed it a moment ago (then just mark it read)
+    function press(id, key) {
+        try { shell.api.invoke(id, key) } catch (e) { shell.api.markRead([id]) }
+        close()
     }
     // a click on a notification: what clicking its popup does (the app's default action) while the app still holds it; else just mark it read
     function open_(entry, live) {
-        if (live && (live.actions || []).some(a => a.identifier === "default")) { shell.api.invoke(entry.id, "default"); close() }
+        if (live && (live.actions || []).some(a => a.identifier === "default")) press(entry.id, "default")
         else shell.api.markRead([entry.id])
     }
     function accent(z) { return (cfg.zones[z] && cfg.zones[z].accent) || "#60a5fa" }
@@ -195,7 +201,7 @@ Scope {
                             hideText: center.shell.sharing
                             current: row.current
                             onOpened: center.open_(row.modelData.entry, live)
-                            onInvoked: key => { center.shell.api.invoke(row.modelData.entry.id, key); center.close() }
+                            onInvoked: key => center.press(row.modelData.entry.id, key)
                             onRemoved: center.shell.api.removeHistory(row.modelData.entry.id, row.modelData.entry.t)
                         }
                     }

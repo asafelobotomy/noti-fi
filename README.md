@@ -28,7 +28,7 @@ Since 0.8.2 the panel runs on any Qt 6 (earlier releases only ran on the Qt they
 cd packaging && makepkg -si     # builds noti-fi against your installed Qt (about 8 minutes)
 ```
 
-Needs at run time: `quickshell`, `qt6-declarative`, `kirigami`, `qqc2-desktop-style` (`qt6-multimedia` is optional, for audio/video players).
+Needs at run time: `quickshell`, `qt6-declarative`, `kirigami`, `qqc2-desktop-style`, `dbus` (`notify serve` runs a private bus), `pipewire` (`pw-dump`) and `python` (screen-share detection); `qt6-multimedia` is optional, for audio/video players.
 
 ## Updating
 
@@ -41,7 +41,9 @@ The panel's General page does the same, and can check once a day if you tick the
 
 ## Releasing
 
-Bump the version in `Cargo.toml` and `daemonVersion` in `notifd/shell.qml` (a test checks they agree), update `CHANGELOG.md`, commit, then push a tag such as `v0.8.1`.
+Bump the version in `Cargo.toml`, `daemonVersion` in `notifd/shell.qml` and `pkgver` in `packaging/PKGBUILD`, add a `<release>` line to
+`packaging/org.notify.Panel.metainfo.xml` and a `## X.Y.Z` section to `CHANGELOG.md` (the `version` test checks all of these agree), commit,
+then push a tag such as `v0.8.1`.
 The `release` workflow builds on Arch, packages the archive with `packaging/build-tarball.sh`, and publishes it with its checksum, together with the source archive the AUR package builds from. Its `aur` artifact is the AUR package (PKGBUILD with the real checksum, and `.SRCINFO`). The `ci` workflow builds and tests every push and pull request.
 
 ## Layout
@@ -126,7 +128,8 @@ the last good config keeps running, a red pill shows the reason, and `notify sta
 Check a file before saving with `notify rules --file PATH`.
 
 - Rules are checked top to bottom; for each of `zone`, `timeout`, `silent` the **first matching rule that sets it wins**.
-- `match` fields (all regexes, case-insensitive): `appName`, `desktopEntry`, `origin` (site name from browsers), `summary`, `body`, `urgency`.
+- `match` fields (all regexes, case-insensitive): `appName`, `desktopEntry`, `origin` (site name from browsers), `summary`, `body`, `urgency`,
+  `category` (the app's own kind, e.g. `email.arrived`), `channel` (`app`, `portal` or `web`) and `group` (a rule for a whole group).
 - Regexes are JavaScript regexes (no `(?i)`, no `(?P<name>...)`); `notify rules` flags those.
 - `timeout`: milliseconds, `0` = stays until dismissed. An app's own `-t 0` is honoured too.
 - `maxVisible`: popups shown per zone; extras queue and a "+N more waiting" chip appears.

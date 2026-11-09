@@ -1,7 +1,6 @@
 # Maintainer: asafelobotomy
-# Builds noti-fi against the Qt installed on YOUR machine (the panel's compiled QML only runs on the Qt it was built with, so a prebuilt
-# panel from the release archive works only on a matching Qt). Use:   cd packaging && makepkg -si
-# After a Qt upgrade the panel may stop starting; run makepkg -si again to rebuild it.
+# Builds noti-fi from the release's source archive against the Qt installed on your machine. Use:   cd packaging && makepkg -si
+# (the panel runs on any Qt 6 since 0.8.2; building it here simply avoids the prebuilt binaries).
 pkgname=noti-fi
 pkgver=0.18.0
 pkgrel=1
@@ -9,17 +8,23 @@ pkgdesc="Notification daemon (notifd), command line (notify) and control panel f
 arch=('x86_64')
 url="https://github.com/asafelobotomy/noti-fi"
 license=('MIT')
-depends=('quickshell' 'qt6-base' 'qt6-declarative' 'kirigami' 'qqc2-desktop-style' 'sqlite')
-makedepends=('cargo' 'git')
+# dbus: `notify serve` runs Quickshell on a private dbus-daemon; pipewire (pw-dump) and python: screen-share detection
+depends=('quickshell' 'qt6-base' 'qt6-declarative' 'kirigami' 'qqc2-desktop-style' 'sqlite' 'dbus' 'pipewire' 'python')
+makedepends=('cargo')
 optdepends=('qt6-multimedia: audio and video players in popups' 'flatpak: per-app notification permissions for Flatpak apps')
 # The source archive the release workflow uploads (git archive of the tag). The release's `aur` artifact holds this
 # PKGBUILD with its real checksum and a .SRCINFO, ready to push to the AUR; here it stays SKIP between releases.
 source=("$pkgname-$pkgver.tar.gz::$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz")
 sha256sums=('SKIP')
 
+prepare() {
+    cd "$pkgname-$pkgver"
+    cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
 build() {
     cd "$pkgname-$pkgver"
-    cargo build --release --locked -p notify-cli -p notify-panel
+    cargo build --release --frozen -p notify-cli -p notify-panel
 }
 
 package() {

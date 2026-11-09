@@ -309,6 +309,8 @@ const SETTING_DEFAULTS: &[(&str, Kind)] = &[
     ("theme.opacity", Kind::Num(1.0)),
     ("theme.fontFamily", Kind::Text("")), ("theme.fontSize", Kind::Num(12.0)),
     ("theme.timerStyle", Kind::Text("none")),
+    ("theme.radius", Kind::Num(12.0)),
+    ("theme.tokens", Kind::Text("auto")),
     ("transfer.chart", Kind::Text("line")),
     ("center.anchor", Kind::Text("bottom-right")),
     ("center.keep", Kind::Num(50.0)),

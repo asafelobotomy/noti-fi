@@ -108,7 +108,7 @@ pub fn doctor(ctx: &Ctx) -> anyhow::Result<bool> {
     let mut checks: Vec<Check> = Vec::new();
     let mut add = |group: &'static str, level: &'static str, message: String, hint: Option<&str>| checks.push(Check { group, level, message, hint: hint.map(String::from) });
 
-    for (t, why) in [("qs", "Quickshell runs the daemon"), ("dbus-daemon", "the daemon's private bus"), ("busctl", "inspect D-Bus ownership"), ("notify-send", "send test notifications"), ("systemctl", "manage the service")] {
+    for (t, why) in [("qs", "Quickshell runs the daemon"), ("dbus-daemon", "the daemon's private bus"), ("pw-dump", "screen-share detection (pipewire)"), ("python3", "screen-share detection"), ("busctl", "inspect D-Bus ownership"), ("notify-send", "send test notifications"), ("systemctl", "manage the service")] {
         let found = which(t).is_some();
         add("Tools", if found { OK } else { WARN }, format!("{t}: {} ({why})", if found { "found" } else { "missing" }), None);
     }
