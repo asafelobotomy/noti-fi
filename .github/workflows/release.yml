@@ -47,6 +47,30 @@ jobs:
         env:
           VERSION: ${{ steps.v.outputs.version }}
         run: packaging/build-tarball.sh "$VERSION" target
+      # The source archive the AUR package builds from, so its checksum is
+      # fixed by this release rather than by GitHub's generated archives.
+      - name: Source archive and AUR files
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          src="noti-fi-$VERSION.tar.gz"
+          git archive --format=tar.gz --prefix="noti-fi-$VERSION/" -o "dist/$src" HEAD
+          ( cd dist && sha256sum "$src" > "$src.sha256" )
+          sum=$(cut -d' ' -f1 "dist/$src.sha256")
+          mkdir -p aur/noti-fi
+          sed "s/^sha256sums=('SKIP')$/sha256sums=('$sum')/" packaging/PKGBUILD > aur/noti-fi/PKGBUILD
+          grep -q "^sha256sums=('$sum')$" aur/noti-fi/PKGBUILD
+          grep -q "^pkgver=$VERSION$" aur/noti-fi/PKGBUILD || { echo "pkgver in packaging/PKGBUILD is not $VERSION" >&2; exit 1; }
+          useradd -m aurbuild
+          chown -R aurbuild aur
+          su aurbuild -c 'cd aur/noti-fi && makepkg --printsrcinfo > .SRCINFO'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: aur
+          path: aur/
+          include-hidden-files: true
+          if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: noti-fi-${{ steps.v.outputs.version }}
