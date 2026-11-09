@@ -33,6 +33,16 @@ def main():
         d.send("evil name", t=300, hints=["string:sound-name:x; touch " + str(stub / "pwned")])
         time.sleep(1.5)
         T.check("a sound name with shell characters is never run", not (stub / "pwned").exists())
+        # a flood plays at most two sounds at once: the player now lasts a few seconds
+        player.write_text(f'#!/bin/sh\necho "$@" >> {log}\nsleep 3\n')
+        n = len(played())
+        for i in range(5):
+            d.send(f"flood {i}", t=300, hints=[f"string:sound-name:flood-{i}"])
+        time.sleep(1.5)
+        T.check("a flood of sounds plays at most two at once", len(played()) - n == 2, str(played()[n:]))
+        time.sleep(3)
+        d.send("after the flood", t=300, hints=["string:sound-name:after-flood"])
+        T.check("sounds play again once the flood's players exit", d.wait_for(lambda: any("after-flood" in l for l in played()), 5), str(played()))
         cfg = json.loads(json.dumps(T.BASE_CONFIG)); cfg["sound"] = {"enabled": False, "defaultName": ""}
         d.write_config(cfg); time.sleep(1.5)
         n = len(played())

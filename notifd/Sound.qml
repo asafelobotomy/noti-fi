@@ -15,7 +15,11 @@ Scope {
         'else ' +
         '  command -v canberra-gtk-play >/dev/null 2>&1 && exec canberra-gtk-play -i "$v"; ' +
         'fi; exit 0'
-    Component { id: soundComp; Process { onExited: destroy() } }
+    // Sounds playing now. A flood of notifications plays at most maxPlaying at once (the rest are skipped),
+    // and each player is destroyed once it stops, whether it exited or never started.
+    property int playing: 0
+    readonly property int maxPlaying: 2
+    Component { id: soundComp; Process { onRunningChanged: if (!running) { sound.playing--; destroy() } } }
 
     function play(n) {
         const c = sound.shell.cfg
@@ -32,7 +36,8 @@ Scope {
         } else if (c.sound.defaultName && /^[A-Za-z0-9_][A-Za-z0-9._-]*$/.test(c.sound.defaultName)) {
             kind = "name"; val = c.sound.defaultName
         }
-        if (kind === "") return
+        if (kind === "" || sound.playing >= sound.maxPlaying) return
+        sound.playing++
         soundComp.createObject(sound, { command: ["sh", "-c", script, "notifd-sound", kind, val], running: true })
     }
 }
