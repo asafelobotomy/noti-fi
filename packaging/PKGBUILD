@@ -5,15 +5,17 @@
 pkgname=noti-fi
 pkgver=0.18.0
 pkgrel=1
-pkgdesc="Notification daemon (notifd), command line (notify) and control panel for KDE Plasma on Wayland"
+pkgdesc="Notification daemon (notifd), command line (notify) and control panel for KDE Plasma and Hyprland on Wayland"
 arch=('x86_64')
 url="https://github.com/asafelobotomy/noti-fi"
 license=('MIT')
 depends=('quickshell' 'qt6-base' 'qt6-declarative' 'kirigami' 'qqc2-desktop-style' 'sqlite')
 makedepends=('cargo' 'git')
 optdepends=('qt6-multimedia: audio and video players in popups' 'flatpak: per-app notification permissions for Flatpak apps')
-source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('SKIP')   # fill in with `updpkgsums` before publishing the package elsewhere
+# The source archive the release workflow uploads (git archive of the tag). The release's `aur` artifact holds this
+# PKGBUILD with its real checksum and a .SRCINFO, ready to push to the AUR; here it stays SKIP between releases.
+source=("$pkgname-$pkgver.tar.gz::$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz")
+sha256sums=('SKIP')
 
 build() {
     cd "$pkgname-$pkgver"

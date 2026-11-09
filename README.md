@@ -42,7 +42,7 @@ The panel's General page does the same, and can check once a day if you tick the
 ## Releasing
 
 Bump the version in `Cargo.toml` and `daemonVersion` in `notifd/shell.qml` (a test checks they agree), update `CHANGELOG.md`, commit, then push a tag such as `v0.8.1`.
-The `release` workflow builds on Arch, packages the archive with `packaging/build-tarball.sh`, and publishes it with its checksum. The `ci` workflow builds and tests every push and pull request.
+The `release` workflow builds on Arch, packages the archive with `packaging/build-tarball.sh`, and publishes it with its checksum, together with the source archive the AUR package builds from. Its `aur` artifact is the AUR package (PKGBUILD with the real checksum, and `.SRCINFO`). The `ci` workflow builds and tests every push and pull request.
 
 ## Layout
 

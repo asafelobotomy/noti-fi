@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **AUR-ready package:** each release also uploads a source archive (`noti-fi-<version>.tar.gz`) with its checksum, and the PKGBUILD builds from it. The release's `aur` artifact holds the PKGBUILD with the real checksum and a `.SRCINFO`, ready to push to the AUR.
+
 - **Fixed: hovering a taskbar entry hid notifications.** Plasma draws its window previews from short-lived KWin captures read by plasmashell, which counted as screen sharing. Captures read by plasmashell no longer count, nor does a capture stream nobody reads (KDE's remote-control sessions keep an idle one open). Checked live by hovering taskbar entries.
 
 - **Who is capturing the screen:** the screen-share watch now names the programs reading KWin's capture (`sharingBy` in `status`), and `autoDnd.ignoreCaptureBy` lists programs whose captures do not count as sharing. Found because Claude's computer use (`kwin-portal-bridge`) captures the screen and so hid notifications, which looked like another app's doing.

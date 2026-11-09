@@ -21,7 +21,7 @@ Notification daemon for KDE Plasma on Wayland (`notifd`, QML on Quickshell) plus
 - Every source file is at most 400 lines (`cargo test -p notify-cli --test loc`); files in `tests/loc-baseline.txt` may only shrink.
 - `notifd/*.qml` is embedded into `notify` at build time; no list needs editing when you add a file.
 - Tests use a private D-Bus session and must never touch real notifications.
-- Release: bump `version` in the root `Cargo.toml` AND `daemonVersion` in `notifd/shell.qml` (a test checks they agree), update `CHANGELOG.md`, commit, then push tag `vX.Y.Z`. The release workflow (Arch container) fails if the tag differs from the crate version, then publishes the tarball and `.sha256`.
+- Release: bump `version` in the root `Cargo.toml` AND `daemonVersion` in `notifd/shell.qml` (a test checks they agree), update `CHANGELOG.md`, commit, then push tag `vX.Y.Z`. The release workflow (Arch container) fails if the tag differs from the crate version, then publishes the tarball, a source archive (`noti-fi-X.Y.Z.tar.gz`, what the AUR package builds from) and their `.sha256` files. Its `aur` artifact holds the PKGBUILD with the real checksum and a `.SRCINFO`; pushing that to the AUR is the user's step, never an agent's. Bump `pkgver` in `packaging/PKGBUILD` with the version.
 - Rust edition 2024, MSRV 1.85, MIT. Work on `main`.
 
 ## Gotchas
