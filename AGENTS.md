@@ -22,7 +22,7 @@ Notification daemon for KDE Plasma on Wayland (`notifd`, QML on Quickshell) plus
 - `notifd/*.qml` is embedded into `notify` at build time; no list needs editing when you add a file.
 - Tests use a private D-Bus session and must never touch real notifications.
 - Release: bump `version` in the root `Cargo.toml`, `daemonVersion` in `notifd/shell.qml` and `pkgver` in `packaging/PKGBUILD`, add the metainfo `<release>` line and a `## X.Y.Z` CHANGELOG section (the `version` test checks they all agree), commit, then push tag `vX.Y.Z`. The release workflow (Arch container) fails if the tag differs from the crate version, then publishes the tarball, a source archive (`noti-fi-X.Y.Z.tar.gz`, what the AUR package builds from) and their `.sha256` files. Its `aur` artifact holds the PKGBUILD with the real checksum and a `.SRCINFO`; pushing that to the AUR is the user's step, never an agent's. Bump `pkgver` in `packaging/PKGBUILD` with the version.
-- Rust edition 2024, MSRV 1.85, MIT. Work on `main`.
+- Rust edition 2024, MSRV 1.89, MIT. Work on `main`.
 
 ## Gotchas
 - Building the panel needs Qt 6 (CI installs `qt6-base qt6-declarative` on Arch). Runtime: `quickshell`, `qt6-declarative`, `kirigami`, `qqc2-desktop-style`; optional `qt6-multimedia`.

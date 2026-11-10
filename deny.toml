@@ -1,10 +1,7 @@
 # cargo-deny: dependency policy (run with `cargo deny check`; CI runs it on every push).
 [advisories]
 # The zbus family is flagged "unmaintained" (no vulnerability) and has no replacement; it comes in through the tray library (ksni).
-# RUSTSEC-2026-0459 (SQLite, CVE-2026-119375): notify links the system SQLite, not the crate's bundled copy, and only opens a
-# browser's database written by the same user (the flaw needs a database a less trusted party wrote). Remove once Arch's sqlite
-# package has the fix.
-ignore = ["RUSTSEC-2026-0370", "RUSTSEC-2026-0371", "RUSTSEC-2026-0372", "RUSTSEC-2026-0459"]
+ignore = ["RUSTSEC-2026-0370", "RUSTSEC-2026-0371", "RUSTSEC-2026-0372"]
 
 [licenses]
 allow = ["MIT", "Apache-2.0", "Apache-2.0 WITH LLVM-exception", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Unicode-3.0", "Unicode-DFS-2016", "Zlib", "Unlicense", "MPL-2.0", "CC0-1.0", "BSL-1.0"]
