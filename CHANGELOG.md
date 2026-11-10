@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **SQLite advisory fixed rather than ignored:** rusqlite 0.41 (libsqlite3-sys 0.39) is outside RUSTSEC-2026-0459's range, so `deny.toml` no longer needs the exception. Building now needs Rust 1.89 (was 1.85).
+
 - **Fixed: uQ's theme didn't reach noti-fi on a stock install.** The `rules.json` that `notify takeover` writes set the six theme colours explicitly, and settings in `rules.json` win over a desktop's tokens, so `theme.tokens: "auto"` never showed uQ's colours. The shipped file now leaves them out; the daemon's defaults are the same colours, so nothing changes without uQ. An existing `rules.json` keeps its colours: remove `card`, `border`, `text`, `subtext`, `button` and `buttonHover` from its `theme` to follow uQ.
 
 ## 0.18.1
