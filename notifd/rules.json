@@ -23,12 +23,6 @@
     "screenShare": true
   },
   "theme": {
-    "card": "#1d1f27",
-    "border": "#2c2f3a",
-    "text": "#f2f3f7",
-    "subtext": "#b9bccb",
-    "button": "#272a36",
-    "buttonHover": "#323646",
     "timerStyle": "line"
   },
   "focus": {

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Fixed: uQ's theme didn't reach noti-fi on a stock install.** The `rules.json` that `notify takeover` writes set the six theme colours explicitly, and settings in `rules.json` win over a desktop's tokens, so `theme.tokens: "auto"` never showed uQ's colours. The shipped file now leaves them out; the daemon's defaults are the same colours, so nothing changes without uQ. An existing `rules.json` keeps its colours: remove `card`, `border`, `text`, `subtext`, `button` and `buttonHover` from its `theme` to follow uQ.
+
 ## 0.18.1
 
 - **Audit fixes (daemon):** while the screen is shared, popups also hide their button labels and the reply hint, and the socket's `history` and `notification`/`updated` events carry no title or text (`hidden: true`). A replaced notification's history entry now follows it (shown or held, urgency, icon, and unread again), and only this run's entries are matched by id (ids restart with notifd). The list's keys act only while the list has focus, and a button of a notification its app just closed no longer fails. Turning screen-share or full-screen holding back on during a share applies at once. The PipeWire watcher no longer leaves `pw-dump`/`python3` behind. Theme tokens accept only `#rgb`/`#rrggbb`; `theme.tokens` also takes `"off"`. History caps titles at 300 characters; sound names cannot start with "-"; an app called "constructor" no longer breaks the seen-apps count; a rule's `silent` must be true or false.
