@@ -166,7 +166,7 @@ Item {
     // ------------------------------------------------------------ scrolling to a search result
 
     function scrollTo(id) {
-        const target = { "dnd": dndRow, "focus": focusRow, "groups": groupsRow, "auto-dnd": autoRow, "history": historyRow, "rules": rulesRow }[id];
+        const target = { "dnd": dndRow, "focus": focusRow, "groups": groupsRow, "auto-dnd": autoRow, "history": historyRow, "rules": rulesSection.row }[id];
         if (!target)
             return;
         const y = target.mapToItem(column, 0, 0).y;
@@ -384,32 +384,13 @@ Item {
                 }
 
                 // ---- Your rules (read only)
-                SettingRow {
-                    id: rulesRow
-                    settingId: "rules"
-                    label: "Your rules"
+                RulesSection {
+                    id: rulesSection
+                    names: Logic.ruleNames(page.settings)
                     highlight: page.highlight
+                    mutedColor: page.mutedColor
+                    onOpenRequested: page.openApp()
                     Layout.fillWidth: true
-                }
-                Repeater {
-                    model: Logic.ruleNames(page.settings)
-
-                    UqLabel {
-                        required property string modelData
-                        text: modelData
-                        elide: Text.ElideRight
-                        Layout.fillWidth: true
-                    }
-                }
-                UqLabel {
-                    text: "Change your rules in noti-fi's own app."
-                    color: page.mutedColor
-                    wrapMode: Text.Wrap
-                    Layout.fillWidth: true
-                }
-                QQC2.Button {
-                    text: "Open noti-fi"
-                    onClicked: page.openApp()
                 }
             }
         }

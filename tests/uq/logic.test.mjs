@@ -14,6 +14,7 @@ const pageDir = join(here, "../../uq/pages/noti-fi");
 const logic = loadLogic(join(pageDir, "logic.js"));
 const manifest = parseToml(readFileSync(join(pageDir, "page.toml"), "utf8"));
 const pageQml = readFileSync(join(pageDir, "Page.qml"), "utf8");
+const allQml = ["Page.qml", "Notice.qml", "RulesSection.qml"].map((f) => readFileSync(join(pageDir, f), "utf8")).join("\n");
 const fixture = (name) => JSON.parse(readFileSync(join(here, "fixtures", name), "utf8"));
 // logic.js runs in its own context; its arrays and objects have another prototype, so compare plain copies
 const plain = (v) => JSON.parse(JSON.stringify(v));
@@ -208,7 +209,7 @@ test("settings_rows: every row has keywords and a row in the page", () => {
   assert.deepEqual(manifest.setting.map((s) => s.id), ["dnd", "focus", "groups", "auto-dnd", "history", "rules"]);
   for (const s of manifest.setting) {
     assert.ok(s.keywords?.length > 0, `${s.id} has keywords`);
-    assert.ok(pageQml.includes(`settingId: "${s.id}"`), `Page.qml has a row for ${s.id}`);
+    assert.ok(allQml.includes(`settingId: "${s.id}"`), `Page.qml has a row for ${s.id}`);
   }
   for (const w of ["notifications", "noti-fi", "do not disturb", "dnd", "focus", "mute", "history"]) assert.ok(manifest.keywords.includes(w), w);
 });
@@ -248,7 +249,8 @@ test("no_notification_text: the page never reads a summary, a body or an app's n
   const status = logic.parseStatus(ok(fixture("status.json")));
   assert.ok(!JSON.stringify(plain(status)).includes("Quarterly"));
   assert.ok(!JSON.stringify(plain(logic.groupRows(status, null))).includes("Quarterly"));
-  const code = readFileSync(join(pageDir, "logic.js"), "utf8") + pageQml;
+  // (Notice.qml has a `summary` of its own: its own sentence, not a notification's)
+  const code = readFileSync(join(pageDir, "logic.js"), "utf8") + pageQml + readFileSync(join(pageDir, "RulesSection.qml"), "utf8");
   for (const word of ["summary", "latest", "body", "appName", "sharingBy", "inhibitors"]) {
     assert.ok(!new RegExp(`\\.${word}\\b|"${word}"`).test(code.replace(/\/\/.*$/gm, "")), `${word} is never read`);
   }
@@ -290,6 +292,7 @@ test("page_strings_are_plain: no jargon in anything the page or the manifest sho
   const shown = [
     ...texty(literals(pageQml)),
     ...texty(literals(readFileSync(join(pageDir, "Notice.qml"), "utf8"))),
+    ...texty(literals(readFileSync(join(pageDir, "RulesSection.qml"), "utf8"))),
     ...texty(literals(readFileSync(join(pageDir, "logic.js"), "utf8"))),
     manifest.name,
     ...manifest.setting.map((s) => s.label),

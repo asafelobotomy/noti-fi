@@ -78,6 +78,16 @@ Item {
         return hit;
     }
 
+    /// Like shown(), but only an item's own text (a Notice also holds its detail as a property).
+    function shownText(text) {
+        let hit = null;
+        walk(loader.item, it => {
+            if (!hit && it.visible && it.text === text)
+                hit = it;
+        });
+        return hit;
+    }
+
     function named(name) {
         let hit = null;
         walk(loader.item, it => {
@@ -176,11 +186,11 @@ Item {
             tryVerify(() => root.shown("Couldn't change Do not disturb.") !== null);
             compare(row.toggle.checked, false, "the switch is back on the last value read");
             // the program's words are under Advanced details, not shown at first
-            verify(root.shown("the reason in the program's words") === null);
+            verify(root.shownText("the reason in the program's words") === null);
             const details = root.shown("Advanced details");
             verify(details !== null);
             root.press(details);
-            tryVerify(() => root.shown("the reason in the program's words") !== null);
+            tryVerify(() => root.shownText("the reason in the program's words") !== null);
             // the next change clears the message
             fake.commands = Object.assign({}, fake.commands, { dnd: root.statusDoc({ dnd: true }) });
             root.flip(row);
@@ -330,6 +340,8 @@ Item {
                 settings: down,
                 "focus-modes": down
             });
+            fake.calls = [];
+            fake.watches = ({});
             root.open();
             tryVerify(() => root.shown("noti-fi isn't running. uQ's own notifications are in use.") !== null);
             tryVerify(() => root.runs("settings").length === 1 && root.runs("focus-modes").length === 1);
