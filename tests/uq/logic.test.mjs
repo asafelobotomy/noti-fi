@@ -81,8 +81,10 @@ test("focus_modes_listed: Off, then each mode by its label (or its name), and on
   assert.equal(logic.focusArg(m.modes, 2), "work");
   assert.equal(logic.focusArg(m.modes, 3), "off", "an index out of range turns it off, never names a mode");
 
-  const odd = logic.parseFocusModes(ok({ active: "", modes: { "-x": {}, "Two Words": {}, off: {}, fine_1: { label: "Fine" }, "": {} } }));
-  assert.deepEqual(plain(odd.modes), [{ id: "fine_1", label: "Fine" }]);
+  const odd = logic.parseFocusModes(ok({ active: "", modes: { "-x": {}, "Two Words": {}, off: {}, list: {}, Work: {}, fine_1: { label: "Fine" }, "": {} } }));
+  assert.deepEqual(plain(odd.modes), [{ id: "Work", label: "Work" }, { id: "fine_1", label: "Fine" }]);
+  assert.equal(logic.overlapped({ error: "already running" }), true);
+  assert.equal(logic.overlapped({ error: "timed out" }), false);
   assert.equal(logic.parseFocusModes({ error: "x" }).ok, false);
   assert.deepEqual(plain(logic.focusTexts(logic.parseFocusModes({ error: "x" }).modes)), ["Off"]);
 });

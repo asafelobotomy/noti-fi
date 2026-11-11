@@ -9,7 +9,7 @@ var MAX_TEXT = 200;
 /// The argument patterns, exactly as in page.toml (a test compares them).
 var PATTERNS = {
     dnd: { mode: "^(on|off)$" },
-    focus: { mode: "^(off|[a-z0-9_][a-z0-9_-]{0,39})$" },
+    focus: { mode: "^(off|[A-Za-z0-9_][A-Za-z0-9_-]{0,39})$" },
     mute: { zone: "^[A-Za-z0-9_][A-Za-z0-9_-]{0,39}$" },
     unmute: { zone: "^[A-Za-z0-9_][A-Za-z0-9_-]{0,39}$" },
     set: {
@@ -61,6 +61,11 @@ function messageOf(result) {
     if (at >= 0)
         text = text.slice(at + 7);
     return clip(text.split("\n")[0]);
+}
+
+/// True for the answer of a read that ran while a watched run of the same command was still going (uQ allows one at a time).
+function overlapped(result) {
+    return !!(result && result.error === "already running");
 }
 
 /// True when the person pressed Cancel on a confirm: nothing changes and nothing is shown.
@@ -176,7 +181,7 @@ function parseSettings(result) {
 }
 
 /// The result of `focus list --json`: {ok, active, modes: [{id, label}]}. A mode whose name `notify focus`
-/// couldn't be given (the argument pattern) is left out: it can only be chosen in noti-fi's own app.
+/// couldn't be given (the argument pattern), or that `notify focus` would read as a subcommand (`list`), is left out: it can only be chosen in noti-fi's own app.
 function parseFocusModes(result) {
     var bad = { ok: false, active: "", modes: [] };
     if (!result || result.error !== undefined || !isObject(result.output) || !isObject(result.output.modes))
@@ -184,7 +189,7 @@ function parseFocusModes(result) {
     var modes = [];
     var ids = Object.keys(result.output.modes);
     for (var i = 0; i < ids.length && modes.length < MAX_ROWS; ++i) {
-        if (!matches(PATTERNS.focus.mode, ids[i]) || ids[i] === "off")
+        if (!matches(PATTERNS.focus.mode, ids[i]) || ids[i] === "off" || ids[i] === "list")
             continue;
         var m = result.output.modes[ids[i]];
         var label = isObject(m) ? clip(m.label) : "";

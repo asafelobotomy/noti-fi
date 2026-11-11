@@ -26,6 +26,11 @@ Item {
     property string problemDetail
     /// The command whose change is running ("" = none). One change at a time.
     property string working
+    /// False once the page is destroyed: late answers from Settings are then ignored.
+    property bool alive: true
+    /// A read of these failed (noti-fi wasn't running, say): read again when the state turns ready.
+    property bool settingsFailed: false
+    property bool modesFailed: false
 
     readonly property bool ready: page.kind === "ready"
     readonly property bool idle: page.working === ""
@@ -35,22 +40,49 @@ Item {
 
     // ------------------------------------------------------------ reading
 
+    /// Wrap a callback for Settings: nothing happens after the page is gone.
+    function guard(fn) {
+        return result => {
+            if (page.alive)
+                fn(result);
+        };
+    }
+
     function showStatus(result) {
+        // a read that overlapped a watched run of the same command: the other answer is coming
+        if (Logic.overlapped(result))
+            return;
         const s = Logic.parseStatus(result);
         page.kind = s.kind;
         page.kindMessage = s.message;
-        if (s.kind === "ready")
+        if (s.kind === "ready") {
             page.status = s;
+            // the other reads failed while noti-fi was down; nothing watched would run them again
+            if (page.settingsFailed) {
+                page.settingsFailed = false;
+                page.ctx.command.run("settings", [], page.guard(page.showSettings));
+            }
+            if (page.modesFailed) {
+                page.modesFailed = false;
+                page.ctx.command.run("focus-modes", [], page.guard(page.showModes));
+            }
+        }
         page.syncBoxes();
     }
 
     function showSettings(result) {
+        if (Logic.overlapped(result))
+            return;
         page.settings = Logic.parseSettings(result);
+        page.settingsFailed = !page.settings.ok;
         page.syncBoxes();
     }
 
     function showModes(result) {
+        if (Logic.overlapped(result))
+            return;
         page.focusModes = Logic.parseFocusModes(result);
+        page.modesFailed = !page.focusModes.ok;
         page.syncBoxes();
     }
 
@@ -58,9 +90,9 @@ Item {
     onCtxChanged: {
         if (!page.ctx)
             return;
-        page.ctx.command.watch("status", page.showStatus);
-        page.ctx.command.watch("settings", page.showSettings);
-        page.ctx.command.watch("focus-modes", page.showModes);
+        page.ctx.command.watch("status", page.guard(page.showStatus));
+        page.ctx.command.watch("settings", page.guard(page.showSettings));
+        page.ctx.command.watch("focus-modes", page.guard(page.showModes));
     }
 
     /// Put the two boxes back on what was last read (after a read, and after a change that failed).
@@ -78,7 +110,7 @@ Item {
         page.problem = "";
         page.problemDetail = "";
         page.working = command;
-        page.ctx.command.run(command, args, result => {
+        page.ctx.command.run(command, args, page.guard(result => {
             page.working = "";
             if (Logic.cancelled(result)) {
                 page.syncBoxes();
@@ -92,7 +124,7 @@ Item {
                 return;
             }
             done(result);
-        });
+        }));
     }
 
     /// dnd, mute, unmute and focus answer with the new state.
@@ -102,7 +134,7 @@ Item {
             page.status = s;
             page.syncBoxes();
         } else {
-            page.ctx.command.run("status", [], page.showStatus);
+            page.ctx.command.run("status", [], page.guard(page.showStatus));
         }
     }
 
@@ -111,7 +143,7 @@ Item {
             page.syncBoxes();
             return;
         }
-        page.change("set", args, doing, () => page.ctx.command.run("settings", [], page.showSettings));
+        page.change("set", args, doing, () => page.ctx.command.run("settings", [], page.guard(page.showSettings)));
     }
 
     function chooseLimit(index) {
@@ -123,12 +155,12 @@ Item {
     }
 
     function openApp() {
-        page.ctx.openApp(Logic.APP_ID, result => {
+        page.ctx.openApp(Logic.APP_ID, page.guard(result => {
             if (result && result.error !== undefined) {
                 page.problem = "Couldn't open noti-fi.";
                 page.problemDetail = Logic.detailOf(result);
             }
-        });
+        }));
     }
 
     // ------------------------------------------------------------ scrolling to a search result
@@ -142,6 +174,7 @@ Item {
     }
 
     onHighlightChanged: Qt.callLater(() => page.scrollTo(page.highlight))
+    Component.onDestruction: page.alive = false
     Component.onCompleted: {
         if (page.highlight !== "")
             Qt.callLater(() => page.scrollTo(page.highlight));
@@ -284,14 +317,14 @@ Item {
                     label: "When an app is full screen"
                     value: page.settings.ok && page.settings.fullscreen
                     enabled: page.known && page.idle
-                    onChosen: (isOn) => page.setSetting(Logic.setArgs("autoDnd.fullscreen", Logic.boolWord(isOn)), "Couldn't change this")
+                    onChosen: (isOn) => page.setSetting(Logic.setArgs("autoDnd.fullscreen", Logic.boolWord(isOn)), "Couldn't change Do not disturb for full screen")
                     Layout.fillWidth: true
                 }
                 SwitchRow {
                     label: "When you share your screen"
                     value: page.settings.ok && page.settings.screenShare
                     enabled: page.known && page.idle
-                    onChosen: (isOn) => page.setSetting(Logic.setArgs("autoDnd.screenShare", Logic.boolWord(isOn)), "Couldn't change this")
+                    onChosen: (isOn) => page.setSetting(Logic.setArgs("autoDnd.screenShare", Logic.boolWord(isOn)), "Couldn't change Do not disturb for screen sharing")
                     Layout.fillWidth: true
                 }
 
@@ -319,7 +352,7 @@ Item {
                     label: "Keep after restart"
                     value: page.settings.ok && page.settings.persist
                     enabled: page.known && page.idle
-                    onChosen: (isOn) => page.setSetting(Logic.setArgs("history.persist", Logic.boolWord(isOn)), "Couldn't change this")
+                    onChosen: (isOn) => page.setSetting(Logic.setArgs("history.persist", Logic.boolWord(isOn)), "Couldn't change whether history is kept after a restart")
                     Layout.fillWidth: true
                 }
                 UqLabel {
@@ -332,7 +365,7 @@ Item {
                     label: "Let urgent notifications through Do not disturb"
                     value: page.settings.ok && page.settings.allowCritical
                     enabled: page.known && page.idle
-                    onChosen: (isOn) => page.setSetting(Logic.setArgs("dnd.allowCritical", Logic.boolWord(isOn)), "Couldn't change this")
+                    onChosen: (isOn) => page.setSetting(Logic.setArgs("dnd.allowCritical", Logic.boolWord(isOn)), "Couldn't change whether urgent notifications get through")
                     Layout.fillWidth: true
                 }
                 RowLayout {
@@ -346,7 +379,7 @@ Item {
                         text: "Clear history…"
                         enabled: page.idle
                         // Settings asks "Clear the notification history? This can't be undone." first; this runs only on Confirm.
-                        onClicked: page.change("history-clear", [], "Couldn't clear the history", () => page.ctx.command.run("status", [], page.showStatus))
+                        onClicked: page.change("history-clear", [], "Couldn't clear the history", () => page.ctx.command.run("status", [], page.guard(page.showStatus)))
                     }
                 }
 

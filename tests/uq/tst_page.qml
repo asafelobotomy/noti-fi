@@ -119,11 +119,12 @@ Item {
     function open() {
         loader.source = "";
         loader.source = root.pageUrl;
-        verify(loader.status === Loader.Ready, "the page loads");
+        tc.verify(loader.status === Loader.Ready, "the page loads");
         loader.item.ctx = fake.ctx;
     }
 
     TestCase {
+        id: tc
         name: "NotificationsPage"
         when: windowShown
 
@@ -320,6 +321,26 @@ Item {
             verify(!root.shown("Keep after restart").enabled);
             verify(!root.shown("When an app is full screen").enabled);
             verify(!root.named("limitBox").enabled);
+        }
+
+        function test_settings_are_read_again_when_noti_fi_comes_up() {
+            const down = { code: 1, error: "exit code 1: error: notifd is not running" };
+            fake.commands = Object.assign({}, root.answers(), {
+                status: { code: 0, output: { owner: null, notifd_owns: false, jobs_owner: null, daemon: null, config: null } },
+                settings: down,
+                "focus-modes": down
+            });
+            root.open();
+            tryVerify(() => root.shown("noti-fi isn't running. uQ's own notifications are in use.") !== null);
+            tryVerify(() => root.runs("settings").length === 1 && root.runs("focus-modes").length === 1);
+            wait(50);
+            // noti-fi starts: the state file changes, and the page reads what it couldn't
+            fake.commands = root.answers();
+            fake.change("status");
+            tryVerify(() => root.shown("Do not disturb") !== null);
+            tryVerify(() => root.shown("Keep after restart") !== null && root.shown("Keep after restart").enabled);
+            tryCompare(root.named("focusBox"), "currentIndex", 2);
+            verify(root.shown("Couldn't read noti-fi's settings.") === null);
         }
 
         function test_a_rules_file_error_is_shown() {

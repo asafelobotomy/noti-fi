@@ -78,7 +78,7 @@ id = "focus"
 argv = ["/usr/bin/notify", "--json", "focus"]
 output = "json"
 timeout_ms = 8000
-args = [{ name = "mode", pattern = "^(off|[a-z0-9_][a-z0-9_-]{0,39})$" }]
+args = [{ name = "mode", pattern = "^(off|[A-Za-z0-9_][A-Za-z0-9_-]{0,39})$" }]
 
 [[command]]
 id = "mute"
