@@ -66,6 +66,8 @@ The `release` workflow builds on Arch, packages the archive with `packaging/buil
 | `tests/test_notifd.py` | daemon regression suite on a private bus; runs `test_rules.py`, `test_features.py`, `test_inputs.py`, `test_desktop.py` (what desktop shells use: socket state, OSD, design tokens) and `test_socket.py` (socket stress tests); `test_sound.py` separately |
 | `tests/hyprland/run.sh` | notifd on a real Hyprland, nested in a podman container (`/dev/dri` needed); not run in CI |
 | `tests/qml` | QML unit tests (`cargo test -p notify-cli --test qml`) |
+| `uq/pages/noti-fi` | the Notifications page for uQ Settings (a manifest, `Page.qml`, `logic.js`); installed to `/usr/share/uq/settings/pages/noti-fi/` by the package |
+| `tests/uq` | its tests: Node (`node --test 'tests/uq/*.test.mjs'`), QML (`qmltestrunner -import tests/uq/stub -input tests/uq`) and the packaging check (`sh tests/uq/install_test.sh`) |
 | `docs/protocol.md` | the control socket |
 
 Build and test:
@@ -201,7 +203,12 @@ notify update --payload notifd   # deploy the checkout's daemon files instead of
   stream of `state` events with `unread`, `dnd`, `center`, `sharing` and `latest`; `center`, `dnd` and an `osd` command
   that draws a volume, mic or brightness level (one line per key-repeat step, no process). With `theme.tokens` ("auto"
   by default) notifd takes its colours, corner radius and font from uQ's `~/.local/state/uq/theme/tokens.json` (or any
-  file in that format); your own `theme` settings still win.
+  file in that format); your own `theme` settings still win. With uQ installed, the package also gives uQ Settings a
+  **Notifications** page (under Apps): Do Not Disturb, focus mode, muting a group, automatic Do Not Disturb, history, and
+  your rules' names, using `notify status`, `notify settings`, `notify set` and the other `notify` commands (`uq/pages/noti-fi`).
+  The page follows `state.json` and `rules.json`, so it updates when you change something elsewhere, and it never shows
+  notification text. It is installed only by the package or by `PREFIX=/usr ./install.sh`: uQ reads pages from
+  `/usr/share/uq` and nowhere a user can write.
 - **Apps that ask for quiet:** an app can ask for notifications to be held (`Inhibit`, used for presentations, calls and screen recordings).
   notifd holds popups as for Do Not Disturb until the app lifts it or quits (critical ones still show); `notify status` says who asked.
   `notifd.service` runs `notify serve`, which owns the notification name and runs the daemon on a private bus behind it to make this possible.

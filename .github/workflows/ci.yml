@@ -44,6 +44,37 @@ jobs:
       - name: Clippy (reported, not blocking)
         run: cargo clippy --workspace --all-targets --locked || true
 
+  # noti-fi's page in uQ Settings (uq/pages/noti-fi): its Node and QML tests, the packaging, and uQ's own checker of the folder.
+  uq:
+    runs-on: ubuntu-latest
+    container: archlinux:latest        # the same container as above: qt6-declarative brings Qt's QML test runner
+    env:
+      UQ_TAG: v0.3.0-rc.1              # the uQ release whose `uqctl integrations check` and page contract the page is checked against
+    steps:
+      - name: Install build tools, the QML test runner and Node
+        run: pacman -Syu --noconfirm --needed base-devel git rust qt6-base qt6-declarative nodejs
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Cache uqctl
+        id: uqctl
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.uq
+          key: uqctl-${{ env.UQ_TAG }}
+      - name: Build uqctl
+        if: steps.uqctl.outputs.cache-hit != 'true'
+        run: cargo install --locked --git https://github.com/asafelobotomy/uq --tag "$UQ_TAG" uqctl --root "$HOME/.uq"
+      - name: The page's logic and manifest (Node)
+        run: node --test 'tests/uq/*.test.mjs'
+      - name: The page itself (QML, offscreen)
+        run: QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -import tests/uq/stub -input tests/uq
+      - name: Packaging puts exactly the page's files in /usr/share/uq
+        run: sh tests/uq/install_test.sh
+      - name: uQ's check of the folder (the programs themselves are not installed here)
+        run: |
+          out=$("$HOME/.uq/bin/uqctl" integrations check --no-programs uq/)
+          echo "$out"
+          case "$out" in ok:*) ;; *) echo "uqctl did not say ok" >&2; exit 1 ;; esac
+
   deny:
     runs-on: ubuntu-latest
     steps:
