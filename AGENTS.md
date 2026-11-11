@@ -5,7 +5,7 @@ Notification daemon for KDE Plasma on Wayland (`notifd`, QML on Quickshell) plus
 ## Commands
 - Build: `cargo build --workspace --locked`; CLI only: `cargo build --release -p notify-cli`.
 - Test (full, as CONTRIBUTING says): `cargo test --workspace --no-fail-fast -- --test-threads=1` (starts a throwaway daemon on a private D-Bus).
-- Test (CI's unit tests, no desktop needed): `cargo test --locked -p notify-protocol -p notify-apps -p notify-panel-core -p notify-jobs -p notify-update -p notify-bus --lib` and `cargo test --locked -p notify-cli --test loc --test version --test lifecycle` (lifecycle: takeover, update and restore in a fake home).
+- Test (CI's unit tests, no desktop needed): `cargo test --locked -p notify-protocol -p notify-apps -p notify-panel-core -p notify-jobs -p notify-update -p notify-bus --lib` and `cargo test --locked -p notify-cli --test loc --test version --test lifecycle --test settings` (lifecycle: takeover, update and restore in a fake home; settings: `notify settings` and `notify set` against a scripted notifd).
 - Job bridge on a private bus (needs `dbus-daemon` only): `cargo test -p notify-jobs --test bridge`. The proxy (`notify serve`) end to end: `cargo test -p notify-cli --test serve` (needs Quickshell and a display). On a real Hyprland (nested, in a podman container; needs `/dev/dri`): `tests/hyprland/run.sh`.
 - No desktop (CI): `tests/ci-daemon.sh` runs the daemon and sound suites under a headless labwc compositor. CI also runs the QML tests (`--test qml`, needs `kirigami`) and the job bridge test.
 - Daemon suites (need Quickshell, `dbus-run-session`, `notify-send`): `python3 tests/test_notifd.py` (includes features and socket suites), `python3 tests/test_sound.py`.
@@ -15,6 +15,7 @@ Notification daemon for KDE Plasma on Wayland (`notifd`, QML on Quickshell) plus
 ## Layout
 - `crates/notify-cli` (`notify`; embeds the `notifd/` files), `notify-protocol` (socket messages and `rules.json` model), `notify-client`, `notify-testkit`, `notify-apps`, `notify-update`, `notify-jobs` (job bridge: KIO file-operation progress -> notifd, run as `notify jobs` by `notifd-jobs.service`), `notify-bus` (`notify serve`, what `notifd.service` runs: owns org.freedesktop.Notifications, runs Quickshell on a private bus behind it, forwards calls and signals, answers Inhibit), `notify-panel` (cxx-qt + Kirigami), `notify-panel-core` (Qt-free logic), `notify-panel-smoke` (headless panel tests).
 - `notifd/`: daemon QML (`shell.qml`, `Popup.qml`, ...), `rules.json` and `rules.schema.json`. `tests/`: Python daemon suites, `tests/qml`, `tests/loc-baseline.txt`.
+- `uq/pages/noti-fi/`: the Notifications page for uQ Settings (`page.toml`, `Page.qml`, `Notice.qml`, `RulesSection.qml`, `logic.js`; contract: `docs/settings-pages.md` in the uQ repo). Tests in `tests/uq/`: `node --test 'tests/uq/*.test.mjs'`, `QT_QPA_PLATFORM=offscreen qmltestrunner -import tests/uq/stub -input tests/uq`, `sh tests/uq/install_test.sh`; CI job `uq` also runs `uqctl integrations check --no-programs uq/` (uQ release pinned in the workflow). The page runs `notify` commands only; keep `page.toml`, `logic.js` and the tests in step, and show no notification text.
 - `docs/protocol.md` documents the control socket. `packaging/`: PKGBUILD, `install.sh`, `build-tarball.sh`, desktop and metainfo files.
 
 ## Conventions

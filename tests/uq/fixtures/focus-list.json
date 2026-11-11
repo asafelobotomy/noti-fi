@@ -1,0 +1,7 @@
+{
+  "active": "work",
+  "modes": {
+    "reading": { "minPriority": "urgent" },
+    "work": { "label": "Work", "minPriority": "high", "allow": [{ "appName": "^calendar$" }] }
+  }
+}

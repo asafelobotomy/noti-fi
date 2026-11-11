@@ -13,6 +13,7 @@ mod lint;
 mod out;
 mod paths;
 mod payload;
+mod settings;
 mod status;
 mod sys;
 mod units;
@@ -65,6 +66,8 @@ fn run(cli: Cli) -> Result<bool> {
         }
         Cmd::Autodnd { action } => integrations::autodnd(&ctx, match action { Toggle::Status => "status", Toggle::Install => "install", Toggle::Remove => "remove" })?,
         Cmd::Tray { action } => integrations::tray(&ctx, match action { TrayAction::Status => "status", TrayAction::Hide => "hide", TrayAction::Show => "show" })?,
+        Cmd::Settings => settings::settings(&ctx)?,
+        Cmd::Set { key, value } => settings::set(&ctx, key, &value)?,
         Cmd::Focus { mode } => controls::focus(&ctx, mode.as_deref())?,
         Cmd::Dnd { mode } => controls::dnd(&ctx, match mode { Mode::On => "on", Mode::Off => "off", Mode::Toggle => "toggle", Mode::Status => "status" })?,
         Cmd::Mute { zone } => controls::mute(&ctx, &zone, true)?,

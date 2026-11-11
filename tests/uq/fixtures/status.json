@@ -1,0 +1,31 @@
+{
+  "owner": { "pid": "1234", "comm": "notify", "unit": "notifd.service" },
+  "notifd_owns": true,
+  "jobs_owner": { "pid": "1240", "comm": "notify", "unit": "notifd-jobs.service" },
+  "daemon": {
+    "dnd": false,
+    "muted": ["business"],
+    "zones": ["business", "personal", "system"],
+    "active": 0,
+    "queued": 0,
+    "perZone": {},
+    "cap": 5,
+    "history": 42,
+    "cfgError": "",
+    "auto": { "fullscreen": false, "share": false },
+    "holding": "",
+    "previewing": false,
+    "focus": "work",
+    "stacks": [],
+    "unread": 3,
+    "unreadPerZone": { "personal": 3 },
+    "center": false,
+    "kept": 0,
+    "inhibitors": [],
+    "sharing": false,
+    "sharingBy": [],
+    "latest": { "id": 17, "t": 1789000000000, "appName": "Chat", "appIcon": "", "summary": "Quarterly numbers are in", "read": false },
+    "screens": { "popups": "", "osd": "", "focused": "" }
+  },
+  "config": { "ok": true, "error": "", "rules": 2, "zones": ["business", "personal", "system"], "screen_found": true }
+}

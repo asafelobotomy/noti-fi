@@ -15,7 +15,7 @@ makedepends=('cargo')
 # makepkg's default `lto`, those objects are GCC LTO bytecode that lld can't read (undefined cxxbridge
 # symbols), so LTO is off.
 options=('!lto')
-optdepends=('qt6-multimedia: audio and video players in popups' 'flatpak: per-app notification permissions for Flatpak apps')
+optdepends=('qt6-multimedia: audio and video players in popups' 'flatpak: per-app notification permissions for Flatpak apps' 'uq: the Notifications page in uQ Settings')
 # The source archive the release workflow uploads (git archive of the tag). The release's `aur` artifact holds this
 # PKGBUILD with its real checksum and a .SRCINFO, ready to push to the AUR; here it stays SKIP between releases.
 source=("$pkgname-$pkgver.tar.gz::$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz")
@@ -37,6 +37,7 @@ package() {
     install -Dm644 packaging/org.notify.Panel.desktop -t "$pkgdir/usr/share/applications"
     install -Dm644 packaging/org.notify.Panel.metainfo.xml -t "$pkgdir/usr/share/metainfo"
     install -Dm644 packaging/org.notify.Panel.svg -t "$pkgdir/usr/share/icons/hicolor/scalable/apps"
+    install -Dm644 -t "$pkgdir/usr/share/uq/settings/pages/noti-fi" uq/pages/noti-fi/*
     install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
     install -Dm644 README.md -t "$pkgdir/usr/share/doc/$pkgname"
 }

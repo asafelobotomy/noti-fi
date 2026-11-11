@@ -1,12 +1,18 @@
 #!/bin/sh
 # Install noti-fi from this archive.
 #   ./install.sh                 into ~/.local  (no root needed)
-#   PREFIX=/usr ./install.sh     system-wide (run it with run0)
+#   PREFIX=/usr ./install.sh     system-wide (run it with run0); also installs the Notifications page for uQ Settings
 #   ./install.sh --uninstall     remove what this script installed
+# DESTDIR=<folder> puts everything under that folder instead of the real root (for packagers and tests).
 set -eu
 
 here=$(cd "$(dirname "$0")" && pwd)
 prefix=${PREFIX:-$HOME/.local}
+base=${DESTDIR:-}$prefix
+# uQ Settings reads pages only from /usr/share/uq/settings/pages (never from a folder a user can write to), so the page is
+# installed for a system-wide install only: under ~/.local it would never be found.
+case "$prefix" in /usr | /usr/) uq_page=1 ;; *) uq_page= ;; esac
+uq_pages_dir=$base/share/uq/settings/pages
 
 if [ "${1:-}" = "--uninstall" ]; then
     # notify restore needs the notify binary: run it first, or notifd and its job bridge would stay installed with no way to remove them
@@ -14,9 +20,9 @@ if [ "${1:-}" = "--uninstall" ]; then
         echo "notifd is still installed: run 'notify restore' first (it removes notifd and the job bridge and hands notifications back to Plasma), then run this again" >&2
         exit 1
     fi
-    rm -f "$prefix/bin/notify" "$prefix/bin/notify-panel" "$prefix/share/applications/org.notify.Panel.desktop" "$prefix/share/metainfo/org.notify.Panel.metainfo.xml" "$prefix/share/icons/hicolor/scalable/apps/org.notify.Panel.svg"
-    rm -rf "$prefix/share/doc/noti-fi"
-    echo "removed noti-fi from $prefix"
+    rm -f "$base/bin/notify" "$base/bin/notify-panel" "$base/share/applications/org.notify.Panel.desktop" "$base/share/metainfo/org.notify.Panel.metainfo.xml" "$base/share/icons/hicolor/scalable/apps/org.notify.Panel.svg"
+    rm -rf "$base/share/doc/noti-fi" "$uq_pages_dir/noti-fi"
+    echo "removed noti-fi from $base"
     exit 0
 fi
 
@@ -32,23 +38,28 @@ qt_ok() {
     [ "$h2" = "$b2" ] && [ "${h3:-0}" -ge "${b3:-0}" ]
 }
 
-install -d "$prefix/bin" "$prefix/share/applications" "$prefix/share/metainfo" "$prefix/share/icons/hicolor/scalable/apps" "$prefix/share/doc/noti-fi"
-install -m 755 "$here/bin/notify" "$prefix/bin/"
+install -d "$base/bin" "$base/share/applications" "$base/share/metainfo" "$base/share/icons/hicolor/scalable/apps" "$base/share/doc/noti-fi"
+install -m 755 "$here/bin/notify" "$base/bin/"
 if qt_ok; then
-    install -m 755 "$here/bin/notify-panel" "$prefix/bin/"
+    install -m 755 "$here/bin/notify-panel" "$base/bin/"
     panel_note=""
 else
     panel_note="notify-panel was NOT installed: it was built for Qt ${built_qt:-?} and this machine has Qt ${host_qt:-?}. Build it for this machine instead: makepkg -si (packaging/PKGBUILD) or cargo build --release -p notify-panel."
 fi
 # the launcher names the program by its full path: a prefix such as ~/.local/bin is not on every launcher's PATH
-sed "s|^Exec=notify-panel|Exec=$prefix/bin/notify-panel|" "$here/share/applications/org.notify.Panel.desktop" > "$prefix/share/applications/org.notify.Panel.desktop"
-chmod 644 "$prefix/share/applications/org.notify.Panel.desktop"
-install -m 644 "$here/share/metainfo/org.notify.Panel.metainfo.xml" "$prefix/share/metainfo/"
-install -m 644 "$here/share/icons/hicolor/scalable/apps/org.notify.Panel.svg" "$prefix/share/icons/hicolor/scalable/apps/"
-gtk-update-icon-cache -q "$prefix/share/icons/hicolor" 2>/dev/null || true
-cp -r "$here/share/doc/noti-fi/." "$prefix/share/doc/noti-fi/"
+sed "s|^Exec=notify-panel|Exec=$prefix/bin/notify-panel|" "$here/share/applications/org.notify.Panel.desktop" > "$base/share/applications/org.notify.Panel.desktop"
+chmod 644 "$base/share/applications/org.notify.Panel.desktop"
+install -m 644 "$here/share/metainfo/org.notify.Panel.metainfo.xml" "$base/share/metainfo/"
+install -m 644 "$here/share/icons/hicolor/scalable/apps/org.notify.Panel.svg" "$base/share/icons/hicolor/scalable/apps/"
+gtk-update-icon-cache -q "$base/share/icons/hicolor" 2>/dev/null || true
+cp -r "$here/share/doc/noti-fi/." "$base/share/doc/noti-fi/"
+if [ -n "$uq_page" ] && [ -d "$here/share/uq/settings/pages/noti-fi" ]; then
+    rm -rf "$uq_pages_dir/noti-fi"
+    install -d "$uq_pages_dir/noti-fi"
+    install -m 644 "$here/share/uq/settings/pages/noti-fi/"* "$uq_pages_dir/noti-fi/"
+fi
 
-echo "installed to $prefix"
+echo "installed to $base"
 [ -z "$panel_note" ] || echo "note: $panel_note"
 case ":$PATH:" in *":$prefix/bin:"*) ;; *) echo "note: $prefix/bin is not on your PATH" ;; esac
 cat <<MSG

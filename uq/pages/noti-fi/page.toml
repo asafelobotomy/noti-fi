@@ -1,0 +1,113 @@
+# noti-fi's page in uQ Settings (Apps > Notifications). Installed to /usr/share/uq/settings/pages/noti-fi/ by the noti-fi package.
+# Reference: docs/settings-pages.md in the uQ repository. Every write is a `notify` command; nothing here runs as root.
+uq_api = 1
+id = "noti-fi"
+name = "Notifications"
+icon = "preferences-desktop-notification"
+qml = "Page.qml"
+keywords = ["notifications", "noti-fi", "do not disturb", "dnd", "focus", "mute", "history"]
+
+[[setting]]
+id = "dnd"
+label = "Do not disturb"
+keywords = ["dnd", "quiet", "silence", "pause notifications", "urgent"]
+
+[[setting]]
+id = "focus"
+label = "Focus mode"
+keywords = ["focus", "important only", "work", "priority"]
+
+[[setting]]
+id = "groups"
+label = "Groups"
+keywords = ["mute", "zones", "silence a group", "quiet group"]
+
+[[setting]]
+id = "auto-dnd"
+label = "Automatic Do not disturb"
+keywords = ["full screen", "fullscreen", "screen share", "screen sharing", "presentation", "automatic"]
+
+[[setting]]
+id = "history"
+label = "History"
+keywords = ["remember", "keep", "clear history", "restart", "urgent", "past notifications"]
+
+[[setting]]
+id = "rules"
+label = "Your rules"
+keywords = ["rules", "per app", "app rules", "open noti-fi"]
+
+[requires]
+bins = ["notify"]
+
+# The state of the daemon: Do not disturb, muted groups, focus mode. `daemon` is null while noti-fi isn't running.
+# Runs again when the daemon saves its state or the rules file changes.
+[[command]]
+id = "status"
+argv = ["/usr/bin/notify", "status", "--json"]
+output = "json"
+timeout_ms = 8000
+watch = { files = ["~/.local/state/notifd/state.json", "~/.config/notifd/rules.json"] }
+
+# What the daemon runs for history, urgent notifications and automatic Do not disturb, plus rule and group names.
+[[command]]
+id = "settings"
+argv = ["/usr/bin/notify", "settings", "--json"]
+output = "json"
+timeout_ms = 8000
+watch = { files = ["~/.config/notifd/rules.json"] }
+
+# The focus modes, with their labels.
+[[command]]
+id = "focus-modes"
+argv = ["/usr/bin/notify", "focus", "list", "--json"]
+output = "json"
+timeout_ms = 8000
+watch = { files = ["~/.config/notifd/rules.json"] }
+
+# Each of these answers with the new state as one document.
+[[command]]
+id = "dnd"
+argv = ["/usr/bin/notify", "--json", "dnd"]
+output = "json"
+timeout_ms = 8000
+args = [{ name = "mode", pattern = "^(on|off)$" }]
+
+[[command]]
+id = "focus"
+argv = ["/usr/bin/notify", "--json", "focus"]
+output = "json"
+timeout_ms = 8000
+args = [{ name = "mode", pattern = "^(off|[A-Za-z0-9_][A-Za-z0-9_-]{0,39})$" }]
+
+[[command]]
+id = "mute"
+argv = ["/usr/bin/notify", "--json", "mute"]
+output = "json"
+timeout_ms = 8000
+args = [{ name = "zone", pattern = "^[A-Za-z0-9_][A-Za-z0-9_-]{0,39}$" }]
+
+[[command]]
+id = "unmute"
+argv = ["/usr/bin/notify", "--json", "unmute"]
+output = "json"
+timeout_ms = 8000
+args = [{ name = "zone", pattern = "^[A-Za-z0-9_][A-Za-z0-9_-]{0,39}$" }]
+
+# One setting in the rules file; the daemon checks it first (see logic.js for which values go with which key).
+[[command]]
+id = "set"
+argv = ["/usr/bin/notify", "set"]
+output = "text"
+timeout_ms = 8000
+args = [
+  { name = "key", pattern = "^(history\\.limit|history\\.persist|dnd\\.allowCritical|autoDnd\\.fullscreen|autoDnd\\.screenShare)$" },
+  { name = "value", pattern = "^(on|off|50|100|200|500|1000)$" },
+]
+
+[[command]]
+id = "history-clear"
+argv = ["/usr/bin/notify", "history", "--clear"]
+output = "text"
+timeout_ms = 8000
+confirm = "Clear the notification history? This can't be undone."
