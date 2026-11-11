@@ -1,0 +1,10 @@
+{
+  "dnd": { "allowCritical": true },
+  "history": { "limit": 200, "persist": false },
+  "autoDnd": { "fullscreen": true, "screenShare": true },
+  "zones": [
+    { "id": "personal", "label": "Personal" },
+    { "id": "work", "label": "work" }
+  ],
+  "rules": [{ "name": "Quiet chat" }, { "name": "Rule 2" }]
+}

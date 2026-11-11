@@ -1,0 +1,8 @@
+Answers of the `notify` commands the page runs, as `--json` prints them (noti-fi 0.18):
+
+  status.json              `notify status --json` with noti-fi running (a StatusReport: the state is under `daemon`)
+  status-not-running.json  the same while noti-fi isn't running (`daemon` is null; the exit code is 0)
+  settings.json            `notify settings --json` (crates/notify-cli/tests/settings.rs checks it against the real command)
+  focus-list.json          `notify focus list --json`
+
+status.json's `latest.summary` is notification text; the page must never show it.

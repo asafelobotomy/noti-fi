@@ -121,6 +121,9 @@ impl Drop for Fixture {
 fn settings_reports_the_effective_values_and_rule_names_only() {
     let f = fixture("report", START);
     let j = f.settings();
+    // the uQ page's fixture is this command's output (tests/uq/fixtures/settings.json)
+    let fixture: Value = serde_json::from_str(&std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/uq/fixtures/settings.json")).unwrap()).unwrap();
+    assert_eq!(j, fixture, "tests/uq/fixtures/settings.json is out of date");
     assert_eq!(j["dnd"]["allowCritical"], true);
     assert_eq!(j["history"], json!({"limit": 200, "persist": false}));
     assert_eq!(j["autoDnd"], json!({"fullscreen": true, "screenShare": true}));
@@ -240,4 +243,19 @@ fn without_a_daemon_both_commands_fail_and_nothing_is_written() {
         assert!(format!("{out}{err}").contains("not running"), "{args:?}: {out}{err}");
     }
     assert_eq!(std::fs::read_to_string(&f.rules).unwrap(), before);
+}
+
+/// The page's other fixtures parse as the protocol types the real commands print.
+#[test]
+fn the_uq_page_fixtures_have_the_protocols_shapes() {
+    let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/uq/fixtures/");
+    let read = |name: &str| -> Value { serde_json::from_str(&std::fs::read_to_string(format!("{dir}{name}")).unwrap()).unwrap() };
+    let running = read("status.json");
+    let status: notify_protocol::Status = serde_json::from_value(running["daemon"].clone()).expect("status.json: daemon is a Status");
+    assert_eq!(serde_json::to_value(&status).unwrap(), running["daemon"], "no field is missing or invented");
+    let stopped = read("status-not-running.json");
+    assert!(stopped["daemon"].is_null() && stopped.as_object().unwrap().keys().eq(running.as_object().unwrap().keys()));
+    let focus = read("focus-list.json");
+    let modes: std::collections::BTreeMap<String, notify_protocol::FocusMode> = serde_json::from_value(focus["modes"].clone()).expect("focus-list.json: modes");
+    assert_eq!(modes.len(), 2);
 }
