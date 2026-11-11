@@ -977,6 +977,7 @@ dependencies = [
  "notify-bus",
  "notify-client",
  "notify-jobs",
+ "notify-panel-core",
  "notify-protocol",
  "notify-testkit",
  "notify-update",

@@ -108,7 +108,7 @@ predates it, `notify update` adds it and it takes over at the next login (`notif
 
 ### Machine-readable output
 
-Every command accepts `--json`. Read commands print one JSON document (`status`, `doctor`, `apps`, `rules`, `simulate`,
+Every command accepts `--json`. Read commands print one JSON document (`status`, `settings`, `doctor`, `apps`, `rules`, `simulate`,
 `history`, ...). Commands that change things stream **progress events**, one JSON object per line:
 
 ```
@@ -156,7 +156,14 @@ notify dnd toggle        notify mute business     notify history --missed
 notify send "Hi" -a Steam                         notify test
 Meta+Shift+N             (after: notify hotkey)   toggles Do Not Disturb
 Meta+N                   (after: notify hotkey --center)   opens the notification list (or: notify center)
+notify settings          what the daemon runs: history, urgent-through-DND, automatic DND, your rule and zone names
+notify set history.limit 500                      (also: history.persist, dnd.allowCritical, autoDnd.fullscreen,
+                                                  autoDnd.screenShare, each on|off; history.limit 50|100|200|500|1000)
 ```
+
+`notify set` changes one setting in `rules.json` the way the panel does: the running daemon checks the result first, and
+nothing is written if it refuses, if the file already has an error, or if someone edited it meanwhile. It needs notifd
+running. Anything else (zones, rules, themes) stays in the panel or in the file.
 
 ## Safety properties (all covered by `notify selftest`)
 

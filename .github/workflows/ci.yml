@@ -36,7 +36,7 @@ jobs:
       - name: Unit tests and the project's own rules (line limit, version agreement)
         run: |
           cargo test --locked -p notify-protocol -p notify-apps -p notify-panel-core -p notify-jobs -p notify-update -p notify-bus --lib
-          cargo test --locked -p notify-cli --test loc --test version --test qml --test lifecycle
+          cargo test --locked -p notify-cli --test loc --test version --test qml --test lifecycle --test settings
       - name: Job bridge on a private D-Bus
         run: cargo test --locked -p notify-jobs --test bridge
       - name: Daemon, sound, CLI, client and panel tests (headless Wayland)

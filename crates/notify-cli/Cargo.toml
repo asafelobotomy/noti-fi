@@ -16,6 +16,7 @@ notify-protocol = { path = "../notify-protocol" }
 notify-update = { path = "../notify-update" }
 notify-jobs = { path = "../notify-jobs" }
 notify-bus = { path = "../notify-bus" }
+notify-panel-core = { path = "../notify-panel-core" }   # rules.json editing and the safe save, shared with the panel (`notify set`)
 serde.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true

@@ -67,6 +67,21 @@ pub(crate) enum CenterAction {
     Close,
 }
 
+/// The settings `notify set` can change (a fixed list: the ones a desktop's settings page offers).
+#[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub(crate) enum SettingKey {
+    #[value(name = "history.limit")]
+    HistoryLimit,
+    #[value(name = "history.persist")]
+    HistoryPersist,
+    #[value(name = "dnd.allowCritical")]
+    DndAllowCritical,
+    #[value(name = "autoDnd.fullscreen")]
+    AutoDndFullscreen,
+    #[value(name = "autoDnd.screenShare")]
+    AutoDndScreenShare,
+}
+
 #[derive(Subcommand)]
 pub(crate) enum Cmd {
     /// Who owns notifications, daemon state
@@ -205,6 +220,16 @@ pub(crate) enum Cmd {
         /// Show whether the icon is hidden, hide it, or show it again
         #[arg(value_enum, default_value = "status")]
         action: TrayAction,
+    },
+    /// The settings `notify set` changes, as the daemon runs them now, plus the names of your rules and zones
+    Settings,
+    /// Change one setting in rules.json (the daemon checks it first; nothing is written if it refuses): history.limit 50|100|200|500|1000, history.persist, dnd.allowCritical, autoDnd.fullscreen, autoDnd.screenShare on|off
+    Set {
+        /// Which setting
+        #[arg(value_enum)]
+        key: SettingKey,
+        /// 50, 100, 200, 500 or 1000 for history.limit; on or off for the others
+        value: String,
     },
     /// Do Not Disturb: on, off, toggle or status
     Dnd {
