@@ -102,7 +102,16 @@ pub fn owner_of(name: &str) -> Option<Owner> {
 
 /// notifd holds the notification name: Quickshell itself (older installs, `notify dev`), or `notify serve` in front of it.
 pub fn notifd_owns() -> bool {
-    owner().map(|o| o.comm == "qs" || o.comm == "quickshell" || o.comm == "notify").unwrap_or(false)
+    owner().map(|o| is_notifd(&o)).unwrap_or(false)
+}
+
+/// Units whose Quickshell is a desktop shell with its own notification server, not notifd (uQ's `uq-shell`).
+const OTHER_QUICKSHELL_UNITS: &[&str] = &["uq-shell.service"];
+
+/// Whether this owner is notifd: `notify serve`, or a Quickshell that is not another shell's (uQ's shell is a
+/// Quickshell too, and holds the name with its built-in server until it sees notifd).
+pub fn is_notifd(o: &Owner) -> bool {
+    o.comm == "notify" || ((o.comm == "qs" || o.comm == "quickshell") && !OTHER_QUICKSHELL_UNITS.contains(&o.unit.as_str()))
 }
 
 pub fn sleep_ms(ms: u64) {
@@ -123,4 +132,28 @@ pub fn private_dir(prefix: &str) -> Result<std::path::PathBuf> {
     let dir = base.join(format!("{prefix}-{}-{nanos}", std::process::id()));
     fs::DirBuilder::new().mode(0o700).create(&dir).with_context(|| format!("creating {}", dir.display()))?;
     Ok(dir)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn o(comm: &str, unit: &str) -> Owner {
+        Owner { pid: "1".into(), comm: comm.into(), unit: unit.into() }
+    }
+
+    #[test]
+    fn notifd_is_notify_serve_or_its_quickshell() {
+        assert!(is_notifd(&o("notify", "notifd.service")));
+        assert!(is_notifd(&o("qs", "notifd.service")));
+        assert!(is_notifd(&o("quickshell", ""))); // `notify dev`, older installs
+    }
+
+    #[test]
+    fn uq_shell_is_not_notifd() {
+        assert!(!is_notifd(&o("qs", "uq-shell.service")));
+        assert!(!is_notifd(&o("quickshell", "uq-shell.service")));
+        assert!(!is_notifd(&o("plasmashell", "plasma-plasmashell.service")));
+        assert!(!is_notifd(&o("mako", "")));
+    }
 }

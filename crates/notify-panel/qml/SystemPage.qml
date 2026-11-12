@@ -18,9 +18,15 @@ Kirigami.ScrollablePage {
     readonly property var checks: sys.checks ?? []
     readonly property string busy: sys.busy ?? ""
     property string planned: ""            // the action whose plan is on screen; its Apply button is enabled
+    // Outside Plasma (Hyprland, uQ) takeover installs a plain user service and restore hands notifications back to the desktop's own server.
+    readonly property bool plasma: sys.plasma === true
     readonly property var actions: [
-        { id: "takeover", label: "Make notifd the notification owner", apply: "Take over now", warn: "This restarts the Plasma shell briefly. Notifications are handed back with Restore." },
-        { id: "restore", label: "Hand notifications back to Plasma", apply: "Restore", warn: "Plasma shows notifications again; notifd keeps its files." },
+        { id: "takeover", label: "Make notifd the notification owner", apply: "Take over now",
+          warn: plasma ? "This restarts the Plasma shell briefly. Notifications are handed back with Restore."
+                       : "notifd starts as a user service and takes over from the desktop's own notifications (uQ hands them over within a few seconds). Notifications are handed back with Restore." },
+        { id: "restore", label: plasma ? "Hand notifications back to Plasma" : "Hand notifications back to the desktop", apply: "Restore",
+          warn: plasma ? "Plasma shows notifications again; notifd keeps its files."
+                       : "The desktop's own notifications come back (uQ's, or whatever daemon you run); notifd keeps its files." },
         { id: "adapt", label: "Make Brave deliver notifications", apply: "Apply to Brave", warn: "Brave must be closed. The original settings are backed up first." },
         { id: "update", label: "Install changed daemon files", apply: "Update daemon", warn: "The new files are smoke-tested on a private bus first and rolled back if the daemon will not start." },
         { id: "hotkey", label: "Open the notification list with Meta+N", apply: "Set shortcut", warn: "Registers Meta+N with KDE's shortcut service. Change or remove it in System Settings -> Shortcuts." }
