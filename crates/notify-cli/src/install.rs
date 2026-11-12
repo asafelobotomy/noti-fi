@@ -19,7 +19,7 @@ use crate::lint;
 use crate::out::{Out, Step, run_plan, slot};
 use crate::paths::{Paths, paths};
 use crate::payload::{self, Payload};
-use crate::sys::{atomic_write, notifd_owns, owner, owner_of, sh, sh_timeout, sleep_ms, which};
+use crate::sys::{atomic_write, is_notifd, notifd_owns, owner, owner_of, sh, sh_timeout, sleep_ms, which};
 
 pub const PORTAL_MARK: &str = "# managed by notify: routes portal notifications through notifd";
 
@@ -327,12 +327,13 @@ pub fn takeover(ctx: &Ctx, now: bool, dry: bool, no_portal: bool, no_autodnd: bo
     if now && plain {
         let c2 = ctx.clone();
         steps.push(Step::new("NOW: start notifd and the job bridge; auto-rollback if notifd is not the owner (stop mako, dunst or swaync first)", move || {
-            if let Some(o) = owner().filter(|o| o.comm != "notify" && o.comm != "qs") {
-                c2.out.text(&format!("  ! {} (pid {}) owns notifications; notifd waits behind it until it stops", o.comm, o.pid));
+            let other = owner().filter(|o| !is_notifd(o));
+            if let Some(o) = &other {
+                c2.out.text(&format!("  ! {}", handover_note(o)));
             }
             let rc = systemctl(&c2, &["start", "notifd.service"]);
             systemctl(&c2, &["start", "notifd-jobs.service"]);
-            if !c2.no_systemctl && (rc != 0 || !healthy(None, Duration::from_secs(10))) {
+            if !c2.no_systemctl && (rc != 0 || !healthy(None, plain_start_timeout(other.as_ref()))) {
                 c2.out.text("  ! takeover did not take effect; rolling back");
                 do_restore(&c2)?;
                 bail!("notifd did not become the notification owner and the install was rolled back (is another notification daemon running?)");
@@ -367,4 +368,6 @@ pub fn takeover(ctx: &Ctx, now: bool, dry: bool, no_portal: bool, no_autodnd: bo
 mod update;
 pub use update::update;
 mod restore;
+mod handover;
+use handover::{handover_note, plain_start_timeout};
 pub use restore::{do_restore, restore};
