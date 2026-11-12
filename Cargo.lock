@@ -949,7 +949,7 @@ dependencies = [
 
 [[package]]
 name = "notify-apps"
-version = "0.18.1"
+version = "0.19.0"
 dependencies = [
  "notify-protocol",
  "serde",
@@ -958,7 +958,7 @@ dependencies = [
 
 [[package]]
 name = "notify-bus"
-version = "0.18.1"
+version = "0.19.0"
 dependencies = [
  "anyhow",
  "notify-client",
@@ -969,7 +969,7 @@ dependencies = [
 
 [[package]]
 name = "notify-cli"
-version = "0.18.1"
+version = "0.19.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -990,7 +990,7 @@ dependencies = [
 
 [[package]]
 name = "notify-client"
-version = "0.18.1"
+version = "0.19.0"
 dependencies = [
  "notify-protocol",
  "notify-testkit",
@@ -1001,7 +1001,7 @@ dependencies = [
 
 [[package]]
 name = "notify-jobs"
-version = "0.18.1"
+version = "0.19.0"
 dependencies = [
  "anyhow",
  "notify-apps",
@@ -1011,7 +1011,7 @@ dependencies = [
 
 [[package]]
 name = "notify-panel"
-version = "0.18.1"
+version = "0.19.0"
 dependencies = [
  "cxx",
  "cxx-qt",
@@ -1027,7 +1027,7 @@ dependencies = [
 
 [[package]]
 name = "notify-panel-core"
-version = "0.18.1"
+version = "0.19.0"
 dependencies = [
  "ksni",
  "notify-apps",
@@ -1040,7 +1040,7 @@ dependencies = [
 
 [[package]]
 name = "notify-panel-smoke"
-version = "0.18.1"
+version = "0.19.0"
 dependencies = [
  "notify-client",
  "notify-protocol",
@@ -1050,7 +1050,7 @@ dependencies = [
 
 [[package]]
 name = "notify-protocol"
-version = "0.18.1"
+version = "0.19.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -1058,7 +1058,7 @@ dependencies = [
 
 [[package]]
 name = "notify-testkit"
-version = "0.18.1"
+version = "0.19.0"
 dependencies = [
  "notify-client",
  "notify-protocol",
@@ -1067,7 +1067,7 @@ dependencies = [
 
 [[package]]
 name = "notify-update"
-version = "0.18.1"
+version = "0.19.0"
 dependencies = [
  "serde_json",
  "sha2",
