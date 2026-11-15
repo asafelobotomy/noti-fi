@@ -3,6 +3,11 @@ updates:
   - package-ecosystem: cargo
     directory: /
     schedule: {interval: weekly}
+    groups:
+      # cxx's runtime and its generators (cxx-gen via cxx-qt-build, cxxbridge-*) must stay on the
+      # same version, or the bridge symbols (cxxbridge1$<ver>$...) fail to link
+      cxx:
+        patterns: ["cxx", "cxx-*", "cxxbridge-*"]
   - package-ecosystem: github-actions
     directory: /
     schedule: {interval: weekly}
