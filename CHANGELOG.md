@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Fixed: `notify takeover --now` on uQ rolled back.** uQ's shell is a Quickshell, so the check counted it as notifd and printed no warning; and when uQ held the notification name, the takeover waited only 10 s for uQ to hand it over. notifd is now told apart from uQ by its systemd unit, and when another program holds the name the takeover says who and waits up to 45 s (uQ from 0.3.0-rc.3 hands over within about 3 s; rc.2 can take 30 s).
+- **Fixed: the System page talked about Plasma on Hyprland.** Outside Plasma, Restore reads "Hand notifications back to the desktop", and Take over no longer warns that the Plasma shell restarts.
+
 ## 0.19.0
 
 - **`notify settings` and `notify set`:** `notify settings --json` prints what the daemon runs for history, urgent-through-Do-Not-Disturb and automatic Do Not Disturb, plus the names of your rules and the zones' labels (no notification text). `notify set <key> <value>` changes one of `history.limit` (50, 100, 200, 500, 1000), `history.persist`, `dnd.allowCritical`, `autoDnd.fullscreen` and `autoDnd.screenShare` (on or off). It edits `rules.json` through the panel's own draft and atomic save, after the running daemon has validated the result: a refusal, an error already in the file or a hand edit in the meantime leaves it untouched. A desktop's settings page can use both without the panel. `notify-cli` now depends on `notify-panel-core` (no new crates).

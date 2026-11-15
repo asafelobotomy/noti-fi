@@ -172,12 +172,12 @@ Item {
         const y = target.mapToItem(column, 0, 0).y;
         flick.contentY = Math.max(0, Math.min(y - 8, flick.contentHeight - flick.height));
     }
-
-    onHighlightChanged: Qt.callLater(() => page.scrollTo(page.highlight))
+    property bool following: false // keep scrolling to the highlight while sections lay out, until the user scrolls
+    onHighlightChanged: { page.following = true; Qt.callLater(() => page.scrollTo(page.highlight)); }
     Component.onDestruction: page.alive = false
     Component.onCompleted: {
         if (page.highlight !== "")
-            Qt.callLater(() => page.scrollTo(page.highlight));
+            { page.following = true; Qt.callLater(() => page.scrollTo(page.highlight)); }
     }
 
     Flickable {
@@ -186,6 +186,8 @@ Item {
         contentWidth: width
         contentHeight: column.implicitHeight + 32
         clip: true
+        onContentHeightChanged: if (page.following) Qt.callLater(() => page.scrollTo(page.highlight))
+        onMovementStarted: page.following = false
         QQC2.ScrollBar.vertical: QQC2.ScrollBar {}
 
         ColumnLayout {

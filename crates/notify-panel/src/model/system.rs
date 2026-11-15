@@ -28,6 +28,12 @@ fn args_for(action: &str, apply: bool) -> Option<Vec<&'static str>> {
     })
 }
 
+/// Whether this session is KDE Plasma (the same test as `notify takeover`). Elsewhere (Hyprland, uQ) takeover is a plain
+/// user service and restore hands notifications to whatever the desktop runs, so the page must not mention Plasma.
+fn is_plasma(current_desktop: &str) -> bool {
+    current_desktop.split(':').any(|x| x.eq_ignore_ascii_case("KDE"))
+}
+
 fn run(args: &[&str]) -> (bool, String) {
     match std::process::Command::new(notify_binary()).args(args).output() {
         Ok(o) => {
@@ -47,7 +53,8 @@ impl qobject::PanelModel {
 
     /// Run the health checks in the background.
     pub fn system_doctor(mut self: Pin<&mut Self>) {
-        self.as_mut().system_state(|v| v["busy"] = json!("doctor"));
+        let plasma = is_plasma(&std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default());
+        self.as_mut().system_state(|v| { v["busy"] = json!("doctor"); v["plasma"] = json!(plasma); });
         let qt = self.qt_thread();
         std::thread::spawn(move || {
             let (_, text) = run(&["--json", "doctor"]);
@@ -84,5 +91,20 @@ impl qobject::PanelModel {
                 if apply { m.system_doctor(); }
             });
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_plasma;
+
+    #[test]
+    fn plasma_only_when_the_desktop_says_kde() {
+        assert!(is_plasma("KDE"));
+        assert!(is_plasma("kde"));
+        assert!(is_plasma("Hyprland:KDE"));
+        assert!(!is_plasma("Hyprland"));
+        assert!(!is_plasma("uQ:Hyprland"));
+        assert!(!is_plasma(""));
     }
 }

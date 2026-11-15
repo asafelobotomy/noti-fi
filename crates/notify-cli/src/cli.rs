@@ -163,7 +163,7 @@ pub(crate) enum Cmd {
     },
     /// Install changed daemon files; smoke-tests first and rolls back if notifd will not start
     Update,
-    /// Hand notifications back to Plasma
+    /// Hand notifications back to Plasma (or, outside Plasma, to the desktop's own server)
     Restore {
         /// Show what would change without changing it
         #[arg(long)]
