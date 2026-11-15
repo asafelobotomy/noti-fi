@@ -15,7 +15,9 @@ concurrency:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    container: archlinux:latest        # Manjaro/Arch is the target; Qt 6 and cxx-qt build against its libraries
+    container:                         # Manjaro/Arch is the target; Qt 6 and cxx-qt build against its libraries
+      image: archlinux:latest
+      options: --cap-add=SYS_NICE        # labwc ships with file capability cap_sys_nice (since 0.20.3-2); without it exec fails
     steps:
       - name: Install build tools and Qt
         run: |

@@ -16,7 +16,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: archlinux:latest
+    container:
+      image: archlinux:latest
+      options: --cap-add=SYS_NICE        # labwc ships with file capability cap_sys_nice (since 0.20.3-2); without it exec fails
     outputs:
       version: ${{ steps.v.outputs.version }}
     steps:
