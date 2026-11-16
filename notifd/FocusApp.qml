@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import Quickshell.Io
 
 // Brings an app's window forward after one of its notification actions ran (View, Open, Activate ...). The app asks the
@@ -9,9 +10,8 @@ import Quickshell.Io
 //    StartupWMClass and the command it runs (read from the file), so an app whose class differs from its name still matches.
 //  - The focus is sent as the Lua dispatcher (`hl.dsp.focus`) that a Lua config (uQ's hyprland.lua) understands; the older
 //    `focuswindow` dispatcher is tried when that is refused.
-Item {
+Scope {
     id: focus
-    visible: false
     property var names: []          // the lowercased candidates of the request being served
 
     function norm(list) {

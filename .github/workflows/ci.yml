@@ -82,3 +82,30 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2
+
+  hyprland-focus:
+    # A notification's View button brings the app's window forward, on a real headless Hyprland (tests/hyprland/focus.py).
+    # Hyprland cannot start without a DRM device, so this runs on the runner VM: it loads vkms (a virtual KMS card,
+    # rendered in software) and runs the test in an Arch container given only that card (as uQ's smoke job does).
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Load vkms
+        run: |
+          sudo modprobe vkms 2>/dev/null || {
+            sudo apt-get update -q && sudo apt-get install -y -q "linux-modules-extra-$(uname -r)" && sudo modprobe vkms
+          }
+          card=""
+          for c in /sys/class/drm/card*; do
+            case "${c##*/}" in *-*) continue ;; esac
+            [ "$(basename "$(readlink -f "$c/device")")" = vkms ] && card=/dev/dri/${c##*/}
+          done
+          [ -n "$card" ] || { echo "::error::vkms loaded but no vkms card found"; exit 1; }
+          echo "SMOKE_CARD=$card" >> "$GITHUB_ENV"
+      - name: Notification button focuses the app's window
+        run: |
+          docker run --rm --device "$SMOKE_CARD" -e SMOKE_CARD -e SMOKE_UID="$(id -u)" \
+            -v "$GITHUB_WORKSPACE:/src" archlinux:latest bash /src/tests/hyprland/focus-in-container.sh

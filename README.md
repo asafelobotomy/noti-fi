@@ -65,6 +65,7 @@ The `release` workflow builds on Arch, packages the archive with `packaging/buil
 | `notifd/rules.json`, `rules.schema.json` | default config and its JSON Schema |
 | `tests/test_notifd.py` | daemon regression suite on a private bus; runs `test_rules.py`, `test_features.py`, `test_inputs.py`, `test_desktop.py` (what desktop shells use: socket state, OSD, design tokens) and `test_socket.py` (socket stress tests); `test_sound.py` separately |
 | `tests/hyprland/run.sh` | notifd on a real Hyprland, nested in a podman container (`/dev/dri` needed); not run in CI |
+| `tests/hyprland/focus.py` | a popup/list button brings the app's window forward, on a headless Hyprland on vkms; CI job `hyprland-focus` runs it through `focus-in-container.sh` |
 | `tests/qml` | QML unit tests (`cargo test -p notify-cli --test qml`) |
 | `uq/pages/noti-fi` | the Notifications page for uQ Settings (a manifest, `Page.qml`, `logic.js`); installed to `/usr/share/uq/settings/pages/noti-fi/` by the package |
 | `tests/uq` | its tests: Node (`node --test 'tests/uq/*.test.mjs'`), QML (`qmltestrunner -import tests/uq/stub -input tests/uq`) and the packaging check (`sh tests/uq/install_test.sh`) |

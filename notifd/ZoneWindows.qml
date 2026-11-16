@@ -12,7 +12,6 @@ Variants {
     PanelWindow {
         id: win
         required property string modelData
-        FocusApp { id: focusApp }      // here, not in a popup: a button also dismisses its popup, which would cut the lookup short
         readonly property var zone: root.cfg.zones[modelData]
         readonly property bool free: zone.anchor === "free"
         readonly property real fx: free ? Math.min(1, Math.max(0, Number(zone.x))) : 0
@@ -244,7 +243,7 @@ Variants {
                         stackExpanded: slot.expanded
                         onStackToggled: root.layout.toggleStack(slot.zone, slot.stackKey)
                         onDismissed: { const n = root.byId[slot.nid]; if (n && !slot.leaving) n.dismiss() }
-                        onActionRan: focusApp.raise(root.byId[slot.nid])
+                        onActionRan: root.focusApp.raise(root.byId[slot.nid])
                         onExpired:   { if (!slot.leaving) root.timedOut(slot.nid) }
                         onPinToggled: root.layout.setPinned(slot.nid, !slot.pinned)
                         onResized: w => root.layout.setUserWidth(slot.nid, w)

@@ -223,6 +223,7 @@ Scope {
         if (!a) fail("bad_params", "that notification has no button '" + key + "'")
         markRead([nid])
         a.invoke()
+        s.focusApp.raise(n)
         return status()
     }
     function dismissAll() {
