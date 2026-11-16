@@ -34,6 +34,7 @@ Rectangle {
     property bool stackExpanded: false
 
     signal dismissed()
+    signal actionRan()      // one of the buttons ran: the daemon may bring the app's window forward
     signal expired()
     signal pinToggled()
     signal stackToggled()

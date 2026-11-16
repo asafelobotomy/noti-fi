@@ -13,6 +13,7 @@ ShellRoot {
     readonly property Tokens tokens: Tokens { shell: root }        // a desktop's design tokens under the theme (uQ's tokens.json)
     function reapply() { if (rawConfig !== "") config.apply(rawConfig) }
     readonly property Preview preview: Preview { shell: root }     // real sample popups from a draft config
+    readonly property FocusApp focusApp: FocusApp {}               // brings an app's window forward after one of its buttons ran (held here: a button also dismisses its popup)
     readonly property Api api: Api { shell: root }                 // the control API and `qs ipc call notifd ...`
     readonly property Control control: Control { shell: root }     // the control socket and its events
     readonly property Sound sound: Sound { shell: root }

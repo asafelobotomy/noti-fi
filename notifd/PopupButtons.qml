@@ -20,7 +20,7 @@ Flow {
             HoverHandler { id: btn }
             TapHandler {
                 enabled: row.popup.active
-                onTapped: { btnRect.modelData.invoke(); if (!row.popup.resident) row.popup.dismissed() }
+                onTapped: { btnRect.modelData.invoke(); row.popup.actionRan(); if (!row.popup.resident) row.popup.dismissed() }
             }
             Text {
                 id: btnLabel

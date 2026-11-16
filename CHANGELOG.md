@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Fixed: a popup's View or Open button didn't bring the app's window forward on Hyprland.** The app's own request to be raised carries no activation token (notifd has none to pass on), so Hyprland ignored it. After a button runs, notifd now finds the app's window and focuses it. It matches the window class against the notification's desktop entry, app name and icon, and against the desktop file's `StartupWMClass` and command, so apps whose class differs from their name are found. The focus goes out as the Lua dispatcher (`hl.dsp.focus`, as uQ's own config needs), with the older `focuswindow` as a fallback.
 - **Fixed: `notify takeover --now` on uQ rolled back.** uQ's shell is a Quickshell, so the check counted it as notifd and printed no warning; and when uQ held the notification name, the takeover waited only 10 s for uQ to hand it over. notifd is now told apart from uQ by its systemd unit, and when another program holds the name the takeover says who and waits up to 45 s (uQ from 0.3.0-rc.3 hands over within about 3 s; rc.2 can take 30 s).
 - **Fixed: the System page talked about Plasma on Hyprland.** Outside Plasma, Restore reads "Hand notifications back to the desktop", and Take over no longer warns that the Plasma shell restarts.
 
