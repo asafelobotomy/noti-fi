@@ -2,6 +2,7 @@
 
 mod apps;
 mod cli;
+mod config;
 mod controls;
 mod ctx;
 mod daemon;
@@ -57,7 +58,7 @@ fn run(cli: Cli) -> Result<bool> {
         Cmd::Preview { config, seconds, end } => controls::preview(&ctx, config, seconds, end)?,
         Cmd::Takeover { dry_run, now, no_portal, no_autodnd, plain } => install::takeover(&ctx, now, dry_run, no_portal, no_autodnd, plain)?,
         Cmd::Update => install::update(&ctx)?,
-        Cmd::Upgrade { apply } => upgrade::upgrade(&ctx, apply)?,
+        Cmd::Upgrade { apply, plan } => upgrade::upgrade(&ctx, apply, plan)?,
         Cmd::Restore { dry_run, purge, auto } => install::restore(&ctx, dry_run, purge, auto)?,
         Cmd::Portal { remove, dry_run } => install::portal(&ctx, remove, dry_run)?,
         Cmd::Adapt { apply, background, autostart } => integrations::adapt(&ctx, integrations::AdaptArgs { apply, background, autostart })?,
@@ -67,12 +68,13 @@ fn run(cli: Cli) -> Result<bool> {
         Cmd::Autodnd { action } => integrations::autodnd(&ctx, match action { Toggle::Status => "status", Toggle::Install => "install", Toggle::Remove => "remove" })?,
         Cmd::Tray { action } => integrations::tray(&ctx, match action { TrayAction::Status => "status", TrayAction::Hide => "hide", TrayAction::Show => "show" })?,
         Cmd::Settings => settings::settings(&ctx)?,
+        Cmd::Config { action } => config::run(&ctx, action)?,
         Cmd::Set { key, value } => settings::set(&ctx, key, &value)?,
         Cmd::Focus { mode } => controls::focus(&ctx, mode.as_deref())?,
         Cmd::Dnd { mode } => controls::dnd(&ctx, match mode { Mode::On => "on", Mode::Off => "off", Mode::Toggle => "toggle", Mode::Status => "status" })?,
         Cmd::Mute { zone } => controls::mute(&ctx, &zone, true)?,
         Cmd::Unmute { zone } => controls::mute(&ctx, &zone, false)?,
-        Cmd::History { n, zone, app, missed, full, clear } => controls::history(&ctx, controls::HistoryArgs { n, zone, app, missed, full, clear })?,
+        Cmd::History { n, zone, app, missed, full, no_text, clear, dry_run } => controls::history(&ctx, controls::HistoryArgs { n, zone, app, missed, full, no_text, clear, dry_run })?,
         Cmd::Center { action } => controls::center(&ctx, match action { CenterAction::Toggle => "toggle", CenterAction::Open => "open", CenterAction::Close => "close" })?,
         Cmd::Dismiss => controls::dismiss(&ctx)?,
         Cmd::Reply { id, text } => controls::reply(&ctx, id, &text)?,

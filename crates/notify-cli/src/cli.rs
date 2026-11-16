@@ -83,6 +83,30 @@ pub(crate) enum SettingKey {
 }
 
 #[derive(Subcommand)]
+pub(crate) enum ConfigCmd {
+    /// Every setting with its type, default and current value (reads rules.json; the daemon need not run)
+    Show,
+    /// Change one setting; the daemon checks the result first and nothing is written if it refuses. An empty value resets it
+    Set {
+        /// The setting, as `notify config show` lists it (history.limit, theme.card, ...)
+        key: String,
+        /// on|off for switches, a number, a #colour, or text
+        value: String,
+        /// Only say what would change (with --json: one plan document)
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Put one setting back to the daemon's default (removes it from rules.json)
+    Reset {
+        /// The setting
+        key: String,
+        /// Only say what would change
+        #[arg(long)]
+        dry_run: bool,
+    },
+}
+
+#[derive(Subcommand)]
 pub(crate) enum Cmd {
     /// Who owns notifications, daemon state
     Status,
@@ -160,6 +184,9 @@ pub(crate) enum Cmd {
         /// Actually install it (without this, only report what is available)
         #[arg(long)]
         apply: bool,
+        /// Print what --apply would do as one plan document (for settings pages); changes nothing
+        #[arg(long, conflicts_with = "apply")]
+        plan: bool,
     },
     /// Install changed daemon files; smoke-tests first and rolls back if notifd will not start
     Update,
@@ -223,6 +250,11 @@ pub(crate) enum Cmd {
     },
     /// The settings `notify set` changes, as the daemon runs them now, plus the names of your rules and zones
     Settings,
+    /// Every setting in rules.json that the panel edits (timeouts, sizes, theme, sound...): show, set or reset one
+    Config {
+        #[command(subcommand)]
+        action: Option<ConfigCmd>,
+    },
     /// Change one setting in rules.json (the daemon checks it first; nothing is written if it refuses): history.limit 50|100|200|500|1000, history.persist, dnd.allowCritical, autoDnd.fullscreen, autoDnd.screenShare on|off
     Set {
         /// Which setting
@@ -269,9 +301,15 @@ pub(crate) enum Cmd {
         /// Include message text
         #[arg(long)]
         full: bool,
+        /// Leave out every notification's title and text (for pages that only list who sent what and when)
+        #[arg(long, conflicts_with = "full")]
+        no_text: bool,
         /// Erase history
         #[arg(long)]
         clear: bool,
+        /// With --clear: only say what would go (with --json: one plan document)
+        #[arg(long, requires = "clear")]
+        dry_run: bool,
     },
     /// Open or close the notification list (what clicking the tray icon does)
     Center {

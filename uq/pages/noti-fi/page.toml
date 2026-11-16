@@ -1,11 +1,12 @@
 # noti-fi's page in uQ Settings (Apps > Notifications). Installed to /usr/share/uq/settings/pages/noti-fi/ by the noti-fi package.
 # Reference: docs/settings-pages.md in the uQ repository. Every write is a `notify` command; nothing here runs as root.
-uq_api = 1
+# uq_api 3: previews on the two commands that can't be undone, and progress for the update.
+uq_api = 3
 id = "noti-fi"
 name = "Notifications"
 icon = "preferences-desktop-notification"
 qml = "Page.qml"
-keywords = ["notifications", "noti-fi", "do not disturb", "dnd", "focus", "mute", "history"]
+keywords = ["notifications", "noti-fi", "do not disturb", "dnd", "focus", "mute", "history", "popups", "sound"]
 
 [[setting]]
 id = "dnd"
@@ -18,6 +19,11 @@ label = "Focus mode"
 keywords = ["focus", "important only", "work", "priority"]
 
 [[setting]]
+id = "now"
+label = "Right now"
+keywords = ["on screen", "waiting", "unread", "test", "holding"]
+
+[[setting]]
 id = "groups"
 label = "Groups"
 keywords = ["mute", "zones", "silence a group", "quiet group"]
@@ -28,20 +34,66 @@ label = "Automatic Do not disturb"
 keywords = ["full screen", "fullscreen", "screen share", "screen sharing", "presentation", "automatic"]
 
 [[setting]]
+id = "urgent"
+label = "Urgent notifications"
+keywords = ["urgent", "critical", "through do not disturb"]
+
+[[setting]]
 id = "history"
-label = "History"
-keywords = ["remember", "keep", "clear history", "restart", "urgent", "past notifications"]
+label = "What is kept"
+keywords = ["remember", "keep", "restart", "limit", "past notifications"]
+
+[[setting]]
+id = "recent"
+label = "Recent notifications"
+keywords = ["history", "clear history", "missed", "held back", "who sent"]
 
 [[setting]]
 id = "rules"
 label = "Your rules"
 keywords = ["rules", "per app", "app rules", "open noti-fi"]
 
+[[setting]]
+id = "rules-check"
+label = "Rules check"
+keywords = ["rules", "lint", "errors", "warnings", "broken rule"]
+
+[[setting]]
+id = "check-up"
+label = "Check-up"
+keywords = ["doctor", "health", "problems", "tools", "install", "diagnose"]
+
+[[setting]]
+id = "updates"
+label = "Updates"
+keywords = ["upgrade", "new version", "update noti-fi", "release"]
+
+[[setting]]
+id = "popups"
+label = "Popups"
+keywords = ["timeout", "how long", "width", "margin", "spacing", "screen", "monitor", "max visible", "size"]
+
+[[setting]]
+id = "sound"
+label = "Sound"
+keywords = ["sound", "beep", "chime", "mute sound"]
+
+[[setting]]
+id = "appearance"
+label = "Look"
+keywords = ["theme", "colour", "color", "font", "opacity", "corner", "radius", "timer", "dark"]
+
+[[setting]]
+id = "list"
+label = "Notification list"
+keywords = ["tray", "center", "list", "chart", "transfers", "keep"]
+
 [requires]
 bins = ["notify"]
 
-# The state of the daemon: Do not disturb, muted groups, focus mode. `daemon` is null while noti-fi isn't running.
-# Runs again when the daemon saves its state or the rules file changes.
+# ---- reads. The first four follow the files the daemon writes (the state it saves, and your rules).
+
+# The state of the daemon: Do not disturb, muted groups, focus mode, what is on screen. `daemon` is null while noti-fi isn't running.
 [[command]]
 id = "status"
 argv = ["/usr/bin/notify", "status", "--json"]
@@ -65,7 +117,65 @@ output = "json"
 timeout_ms = 8000
 watch = { files = ["~/.config/notifd/rules.json"] }
 
-# Each of these answers with the new state as one document.
+# Every setting in the rules file, with its type, default and value. Read from the file, so it works while noti-fi is stopped.
+[[command]]
+id = "config"
+argv = ["/usr/bin/notify", "config", "show", "--json"]
+output = "json"
+timeout_ms = 8000
+watch = { files = ["~/.config/notifd/rules.json"] }
+
+# Whether your rules are sound. Exits 1 when one has an error, and still prints its verdict.
+[[command]]
+id = "rules"
+argv = ["/usr/bin/notify", "rules", "--json"]
+output = "json"
+timeout_ms = 15000
+watch = { files = ["~/.config/notifd/rules.json"] }
+
+# The last notifications: who sent them, to which group and when. --no-text leaves every title and text out.
+[[command]]
+id = "history"
+argv = ["/usr/bin/notify", "history", "--json", "--no-text", "-n", "100"]
+output = "json"
+timeout_ms = 8000
+
+[[command]]
+id = "history-held"
+argv = ["/usr/bin/notify", "history", "--json", "--no-text", "-n", "100", "--missed"]
+output = "json"
+timeout_ms = 8000
+
+# The check-up: tools, install, daemon, rules and apps. Exits 1 when your rules have an error, and still prints its report.
+[[command]]
+id = "doctor"
+argv = ["/usr/bin/notify", "doctor", "--json"]
+output = "json"
+timeout_ms = 60000
+
+# Asks GitHub for the latest release (only when you press the button).
+[[command]]
+id = "update-check"
+argv = ["/usr/bin/notify", "upgrade", "--json"]
+output = "json"
+timeout_ms = 30000
+
+# ---- previews: what a confirmed command would do, in one plan document (see docs/settings-pages.md, "preview")
+
+[[command]]
+id = "history-clear-plan"
+argv = ["/usr/bin/notify", "--json", "history", "--clear", "--dry-run"]
+output = "json"
+timeout_ms = 8000
+
+[[command]]
+id = "update-plan"
+argv = ["/usr/bin/notify", "--json", "upgrade", "--plan"]
+output = "json"
+timeout_ms = 30000
+
+# ---- writes. Each of these answers with the new state as one document, or one result line.
+
 [[command]]
 id = "dnd"
 argv = ["/usr/bin/notify", "--json", "dnd"]
@@ -94,20 +204,46 @@ output = "json"
 timeout_ms = 8000
 args = [{ name = "zone", pattern = "^[A-Za-z0-9_][A-Za-z0-9_-]{0,39}$" }]
 
-# One setting in the rules file; the daemon checks it first (see logic.js for which values go with which key).
+# One setting in the rules file; the daemon checks it first and refuses what it can't use (see logic.js for the values).
 [[command]]
-id = "set"
-argv = ["/usr/bin/notify", "set"]
+id = "config-set"
+argv = ["/usr/bin/notify", "config", "set"]
 output = "text"
 timeout_ms = 8000
 args = [
-  { name = "key", pattern = "^(history\\.limit|history\\.persist|dnd\\.allowCritical|autoDnd\\.fullscreen|autoDnd\\.screenShare)$" },
-  { name = "value", pattern = "^(on|off|50|100|200|500|1000)$" },
+  { name = "key", pattern = "^(screen|defaultZone|defaultTimeout|maxVisible|width|margin|spacing|dnd\\.allowCritical|history\\.limit|history\\.persist|sound\\.enabled|sound\\.defaultName|autoDnd\\.fullscreen|autoDnd\\.screenShare|theme\\.card|theme\\.border|theme\\.text|theme\\.subtext|theme\\.button|theme\\.buttonHover|theme\\.opacity|theme\\.fontFamily|theme\\.fontSize|theme\\.timerStyle|theme\\.radius|theme\\.tokens|transfer\\.chart|center\\.anchor|center\\.keep)$" },
+  { name = "value", pattern = "^[A-Za-z0-9#.]([A-Za-z0-9#.,_ -]{0,98}[A-Za-z0-9#.,_-])?$" },
 ]
 
+# Takes the setting out of the rules file, so the daemon uses its default again.
+[[command]]
+id = "config-reset"
+argv = ["/usr/bin/notify", "config", "reset"]
+output = "text"
+timeout_ms = 8000
+args = [{ name = "key", pattern = "^(screen|defaultZone|defaultTimeout|maxVisible|width|margin|spacing|dnd\\.allowCritical|history\\.limit|history\\.persist|sound\\.enabled|sound\\.defaultName|autoDnd\\.fullscreen|autoDnd\\.screenShare|theme\\.card|theme\\.border|theme\\.text|theme\\.subtext|theme\\.button|theme\\.buttonHover|theme\\.opacity|theme\\.fontFamily|theme\\.fontSize|theme\\.timerStyle|theme\\.radius|theme\\.tokens|transfer\\.chart|center\\.anchor|center\\.keep)$" }]
+
+# Sends one sample notification to every group.
+[[command]]
+id = "test"
+argv = ["/usr/bin/notify", "test"]
+output = "text"
+timeout_ms = 20000
+
+# Shows what is about to go (grouped by app), then asks.
 [[command]]
 id = "history-clear"
 argv = ["/usr/bin/notify", "history", "--clear"]
 output = "text"
 timeout_ms = 8000
 confirm = "Clear the notification history? This can't be undone."
+preview = "history-clear-plan"
+
+# Downloads the release, checks its checksum, replaces the program, refreshes the daemon. One JSON line per step.
+[[command]]
+id = "update"
+argv = ["/usr/bin/notify", "--json", "upgrade", "--apply"]
+output = "ndjson"
+timeout_ms = 300000
+confirm = "Update noti-fi? Notifications pause for about a second."
+preview = "update-plan"

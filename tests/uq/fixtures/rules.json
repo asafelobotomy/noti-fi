@@ -1,0 +1,6 @@
+{
+  "file": "/home/user/.config/notifd/rules.json",
+  "errors": [],
+  "warnings": ["rule 2 never matches anything"],
+  "daemon": null
+}

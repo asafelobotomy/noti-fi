@@ -1,0 +1,10 @@
+{
+  "summary": "Update noti-fi 0.19.1 to 0.20.0",
+  "changes": [
+    { "group": "Update", "label": "Download notify-0.20.0.tar.gz", "detail": "its checksum is checked before anything is replaced", "reversible": false },
+    { "group": "Update", "label": "Replace notify, notify-panel and the launcher", "detail": "/home/user/.local", "reversible": false },
+    { "group": "Update", "label": "Refresh the daemon", "detail": "notifications pause for about a second", "reversible": false }
+  ],
+  "would_refuse": false,
+  "reason": ""
+}

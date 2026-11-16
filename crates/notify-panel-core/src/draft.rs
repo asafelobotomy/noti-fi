@@ -337,6 +337,7 @@ mod settings;
 mod zones;
 pub use apps::AppRouting;
 pub use save::*;
+pub use settings::{SettingSpec, setting_specs};
 
 #[cfg(test)]
 mod tests;

@@ -109,11 +109,16 @@ pub struct HistoryArgs {
     pub app: Option<String>,
     pub missed: bool,
     pub full: bool,
+    pub no_text: bool,
     pub clear: bool,
+    pub dry_run: bool,
 }
 
 pub fn history(ctx: &Ctx, a: HistoryArgs) -> Result<()> {
     let mut c = daemon::connect(ctx.dev)?;
+    if a.clear && a.dry_run {
+        return crate::config::print_history_plan(ctx, &mut c);
+    }
     if a.clear {
         c.clear_history()?;
         ctx.out.result(true, "history cleared");
@@ -131,6 +136,12 @@ pub fn history(ctx: &Ctx, a: HistoryArgs) -> Result<()> {
         items.retain(|i| !i.shown);
     }
     items.truncate(a.n);
+    if a.no_text {
+        for i in &mut items {
+            i.summary.clear();
+            i.body.clear();
+        }
+    }
     if ctx.out.json {
         ctx.out.document(&items);
         return Ok(());

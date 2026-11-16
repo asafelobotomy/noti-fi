@@ -6,33 +6,38 @@
 var MAX_ROWS = 500;
 var MAX_TEXT = 200;
 
+/// Every setting `notify config` knows, in the order the panel lists them (a test compares this with the manifest and with the CLI's fixture).
+var PREF_KEYS = [
+    "screen", "defaultZone", "defaultTimeout", "maxVisible", "width", "margin", "spacing",
+    "dnd.allowCritical", "history.limit", "history.persist", "sound.enabled", "sound.defaultName",
+    "autoDnd.fullscreen", "autoDnd.screenShare",
+    "theme.card", "theme.border", "theme.text", "theme.subtext", "theme.button", "theme.buttonHover", "theme.opacity",
+    "theme.fontFamily", "theme.fontSize", "theme.timerStyle", "theme.radius", "theme.tokens",
+    "transfer.chart", "center.anchor", "center.keep"
+];
+
+var KEY_PATTERN = "^(" + PREF_KEYS.map(function (k) { return k.replace(/\./g, "\\."); }).join("|") + ")$";
+/// A value starts and ends with a letter, digit, # or . and may hold spaces and hyphens inside (a font's name, a colour, a number, on, off).
+var VALUE_PATTERN = "^[A-Za-z0-9#.]([A-Za-z0-9#.,_ -]{0,98}[A-Za-z0-9#.,_-])?$";
+
 /// The argument patterns, exactly as in page.toml (a test compares them).
 var PATTERNS = {
     dnd: { mode: "^(on|off)$" },
     focus: { mode: "^(off|[A-Za-z0-9_][A-Za-z0-9_-]{0,39})$" },
     mute: { zone: "^[A-Za-z0-9_][A-Za-z0-9_-]{0,39}$" },
     unmute: { zone: "^[A-Za-z0-9_][A-Za-z0-9_-]{0,39}$" },
-    set: {
-        key: "^(history\\.limit|history\\.persist|dnd\\.allowCritical|autoDnd\\.fullscreen|autoDnd\\.screenShare)$",
-        value: "^(on|off|50|100|200|500|1000)$"
-    }
+    "config-set": { key: KEY_PATTERN, value: VALUE_PATTERN },
+    "config-reset": { key: KEY_PATTERN }
 };
 
-/// The confirms of page.toml that need one (a test compares them).
+/// The confirms of page.toml that need one (a test compares them). Each is followed by the plan of the command's `preview`.
 var CONFIRMS = {
-    "history-clear": "Clear the notification history? This can't be undone."
-};
-
-/// What `notify set` takes for each key. The page sends no other pair.
-var SET_VALUES = {
-    "history.limit": ["50", "100", "200", "500", "1000"],
-    "history.persist": ["on", "off"],
-    "dnd.allowCritical": ["on", "off"],
-    "autoDnd.fullscreen": ["on", "off"],
-    "autoDnd.screenShare": ["on", "off"]
+    "history-clear": "Clear the notification history? This can't be undone.",
+    "update": "Update noti-fi? Notifications pause for about a second."
 };
 
 var LIMITS = [50, 100, 200, 500, 1000];
+var WORKING = "Working…";
 
 var NOT_RUNNING = "noti-fi isn't running. uQ's own notifications are in use.";
 var APP_ID = "org.notify.Panel.desktop";
@@ -101,6 +106,10 @@ function stringList(v) {
     return out;
 }
 
+function count(v) {
+    return typeof v === "number" && v >= 0 ? Math.floor(v) : 0;
+}
+
 /// The fields of a Status document that the page uses.
 function statusFields(doc) {
     return {
@@ -108,8 +117,13 @@ function statusFields(doc) {
         muted: stringList(doc.muted),
         zones: stringList(doc.zones),
         focus: clip(doc.focus),
-        history: typeof doc.history === "number" && doc.history >= 0 ? Math.floor(doc.history) : 0,
-        cfgError: clip(doc.cfgError)
+        history: count(doc.history),
+        cfgError: clip(doc.cfgError),
+        active: count(doc.active),
+        queued: count(doc.queued),
+        unread: count(doc.unread),
+        holding: clip(doc.holding),
+        sharing: doc.sharing === true
     };
 }
 
@@ -239,21 +253,12 @@ function limitIndex(current) {
     return limitChoices(current).indexOf(current);
 }
 
-/// `set history.limit <n>` for a box index, or null when the choice isn't one `notify set` takes.
-function limitArgs(current, index) {
+/// The limit for a box index, or null when it isn't one of the panel's choices (an odd current limit is shown, never sent back).
+function limitValue(current, index) {
     var choices = limitChoices(current);
-    if (index < 0 || index >= choices.length)
+    if (index < 0 || index >= choices.length || LIMITS.indexOf(choices[index]) < 0)
         return null;
-    return setArgs("history.limit", String(choices[index]));
-}
-
-/// The two arguments for `set`, or null for a pair `notify set` doesn't take.
-function setArgs(key, value) {
-    if (!Object.prototype.hasOwnProperty.call(SET_VALUES, key))
-        return null;
-    if (SET_VALUES[key].indexOf(value) < 0)
-        return null;
-    return [key, value];
+    return String(choices[index]);
 }
 
 function boolWord(on) {
@@ -300,4 +305,328 @@ function historyLine(count) {
     if (count === 1)
         return "1 notification is kept.";
     return count + " notifications are kept.";
+}
+
+// ------------------------------------------------------------ what is happening now
+
+/// Why popups are being held, in the person's words ("" = they are not).
+function holdingText(holding) {
+    var words = {
+        dnd: "Do not disturb is on.",
+        focus: "A focus mode is on.",
+        fullscreen: "A full-screen app is in front.",
+        share: "Your screen is being shared.",
+        inhibit: "An app asked for quiet."
+    };
+    if (holding === "")
+        return "";
+    return Object.prototype.hasOwnProperty.call(words, holding) ? words[holding] : "Popups are being held.";
+}
+
+function plural(n, one, many) {
+    return n + " " + (n === 1 ? one : many);
+}
+
+/// The lines under "Right now": counts only, never what a notification says.
+function nowLines(status) {
+    var lines = [plural(status.active, "popup", "popups") + " on screen" + (status.queued > 0 ? ", " + status.queued + " waiting" : "")];
+    lines.push(plural(status.unread, "unread notification", "unread notifications"));
+    if (status.holding !== "")
+        lines.push(holdingText(status.holding));
+    else if (status.sharing)
+        lines.push("Your screen is being shared, so notification text is hidden.");
+    return lines;
+}
+
+// ------------------------------------------------------------ preferences (`notify config show --json`)
+
+/// The cards of the Preferences tab: what each setting is called, in the person's words. The CLI knows the types and choices.
+var PREF_CARDS = [
+    { id: "popups", title: "Popups", icon: "window", help: "Where popups show and how long they stay. An app can ask for its own time.", rows: [
+        { key: "defaultTimeout", label: "How long a popup stays", unit: "ms", hint: "In milliseconds. 0 keeps it until you close it." },
+        { key: "maxVisible", label: "Popups shown at once, per group", hint: "The rest wait their turn. 0 shows them all." },
+        { key: "width", label: "Popup width", unit: "px" },
+        { key: "margin", label: "Gap from the screen edge", unit: "px" },
+        { key: "spacing", label: "Gap between popups", unit: "px" },
+        { key: "screen", label: "Screen", hint: "A screen's name, or focused for the one you are using. Empty uses the first." },
+        { key: "defaultZone", label: "Group for anything no rule places", hint: "A group's id, as your rules name it." }
+    ] },
+    { id: "sound", title: "Sound", icon: "audio-volume-high", help: "The sound popups play.", rows: [
+        { key: "sound.enabled", label: "Play a sound" },
+        { key: "sound.defaultName", label: "Sound", hint: "A name from your sound theme. Empty plays none." }
+    ] },
+    { id: "appearance", title: "Look", icon: "preferences-desktop-theme", help: "Colours, text and corners of popups and the list. Reset puts a setting back to its default.", rows: [
+        { key: "theme.tokens", label: "Follow uQ's colours", hint: "auto follows uQ, off keeps noti-fi's own, or give a file." },
+        { key: "theme.card", label: "Background" },
+        { key: "theme.border", label: "Border" },
+        { key: "theme.text", label: "Text" },
+        { key: "theme.subtext", label: "Secondary text" },
+        { key: "theme.button", label: "Buttons" },
+        { key: "theme.buttonHover", label: "Buttons under the pointer" },
+        { key: "theme.opacity", label: "Background opacity", hint: "From 0.1 to 1. Text stays solid." },
+        { key: "theme.radius", label: "Corner radius", unit: "px" },
+        { key: "theme.fontFamily", label: "Font", hint: "Empty uses the system font." },
+        { key: "theme.fontSize", label: "Text size", unit: "px" },
+        { key: "theme.timerStyle", label: "Time left", hint: "How a popup shows the time it has left." }
+    ] },
+    { id: "list", title: "Notification list", icon: "view-list-text", help: "The list that the tray icon opens, and the transfer chart.", rows: [
+        { key: "center.anchor", label: "Where the list opens" },
+        { key: "center.keep", label: "Notifications the list keeps" },
+        { key: "transfer.chart", label: "Transfer chart" }
+    ] }
+];
+
+var NUMBER = /^[0-9]+(\.[0-9]+)?$/;
+var COLOR = /^#[0-9a-fA-F]{3,8}$/;
+
+/// The result of `config`: {ok, message, detail, byKey: {key: {key, type, default, value, set, choices}}}.
+/// Only the keys the page knows are kept, and only with the type they are expected to have.
+function parseConfig(result) {
+    var bad = { ok: false, message: "Couldn't read noti-fi's preferences.", detail: "", byKey: {} };
+    if (!result || (result.error !== undefined && !isObject(result.output))) {
+        bad.detail = messageOf(result);
+        return bad;
+    }
+    var o = result.output;
+    if (!isObject(o) || !Array.isArray(o.settings))
+        return bad;
+    var byKey = {};
+    for (var i = 0; i < o.settings.length && i < MAX_ROWS; ++i) {
+        var r = o.settings[i];
+        if (!isObject(r) || typeof r.key !== "string" || PREF_KEYS.indexOf(r.key) < 0)
+            continue;
+        if (["text", "color", "bool", "number"].indexOf(r.type) < 0)
+            continue;
+        var want = r.type === "bool" ? "boolean" : r.type === "number" ? "number" : "string";
+        if (typeof r.value !== want)
+            continue;
+        byKey[r.key] = {
+            key: r.key,
+            type: r.type,
+            value: r.value,
+            set: r.set === true,
+            "default": r["default"],
+            choices: stringList(r.choices)
+        };
+    }
+    return { ok: true, message: "", detail: "", byKey: byKey };
+}
+
+/// A setting's value as shown in its field.
+function prefText(pref) {
+    if (!pref)
+        return "";
+    if (pref.type === "bool")
+        return pref.value ? "on" : "off";
+    return String(pref.value);
+}
+
+/// What the field shows when the setting isn't in the file.
+function prefDefaultText(pref) {
+    return pref ? prefText({ type: pref.type, value: pref["default"] }) : "";
+}
+
+/// The two arguments for `config-set` for what was typed, or {error} saying what to type instead. `pref` is from parseConfig.
+/// An empty text is not a value: use prefResetArgs for it.
+function prefArgs(pref, text) {
+    if (!pref)
+        return { error: "That setting isn't available." };
+    var t = typeof text === "string" ? text.trim() : "";
+    if (t === "")
+        return { error: "Type a value, or use Reset." };
+    if (pref.type === "bool" && t !== "on" && t !== "off")
+        return { error: "Use on or off." };
+    if (pref.type === "number" && !NUMBER.test(t))
+        return { error: "Use a number, like " + prefDefaultText(pref) + "." };
+    if (pref.type === "color" && !COLOR.test(t))
+        return { error: "Use a colour like " + prefDefaultText(pref) + "." };
+    if (pref.type === "text" && pref.choices.length > 0) {
+        var parts = pref.key === "theme.timerStyle" ? t.split(",") : [t];
+        for (var i = 0; i < parts.length; ++i)
+            if (pref.choices.indexOf(parts[i]) < 0)
+                return { error: "Use one of: " + pref.choices.join(", ") + "." };
+    }
+    if (!matches(VALUE_PATTERN, t))
+        return { error: "That has a character noti-fi doesn't take here." };
+    return { args: [pref.key, t] };
+}
+
+function prefResetArgs(pref) {
+    return pref && PREF_KEYS.indexOf(pref.key) >= 0 ? [pref.key] : null;
+}
+
+// ------------------------------------------------------------ history (`notify history --json --no-text`)
+
+var WHY = {
+    dnd: "Do not disturb",
+    focus: "Focus mode",
+    fullscreen: "A full-screen app",
+    share: "Screen sharing",
+    "silent rule": "A rule hid it",
+    inhibit: "An app asked for quiet"
+};
+
+function whyText(why) {
+    if (typeof why !== "string" || why === "")
+        return "";
+    if (Object.prototype.hasOwnProperty.call(WHY, why))
+        return WHY[why];
+    if (why.indexOf("muted ") === 0)
+        return "Group muted";
+    return "Held back";
+}
+
+var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function two(n) {
+    return (n < 10 ? "0" : "") + n;
+}
+
+/// "just now", "14:05", "Yesterday 14:05" or "3 Mar 14:05" for a time in ms; `now` is a Date.
+function timeText(t, now) {
+    if (typeof t !== "number" || !isFinite(t))
+        return "";
+    var d = new Date(t);
+    var clock = two(d.getHours()) + ":" + two(d.getMinutes());
+    var days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+    if (now - d >= 0 && now - d < 60000)
+        return "just now";
+    if (days === 0)
+        return clock;
+    if (days === 1)
+        return "Yesterday " + clock;
+    return d.getDate() + " " + MONTHS[d.getMonth()] + " " + clock;
+}
+
+/// The result of `history --no-text`: {ok, message, rows: [{id, app, group, icon, time, shown, why}]}.
+/// Rows carry who sent it, where it went and when, never a title or text.
+function parseHistory(result, now) {
+    var bad = { ok: false, message: "Couldn't read the history.", rows: [] };
+    if (!result || result.error !== undefined || !Array.isArray(result.output)) {
+        bad.message = result && result.error !== undefined ? messageOf(result) || bad.message : bad.message;
+        return bad;
+    }
+    var rows = [];
+    for (var i = 0; i < result.output.length && rows.length < MAX_ROWS; ++i) {
+        var e = result.output[i];
+        if (!isObject(e) || typeof e.app !== "string")
+            continue;
+        var icon = typeof e.icon === "string" && /^[A-Za-z0-9._-]{1,100}$/.test(e.icon) ? e.icon : "";
+        rows.push({
+            id: typeof e.id === "number" ? e.id : i,
+            app: clip(e.app) !== "" ? clip(e.app) : "An app",
+            group: clip(e.zone),
+            icon: icon,
+            time: timeText(e.t, now),
+            shown: e.shown !== false,
+            why: whyText(e.why)
+        });
+    }
+    return { ok: true, message: "", rows: rows };
+}
+
+// ------------------------------------------------------------ check-up (`notify doctor --json`) and rules (`notify rules --json`)
+
+var LEVELS = { ok: "ok", warn: "warn", fail: "fail", info: "info" };
+
+/// The result of `doctor`: {ok, message, summary: {ok, warn, fail}, groups: [{name, checks: [{level, message, hint}]}], rules}.
+/// doctor exits 1 when your rules have an error but still prints its report, so a report under an error code counts.
+function parseDoctor(result) {
+    var bad = { ok: false, message: "Couldn't run the check-up.", summary: { ok: 0, warn: 0, fail: 0 }, groups: [], rules: { errors: [], warnings: [] } };
+    if (!result || !isObject(result.output) || !Array.isArray(result.output.checks)) {
+        bad.message = result && result.error !== undefined ? messageOf(result) || bad.message : bad.message;
+        return bad;
+    }
+    var groups = [];
+    var byName = {};
+    var summary = { ok: 0, warn: 0, fail: 0 };
+    for (var i = 0; i < result.output.checks.length && i < MAX_ROWS; ++i) {
+        var c = result.output.checks[i];
+        if (!isObject(c) || typeof c.message !== "string")
+            continue;
+        var level = typeof c.level === "string" && Object.prototype.hasOwnProperty.call(LEVELS, c.level.toLowerCase()) ? LEVELS[c.level.toLowerCase()] : "info";
+        var name = clip(c.group) !== "" ? clip(c.group) : "Other";
+        if (!Object.prototype.hasOwnProperty.call(byName, name)) {
+            byName[name] = { name: name, checks: [] };
+            groups.push(byName[name]);
+        }
+        byName[name].checks.push({ level: level, message: clip(c.message), hint: clip(c.hint) });
+        if (level !== "info")
+            summary[level] += 1;
+    }
+    // doctor counts its own findings (a rules error is one of them): use its numbers when it gives them
+    var given = result.output.summary;
+    if (isObject(given) && typeof given.ok === "number" && typeof given.warn === "number" && typeof given.fail === "number")
+        summary = { ok: count(given.ok), warn: count(given.warn), fail: count(given.fail) };
+    return { ok: true, message: "", summary: summary, groups: groups, rules: rulesFields(result.output.rules) };
+}
+
+function rulesFields(doc) {
+    return { errors: isObject(doc) ? stringList(doc.errors) : [], warnings: isObject(doc) ? stringList(doc.warnings) : [] };
+}
+
+/// The result of `rules`: {ok, message, errors, warnings}. Like doctor it can exit 1 and still print its verdict.
+function parseRules(result) {
+    if (!result || !isObject(result.output) || !Array.isArray(result.output.errors))
+        return { ok: false, message: (result && messageOf(result)) || "Couldn't check your rules.", errors: [], warnings: [] };
+    var f = rulesFields(result.output);
+    return { ok: true, message: "", errors: f.errors, warnings: f.warnings };
+}
+
+/// One line for the check-up's result.
+function summaryLine(doctor) {
+    if (!doctor.ok)
+        return doctor.message;
+    var s = doctor.summary;
+    if (s.fail > 0)
+        return plural(s.fail, "problem", "problems") + " to fix" + (s.warn > 0 ? ", " + plural(s.warn, "thing", "things") + " to look at." : ".");
+    if (s.warn > 0)
+        return plural(s.warn, "thing", "things") + " to look at.";
+    return "Everything checks out.";
+}
+
+// ------------------------------------------------------------ updates (`notify upgrade --json`, `upgrade --apply --json`)
+
+/// The result of `update-check`: {ok, message, newer, current, latest}.
+function parseUpdate(result) {
+    if (!result || result.error !== undefined || !isObject(result.output) || typeof result.output.newer !== "boolean")
+        return { ok: false, message: (result && messageOf(result)) || "Couldn't check for updates.", newer: false, current: "", latest: "" };
+    return { ok: true, message: "", newer: result.output.newer, current: clip(result.output.current), latest: clip(result.output.latest) };
+}
+
+/// A streamed event of `update` as {fraction (0 to 1), text}, or null for one that says nothing about progress.
+function progressOf(ev) {
+    if (!isObject(ev))
+        return null;
+    if (ev.type === "plan")
+        return { fraction: 0, text: "Starting…" };
+    if (ev.type === "step" && typeof ev.n === "number" && typeof ev.total === "number" && ev.total > 0) {
+        var done = ev.status === "done" ? 1 : 0;
+        return { fraction: Math.max(0, Math.min(1, (ev.n - 1 + done) / ev.total)), text: clip(ev.desc) };
+    }
+    return null;
+}
+
+/// What to say when `update` ends: `last` is the final `result` event it printed (or null), `done` the end of the run.
+function updateOutcome(last, done) {
+    if (done && done.error !== undefined && !done.cancelled)
+        return { ok: false, message: "Couldn't update noti-fi.", detail: (last && clip(last.message)) || messageOf(done) };
+    if (last && last.ok === false)
+        return { ok: false, message: "Couldn't update noti-fi.", detail: clip(last.message) };
+    return { ok: true, message: last && typeof last.message === "string" ? clip(last.message) : "Updated.", detail: "" };
+}
+
+// ------------------------------------------------------------ notes under a row
+
+/// A copy of `notes` with the note for `key` set (null removes it).
+function withNote(notes, key, note) {
+    var out = {};
+    for (var k in notes)
+        if (Object.prototype.hasOwnProperty.call(notes, k))
+            out[k] = notes[k];
+    if (note === null)
+        delete out[key];
+    else
+        out[key] = note;
+    return out;
 }

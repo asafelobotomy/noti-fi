@@ -1,44 +1,62 @@
-// noti-fi's page in uQ Settings. `ctx` is set by Settings (docs/settings-pages.md in the uQ repository). All text goes
-// through org.uq.settings components (plain text); parsing and the rules for what may be sent live in logic.js.
-// Notification text (summaries, bodies) is never read or shown here.
+// noti-fi's page in uQ Settings, laid out like Settings' own pages (uq_api = 3): six tabs of cards. `ctx` is set by Settings
+// (docs/settings-pages.md in the uQ repository). All text goes through org.uq.settings components (plain text); parsing and the
+// rules for what may be sent live in logic.js. Notification text (titles, bodies) is never read or shown here.
 import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.uq.settings
 import "logic.js" as Logic
 
-Item {
+SettingsPage {
     id: page
 
     property var ctx
-    /// The [[setting]] row Settings search jumped to (the rows flash by themselves; the page scrolls to it).
+    property var theme
+    /// The [[setting]] row Settings search jumped to; the rows flash, and their tab opens.
     property string highlight
 
     /// loading | ready | notRunning | error
     property string kind: "loading"
     property string kindMessage
-    property var status: ({ dnd: false, muted: [], zones: [], focus: "", history: 0, cfgError: "" })
+    property var status: ({ dnd: false, muted: [], zones: [], focus: "", history: 0, cfgError: "", active: 0, queued: 0, unread: 0, holding: "", sharing: false })
     property var settings: ({ ok: false, message: "", zones: [], rules: [] })
     property var focusModes: ({ ok: false, active: "", modes: [] })
-    /// Why the last change failed (or the app couldn't open), shown until the next change.
+    property var prefs: ({ ok: false, message: "", detail: "", byKey: ({}) })
+    property var rulesCheck: ({ ok: false, message: "", errors: [], warnings: [] })
+    /// Why the last page-wide change failed, shown until the next change. `problemDetail` is the program's own words for it.
     property string problem
-    /// The program's own words for it, under "Advanced details".
     property string problemDetail
-    /// The command whose change is running ("" = none). One change at a time.
+    /// What each row's change said, by row key: {message, detail}. Shown under the row.
+    property var notes: ({})
+    /// The key of the change that is running ("" = none). One change at a time.
     property string working
     /// False once the page is destroyed: late answers from Settings are then ignored.
     property bool alive: true
     /// A read of these failed (noti-fi wasn't running, say): read again when the state turns ready.
     property bool settingsFailed: false
     property bool modesFailed: false
+    property var openedWith: null
 
     readonly property bool ready: page.kind === "ready"
     readonly property bool idle: page.working === ""
     readonly property bool known: page.ready && page.settings.ok
-    readonly property color errorColor: (page.ctx && page.ctx.theme && page.ctx.theme.colors && page.ctx.theme.colors.error) || "red"
-    readonly property color mutedColor: (page.ctx && page.ctx.theme && page.ctx.theme.colors && page.ctx.theme.colors.text_muted) || "gray"
+    readonly property bool loading: page.kind === "loading"
 
-    // ------------------------------------------------------------ reading
+    pageId: "noti-fi"
+
+    function errorColor() {
+        const c = page.ctx && page.ctx.theme ? page.ctx.theme.colors : null;
+        return (c && c.error) || "red";
+    }
+
+    function mutedColor() {
+        const c = page.ctx && page.ctx.theme ? page.ctx.theme.colors : null;
+        return (c && c.text_muted) || "gray";
+    }
+
+    function noteFor(key) {
+        return page.notes[key] || null;
+    }
 
     /// Wrap a callback for Settings: nothing happens after the page is gone.
     function guard(fn) {
@@ -47,6 +65,8 @@ Item {
                 fn(result);
         };
     }
+
+    // ------------------------------------------------------------ reading
 
     function showStatus(result) {
         // a read that overlapped a watched run of the same command: the other answer is coming
@@ -86,30 +106,49 @@ Item {
         page.syncBoxes();
     }
 
+    function showPrefs(result) {
+        if (Logic.overlapped(result))
+            return;
+        page.prefs = Logic.parseConfig(result);
+    }
+
+    function showRules(result) {
+        if (Logic.overlapped(result))
+            return;
+        page.rulesCheck = Logic.parseRules(result);
+    }
+
     // Read now, and again whenever the daemon saves its state or the rules file changes (page.toml `watch`).
     onCtxChanged: {
-        if (!page.ctx)
+        if (!page.ctx || page.ctx === page.openedWith)
             return;
+        page.openedWith = page.ctx;
         page.ctx.command.watch("status", page.guard(page.showStatus));
         page.ctx.command.watch("settings", page.guard(page.showSettings));
         page.ctx.command.watch("focus-modes", page.guard(page.showModes));
+        page.ctx.command.watch("config", page.guard(page.showPrefs));
+        page.ctx.command.watch("rules", page.guard(page.showRules));
+        historyTab.recent.start();
     }
 
     /// Put the two boxes back on what was last read (after a read, and after a change that failed).
     function syncBoxes() {
-        limitBox.currentIndex = Logic.limitIndex(page.settings.limit);
-        focusBox.currentIndex = Logic.focusIndex(page.focusModes.modes, page.status.focus);
+        overview.sync();
+        historyTab.sync();
     }
 
     // ------------------------------------------------------------ changing
 
-    /// Run one change. A failure shows why and puts every control back on the last value read; Cancel does nothing.
-    function change(command, args, doing, done) {
+    /// Run one change. A failure shows why (under the row `noteKey`, else at the top) and puts every control back on the last
+    /// value read; Cancel does nothing. `done(result)` runs after a change that worked.
+    function change(command, args, doing, done, noteKey) {
         if (!page.ctx || !page.idle)
             return;
+        const key = noteKey || "";
         page.problem = "";
         page.problemDetail = "";
-        page.working = command;
+        page.notes = Logic.withNote(page.notes, key, null);
+        page.working = key !== "" ? key : command;
         page.ctx.command.run(command, args, page.guard(result => {
             page.working = "";
             if (Logic.cancelled(result)) {
@@ -118,12 +157,17 @@ Item {
             }
             const why = Logic.problemOf(result, doing);
             if (why !== "") {
-                page.problem = why;
-                page.problemDetail = Logic.detailOf(result);
+                if (key !== "")
+                    page.notes = Logic.withNote(page.notes, key, { message: why, detail: Logic.detailOf(result) });
+                else {
+                    page.problem = why;
+                    page.problemDetail = Logic.detailOf(result);
+                }
                 page.syncBoxes();
                 return;
             }
-            done(result);
+            if (done)
+                done(result);
         }));
     }
 
@@ -138,16 +182,31 @@ Item {
         }
     }
 
-    function setSetting(args, doing) {
-        if (!args) {
-            page.syncBoxes();
-            return;
+    /// One setting in the rules file. The file is followed, so the page shows the new value once it is written.
+    function setPref(key, text, doing) {
+        const pref = page.prefs.byKey[key];
+        const r = Logic.prefArgs(pref, text);
+        if (r.error !== undefined) {
+            page.notes = Logic.withNote(page.notes, key, { message: r.error, detail: "" });
+            return false;
         }
-        page.change("set", args, doing, () => page.ctx.command.run("settings", [], page.guard(page.showSettings)));
+        page.change("config-set", r.args, doing || "Couldn't change this", () => page.ctx.command.run("config", [], page.guard(page.showPrefs)), key);
+        return true;
+    }
+
+    function resetPref(key) {
+        const args = Logic.prefResetArgs(page.prefs.byKey[key]);
+        if (args)
+            page.change("config-reset", args, "Couldn't reset this", () => page.ctx.command.run("config", [], page.guard(page.showPrefs)), key);
     }
 
     function chooseLimit(index) {
-        page.setSetting(Logic.limitArgs(page.settings.limit, index), "Couldn't change how many notifications are kept");
+        const v = Logic.limitValue(page.settings.limit, index);
+        if (v === null) {
+            page.syncBoxes();
+            return;
+        }
+        page.setPref("history.limit", v, "Couldn't change how many notifications are kept");
     }
 
     function chooseFocus(index) {
@@ -163,238 +222,154 @@ Item {
         }));
     }
 
-    // ------------------------------------------------------------ scrolling to a search result
-
-    function scrollTo(id) {
-        const target = { "dnd": dndRow, "focus": focusRow, "groups": groupsRow, "auto-dnd": autoRow, "history": historyRow, "rules": rulesSection.row }[id];
-        if (!target)
-            return;
-        const y = target.mapToItem(column, 0, 0).y;
-        flick.contentY = Math.max(0, Math.min(y - 8, flick.contentHeight - flick.height));
+    function pref(key) {
+        return page.prefs.byKey[key] || null;
     }
-    property bool following: false // keep scrolling to the highlight while sections lay out, until the user scrolls
-    onHighlightChanged: { page.following = true; Qt.callLater(() => page.scrollTo(page.highlight)); }
+
+    function prefOn(key, fallback) {
+        const p = page.pref(key);
+        return p ? p.value === true : fallback;
+    }
+
     Component.onDestruction: page.alive = false
-    Component.onCompleted: {
-        if (page.highlight !== "")
-            { page.following = true; Qt.callLater(() => page.scrollTo(page.highlight)); }
+
+    headerItems: [
+        QQC2.Button {
+            text: "Open noti-fi"
+            onClicked: page.openApp()
+        }
+    ]
+
+    banners: [
+        ErrorCard {
+            visible: page.kind === "notRunning"
+            title: "noti-fi isn't running"
+            detail: page.kindMessage
+            Layout.fillWidth: true
+        },
+        ErrorCard {
+            visible: page.kind === "error"
+            title: "Couldn't read noti-fi's state"
+            detail: page.kindMessage
+            Layout.fillWidth: true
+        },
+        ErrorCard {
+            visible: page.ready && page.status.cfgError !== ""
+            title: "noti-fi couldn't use your latest rules, so it is using the earlier ones."
+            detail: page.status.cfgError
+            Layout.fillWidth: true
+        },
+        Notice {
+            summary: page.ready && !page.settings.ok ? page.settings.message : ""
+            detail: page.settings.detail || ""
+            color: page.errorColor()
+            mutedColor: page.mutedColor()
+            Layout.fillWidth: true
+        },
+        Notice {
+            summary: page.problem
+            detail: page.problemDetail
+            color: page.errorColor()
+            mutedColor: page.mutedColor()
+            Layout.fillWidth: true
+        }
+    ]
+
+    // ---------------------------------------------------------------- Overview
+
+    OverviewTab {
+        id: overview
+        host: page
     }
 
-    Flickable {
-        id: flick
-        anchors.fill: parent
-        contentWidth: width
-        contentHeight: column.implicitHeight + 32
-        clip: true
-        onContentHeightChanged: if (page.following) Qt.callLater(() => page.scrollTo(page.highlight))
-        onMovementStarted: page.following = false
-        QQC2.ScrollBar.vertical: QQC2.ScrollBar {}
+    // ---------------------------------------------------------------- Quiet
 
-        ColumnLayout {
-            id: column
-            x: 16
-            y: 16
-            width: flick.width - 32
-            spacing: 8
+    QuietTab {
+        host: page
+    }
 
-            UqLabel {
-                visible: page.kind === "loading"
-                text: "Checking…"
+    // ---------------------------------------------------------------- History
+
+    HistoryTab {
+        id: historyTab
+        host: page
+    }
+
+    // ---------------------------------------------------------------- Rules
+
+    SettingsTab {
+        title: "Rules"
+        iconName: "view-filter"
+
+        SettingsCard {
+            title: "Your rules"
+            iconName: "view-list-text"
+            help: "Rules decide where each app's notifications go and how they look."
+            Layout.fillWidth: true
+
+            RulesSection {
+                id: rulesSection
+                names: Logic.ruleNames(page.settings)
+                highlight: page.highlight
+                mutedColor: page.mutedColor()
+                onOpenRequested: page.openApp()
                 Layout.fillWidth: true
             }
-            UqLabel {
-                visible: page.kind === "notRunning"
-                text: page.kindMessage
-                wrapMode: Text.Wrap
+        }
+        SettingsCard {
+            title: "Rules check"
+            iconName: "dialog-ok-apply"
+            help: "noti-fi checks your rules each time the file changes."
+            Layout.fillWidth: true
+
+            RulesCheck {
+                host: page
                 Layout.fillWidth: true
             }
-            ErrorCard {
-                visible: page.kind === "error"
-                title: "Couldn't read noti-fi's state"
-                detail: page.kindMessage
+        }
+    }
+
+    // ---------------------------------------------------------------- Health
+
+    SettingsTab {
+        title: "Health"
+        iconName: "system-help"
+
+        SettingsCard {
+            title: "Check-up"
+            iconName: "tools-check-spelling"
+            help: "Looks at the tools noti-fi needs, how it is installed, and whether it is running."
+            wide: true
+            Layout.fillWidth: true
+
+            CheckupSection {
+                host: page
                 Layout.fillWidth: true
             }
-            ErrorCard {
-                visible: page.ready && page.status.cfgError !== ""
-                title: "noti-fi couldn't use your latest rules, so it is using the earlier ones."
-                detail: page.status.cfgError
+        }
+        SettingsCard {
+            title: "Updates"
+            iconName: "system-software-update"
+            help: "Looks on GitHub only when you press the button."
+            wide: true
+            Layout.fillWidth: true
+
+            UpdateSection {
+                host: page
                 Layout.fillWidth: true
             }
-            Notice {
-                summary: page.ready && !page.settings.ok ? page.settings.message : ""
-                detail: page.settings.detail || ""
-                color: page.errorColor
-                mutedColor: page.mutedColor
-                Layout.fillWidth: true
-            }
-            Notice {
-                summary: page.problem
-                detail: page.problemDetail
-                color: page.errorColor
-                mutedColor: page.mutedColor
-                Layout.fillWidth: true
-            }
-            UqLabel {
-                visible: !page.idle
-                text: "Working…"
-                color: page.mutedColor
-            }
+        }
+    }
 
-            ColumnLayout {
-                visible: page.ready
-                spacing: 8
-                Layout.fillWidth: true
+    // ---------------------------------------------------------------- Preferences
 
-                // ---- Do not disturb
-                SwitchRow {
-                    id: dndRow
-                    settingId: "dnd"
-                    label: "Do not disturb"
-                    highlight: page.highlight
-                    value: page.status.dnd
-                    enabled: page.idle
-                    onChosen: (isOn) => page.change("dnd", Logic.dndArgs(isOn), "Couldn't change Do not disturb", page.takeStatus)
-                    Layout.fillWidth: true
-                }
+    SettingsTab {
+        title: "Preferences"
+        iconName: "configure"
 
-                // ---- Focus mode
-                SettingRow {
-                    id: focusRow
-                    settingId: "focus"
-                    label: "Focus mode"
-                    highlight: page.highlight
-                    enabled: page.idle
-                    Layout.fillWidth: true
-
-                    UqComboBox {
-                        id: focusBox
-                        objectName: "focusBox"
-                        model: Logic.focusTexts(page.focusModes.modes)
-                        onActivated: (index) => page.chooseFocus(index)
-                    }
-                }
-                UqLabel {
-                    text: "Only important notifications show while a focus mode is on."
-                    color: page.mutedColor
-                    wrapMode: Text.Wrap
-                    Layout.fillWidth: true
-                }
-
-                // ---- Groups
-                SettingRow {
-                    id: groupsRow
-                    settingId: "groups"
-                    label: "Groups"
-                    highlight: page.highlight
-                    Layout.fillWidth: true
-                }
-                UqLabel {
-                    text: "Mute a group to keep its notifications out of sight. They still go to the history."
-                    color: page.mutedColor
-                    wrapMode: Text.Wrap
-                    Layout.fillWidth: true
-                }
-                Repeater {
-                    model: Logic.groupRows(page.status, page.settings)
-
-                    SwitchRow {
-                        required property var modelData
-                        label: "Mute " + modelData.label
-                        value: modelData.muted
-                        enabled: page.idle && modelData.changeable
-                        onChosen: (isOn) => page.change(Logic.muteCommand(isOn), [modelData.id], "Couldn't change " + modelData.label, page.takeStatus)
-                        Layout.fillWidth: true
-                    }
-                }
-
-                // ---- Automatic Do not disturb
-                SettingRow {
-                    id: autoRow
-                    settingId: "auto-dnd"
-                    label: "Automatic Do not disturb"
-                    highlight: page.highlight
-                    Layout.fillWidth: true
-                }
-                SwitchRow {
-                    label: "When an app is full screen"
-                    value: page.settings.ok && page.settings.fullscreen
-                    enabled: page.known && page.idle
-                    onChosen: (isOn) => page.setSetting(Logic.setArgs("autoDnd.fullscreen", Logic.boolWord(isOn)), "Couldn't change Do not disturb for full screen")
-                    Layout.fillWidth: true
-                }
-                SwitchRow {
-                    label: "When you share your screen"
-                    value: page.settings.ok && page.settings.screenShare
-                    enabled: page.known && page.idle
-                    onChosen: (isOn) => page.setSetting(Logic.setArgs("autoDnd.screenShare", Logic.boolWord(isOn)), "Couldn't change Do not disturb for screen sharing")
-                    Layout.fillWidth: true
-                }
-
-                // ---- History
-                SettingRow {
-                    id: historyRow
-                    settingId: "history"
-                    label: "History"
-                    highlight: page.highlight
-                    Layout.fillWidth: true
-                }
-                SettingRow {
-                    label: "Remember at most"
-                    enabled: page.known && page.idle
-                    Layout.fillWidth: true
-
-                    UqComboBox {
-                        id: limitBox
-                        objectName: "limitBox"
-                        model: Logic.limitTexts(page.settings.limit)
-                        onActivated: (index) => page.chooseLimit(index)
-                    }
-                }
-                SwitchRow {
-                    label: "Keep after restart"
-                    value: page.settings.ok && page.settings.persist
-                    enabled: page.known && page.idle
-                    onChosen: (isOn) => page.setSetting(Logic.setArgs("history.persist", Logic.boolWord(isOn)), "Couldn't change whether history is kept after a restart")
-                    Layout.fillWidth: true
-                }
-                UqLabel {
-                    text: "Turning this on saves the text of notifications to a file on this computer."
-                    color: page.mutedColor
-                    wrapMode: Text.Wrap
-                    Layout.fillWidth: true
-                }
-                SwitchRow {
-                    label: "Let urgent notifications through Do not disturb"
-                    value: page.settings.ok && page.settings.allowCritical
-                    enabled: page.known && page.idle
-                    onChosen: (isOn) => page.setSetting(Logic.setArgs("dnd.allowCritical", Logic.boolWord(isOn)), "Couldn't change whether urgent notifications get through")
-                    Layout.fillWidth: true
-                }
-                RowLayout {
-                    Layout.fillWidth: true
-
-                    UqLabel {
-                        text: Logic.historyLine(page.status.history)
-                        Layout.fillWidth: true
-                    }
-                    QQC2.Button {
-                        text: "Clear history…"
-                        enabled: page.idle
-                        // Settings asks "Clear the notification history? This can't be undone." first; this runs only on Confirm.
-                        onClicked: page.change("history-clear", [], "Couldn't clear the history", () => page.ctx.command.run("status", [], page.guard(page.showStatus)))
-                    }
-                }
-
-                // ---- Your rules (read only)
-                RulesSection {
-                    id: rulesSection
-                    names: Logic.ruleNames(page.settings)
-                    highlight: page.highlight
-                    mutedColor: page.mutedColor
-                    onOpenRequested: page.openApp()
-                    Layout.fillWidth: true
-                }
-            }
+        PreferencesSection {
+            host: page
+            Layout.fillWidth: true
         }
     }
 }

@@ -107,7 +107,21 @@ pub fn settings(ctx: &Ctx) -> Result<()> {
 /// `notify set <key> <value>`.
 pub fn set(ctx: &Ctx, key: SettingKey, value: &str) -> Result<()> {
     let text = key.draft_text(value).unwrap_or_else(|why| usage_error(&format!("'{value}' is not a value for {}: {why}", key.name())));
-    let mut c = daemon::connect(ctx.dev)?;
+    change(ctx, key.name(), &text, value, false)
+}
+
+/// What `change` found out about a proposed change to one setting.
+pub struct Proposal {
+    pub new_text: String,
+    pub raw: String,
+    pub unchanged: bool,
+    /// Why the daemon would turn it down ("" = it would take it).
+    pub refusal: String,
+}
+
+/// Read rules.json from the running daemon, apply one setting to it, and ask the daemon whether it would take the result.
+/// Nothing is written. `Err` is a reason nothing can be changed at all (daemon down, the file already broken).
+pub fn propose(c: &mut notify_client::Client, key: &str, draft_text: &str) -> Result<Proposal> {
     let got = c.config_get()?;
     if !got.error.is_empty() {
         bail!("notifd rejected the rules.json it has now ({}), so nothing was changed; fix that first (see: notify rules)", got.error);
@@ -117,17 +131,34 @@ pub fn set(ctx: &Ctx, key: SettingKey, value: &str) -> Result<()> {
     } else {
         Draft::from_raw(&got.raw).map_err(|e| anyhow!("rules.json is not usable ({e}), so nothing was changed"))?
     };
-    draft.set_setting(key.name(), &text).map_err(|e| anyhow!("{e}"))?;
-    if !draft.is_dirty() {
-        ctx.out.result(true, &format!("{} is already {value}", key.name()));
+    draft.set_setting(key, draft_text).map_err(|e| anyhow!("{e}"))?;
+    let new_text = draft.to_text();
+    let unchanged = !draft.is_dirty();
+    let refusal = if unchanged {
+        String::new()
+    } else {
+        let verdict = c.validate_text(&new_text)?;
+        if verdict.ok { String::new() } else { verdict.error.unwrap_or_else(|| "no reason given".into()) }
+    };
+    Ok(Proposal { new_text, raw: got.raw, unchanged, refusal })
+}
+
+/// Change one setting (`shown` is the value in the words the person typed). With `dry_run` nothing is written.
+pub fn change(ctx: &Ctx, key: &str, draft_text: &str, shown: &str, dry_run: bool) -> Result<()> {
+    let mut c = daemon::connect(ctx.dev)?;
+    let p = propose(&mut c, key, draft_text)?;
+    if dry_run {
+        crate::config::print_plan(ctx, key, shown, &p);
         return Ok(());
     }
-    let new_text = draft.to_text();
-    let verdict = c.validate_text(&new_text)?;
-    if !verdict.ok {
-        bail!("notifd refused this change ({}); nothing was changed", verdict.error.unwrap_or_else(|| "no reason given".into()));
+    if p.unchanged {
+        ctx.out.result(true, &format!("{key} is already {shown}"));
+        return Ok(());
     }
-    match save(&rules_path(), &new_text, &got.raw, false) {
+    if !p.refusal.is_empty() {
+        bail!("notifd refused this change ({}); nothing was changed", p.refusal);
+    }
+    match save(&rules_path(), &p.new_text, &p.raw, false) {
         SaveOutcome::Saved => {}
         SaveOutcome::Conflict { .. } => bail!("rules.json changed on disk while this ran, so nothing was changed; try again"),
         SaveOutcome::Failed(why) => bail!("{why}"),
@@ -135,7 +166,7 @@ pub fn set(ctx: &Ctx, key: SettingKey, value: &str) -> Result<()> {
     // notifd reloads the file by itself; wait a moment so the next read shows the new value
     let end = Instant::now() + Duration::from_secs(3);
     let applied = loop {
-        if c.config_get().is_ok_and(|g| key.running(&g.effective) == value) {
+        if c.config_get().is_ok_and(|g| g.raw == p.new_text && g.error.is_empty()) {
             break true;
         }
         if Instant::now() >= end {
@@ -143,7 +174,7 @@ pub fn set(ctx: &Ctx, key: SettingKey, value: &str) -> Result<()> {
         }
         crate::sys::sleep_ms(100);
     };
-    let message = if applied { format!("{} set to {value}", key.name()) } else { format!("{} set to {value} (notifd is still loading it)", key.name()) };
+    let message = if applied { format!("{key} set to {shown}") } else { format!("{key} set to {shown} (notifd is still loading it)") };
     ctx.out.result(true, &message);
     Ok(())
 }
