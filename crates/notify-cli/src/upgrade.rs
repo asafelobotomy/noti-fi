@@ -28,7 +28,33 @@ fn describe(r: &Release) -> String {
     format!("noti-fi {} is available (you have {CURRENT}): {}", r.version, r.page)
 }
 
-pub fn upgrade(ctx: &Ctx, apply: bool) -> Result<()> {
+/// `upgrade --plan --json`: what `--apply` would do, as one plan document, and whether it would refuse (a package install,
+/// a folder it cannot write to). Nothing is downloaded or changed.
+fn plan(ctx: &Ctx) -> Result<()> {
+    let rel = notify_update::latest(&Curl).map_err(|e| anyhow!("could not check for updates: {e}"))?;
+    let refusal = match (is_newer(CURRENT, &rel.version), writable_prefix()) {
+        (false, _) => Some(format!("noti-fi {CURRENT} is already the latest release.")),
+        (true, Err(e)) => Some(format!("{e}")),
+        (true, Ok(_)) => None,
+    };
+    let prefix = writable_prefix().map(|p| p.display().to_string()).unwrap_or_default();
+    let change = |label: String, detail: String| json!({ "group": "Update", "label": label, "detail": detail, "reversible": false });
+    let mut changes = vec![
+        change(format!("Download {}", rel.archive_name), "its checksum is checked before anything is replaced".into()),
+        change("Replace notify, notify-panel and the launcher".into(), prefix),
+    ];
+    if paths().takeover_state.exists() {
+        changes.push(change("Refresh the daemon".into(), "notifications pause for about a second".into()));
+    }
+    let doc = json!({ "summary": format!("Update noti-fi {CURRENT} to {}", rel.version), "changes": changes, "would_refuse": refusal.is_some(), "reason": refusal.unwrap_or_default() });
+    ctx.out.document(&doc);
+    Ok(())
+}
+
+pub fn upgrade(ctx: &Ctx, apply: bool, plan_only: bool) -> Result<()> {
+    if plan_only {
+        return plan(ctx);
+    }
     let out = ctx.out;
     // fail early, before any network use, when this copy cannot be replaced
     let prefix = if apply { Some(writable_prefix()?) } else { None };

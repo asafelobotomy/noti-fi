@@ -1,0 +1,40 @@
+[
+  {
+    "t": 1789000060000,
+    "id": 1,
+    "app": "Chat",
+    "summary": "",
+    "body": "",
+    "zone": "personal",
+    "origin": "",
+    "urgency": "normal",
+    "shown": true,
+    "why": "",
+    "updates": null,
+    "desktopEntry": "",
+    "category": "",
+    "channel": "",
+    "read": false,
+    "icon": "chat",
+    "live": false
+  },
+  {
+    "t": 1789000120000,
+    "id": 2,
+    "app": "Mail",
+    "summary": "",
+    "body": "",
+    "zone": "personal",
+    "origin": "",
+    "urgency": "normal",
+    "shown": false,
+    "why": "dnd",
+    "updates": null,
+    "desktopEntry": "",
+    "category": "",
+    "channel": "",
+    "read": false,
+    "icon": "chat",
+    "live": false
+  }
+]

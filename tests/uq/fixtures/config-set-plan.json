@@ -1,0 +1,13 @@
+{
+  "summary": "Set width to 420",
+  "changes": [
+    {
+      "group": "rules.json",
+      "label": "width",
+      "detail": "380 to 420",
+      "reversible": true
+    }
+  ],
+  "would_refuse": false,
+  "reason": ""
+}

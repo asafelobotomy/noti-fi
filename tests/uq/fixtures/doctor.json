@@ -1,0 +1,14 @@
+{
+  "checks": [
+    { "group": "Tools", "level": "ok", "message": "dbus-daemon: found (the daemon's private bus)" },
+    { "group": "Tools", "level": "warn", "message": "pw-dump: missing (screen-share detection (pipewire))" },
+    { "group": "Install", "level": "ok", "message": "takeover installed (starts at login)" },
+    { "group": "Install", "level": "warn", "message": "Flatpak/portal notifications routed through notifd: NO", "hint": "run: notify portal" },
+    { "group": "Install", "level": "info", "message": "not on Plasma: no fallback to Plasma and no KWin full-screen script" },
+    { "group": "Daemon", "level": "FAIL", "message": "no notifd instance answering on the control socket", "hint": "systemctl --user start notifd" }
+  ],
+  "status": { "owner": null, "notifd_owns": false, "jobs_owner": null, "daemon": null, "config": null },
+  "rules": { "file": "/home/user/.config/notifd/rules.json", "errors": ["rule 3: not a valid pattern"], "warnings": ["rule 5 never matches anything"], "daemon": null },
+  "apps": { "chromium": [], "flatpak_browsers": [], "firefox": [], "electron": [] },
+  "summary": { "ok": 2, "warn": 2, "fail": 2 }
+}

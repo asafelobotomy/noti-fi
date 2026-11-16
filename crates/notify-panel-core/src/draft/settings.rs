@@ -73,6 +73,50 @@ impl Draft {
     }
 }
 
+/// One setting `notify config` can read and change: its key, its type (`text`, `color`, `bool`, `number`), the daemon's default,
+/// and, for a few text settings, the only values that make sense.
+pub struct SettingSpec {
+    pub key: &'static str,
+    pub kind: &'static str,
+    pub default: Value,
+    pub choices: &'static [&'static str],
+}
+
+/// Every scalar setting, in the order the panel lists them.
+pub fn setting_specs() -> Vec<SettingSpec> {
+    SETTING_DEFAULTS
+        .iter()
+        .map(|(key, k)| SettingSpec {
+            key,
+            kind: match k {
+                Kind::Text(_) => "text",
+                Kind::Color(_) => "color",
+                Kind::Bool(_) => "bool",
+                Kind::Num(_) => "number",
+            },
+            default: default_value(k),
+            choices: match *key {
+                "center.anchor" => &ANCHORS,
+                "transfer.chart" => &["bars", "line", "heatmap"],
+                "theme.timerStyle" => &["none", "line", "circle", "frame"],
+                _ => &[],
+            },
+        })
+        .collect()
+}
+
+impl Draft {
+    /// Whether the file sets this setting (otherwise the daemon uses its default).
+    pub fn setting_is_set(&self, path: &str) -> bool {
+        lookup(&self.value, path).is_some()
+    }
+
+    /// The setting's value as the daemon would use it: the file's, or the default.
+    pub fn setting_value(&self, path: &str) -> Option<Value> {
+        self.settings_view()["values"].get(path).cloned()
+    }
+}
+
 fn default_value(k: &Kind) -> Value {
     match k {
         Kind::Text(d) | Kind::Color(d) => json!(d),

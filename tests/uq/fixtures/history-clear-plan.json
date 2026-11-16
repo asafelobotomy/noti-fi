@@ -1,0 +1,22 @@
+{
+  "summary": "Clear 3 notifications",
+  "changes": [
+    {
+      "group": "History",
+      "label": "Chat",
+      "detail": "2 notifications",
+      "reversible": false
+    },
+    {
+      "group": "History",
+      "label": "Mail",
+      "detail": "1 notification",
+      "reversible": false
+    }
+  ],
+  "would_refuse": false,
+  "reason": "",
+  "would_remove": 3,
+  "oldest": 1789000060000,
+  "newest": 1789000180000
+}

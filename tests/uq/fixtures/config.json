@@ -1,0 +1,231 @@
+{
+  "file": "/home/user/.config/notifd/rules.json",
+  "settings": [
+    {
+      "key": "screen",
+      "type": "text",
+      "default": "",
+      "value": "",
+      "set": false
+    },
+    {
+      "key": "defaultZone",
+      "type": "text",
+      "default": "personal",
+      "value": "personal",
+      "set": false
+    },
+    {
+      "key": "defaultTimeout",
+      "type": "number",
+      "default": 6000,
+      "value": 6000,
+      "set": false
+    },
+    {
+      "key": "maxVisible",
+      "type": "number",
+      "default": 5,
+      "value": 7,
+      "set": true
+    },
+    {
+      "key": "width",
+      "type": "number",
+      "default": 380,
+      "value": 380,
+      "set": false
+    },
+    {
+      "key": "margin",
+      "type": "number",
+      "default": 16,
+      "value": 16,
+      "set": false
+    },
+    {
+      "key": "spacing",
+      "type": "number",
+      "default": 10,
+      "value": 10,
+      "set": false
+    },
+    {
+      "key": "dnd.allowCritical",
+      "type": "bool",
+      "default": true,
+      "value": true,
+      "set": false
+    },
+    {
+      "key": "history.limit",
+      "type": "number",
+      "default": 200,
+      "value": 200,
+      "set": false
+    },
+    {
+      "key": "history.persist",
+      "type": "bool",
+      "default": false,
+      "value": false,
+      "set": false
+    },
+    {
+      "key": "sound.enabled",
+      "type": "bool",
+      "default": true,
+      "value": true,
+      "set": false
+    },
+    {
+      "key": "sound.defaultName",
+      "type": "text",
+      "default": "",
+      "value": "",
+      "set": false
+    },
+    {
+      "key": "autoDnd.fullscreen",
+      "type": "bool",
+      "default": true,
+      "value": true,
+      "set": false
+    },
+    {
+      "key": "autoDnd.screenShare",
+      "type": "bool",
+      "default": true,
+      "value": true,
+      "set": false
+    },
+    {
+      "key": "theme.card",
+      "type": "color",
+      "default": "#1d1f27",
+      "value": "#101010",
+      "set": true
+    },
+    {
+      "key": "theme.border",
+      "type": "color",
+      "default": "#2c2f3a",
+      "value": "#2c2f3a",
+      "set": false
+    },
+    {
+      "key": "theme.text",
+      "type": "color",
+      "default": "#f2f3f7",
+      "value": "#f2f3f7",
+      "set": false
+    },
+    {
+      "key": "theme.subtext",
+      "type": "color",
+      "default": "#b9bccb",
+      "value": "#b9bccb",
+      "set": false
+    },
+    {
+      "key": "theme.button",
+      "type": "color",
+      "default": "#272a36",
+      "value": "#272a36",
+      "set": false
+    },
+    {
+      "key": "theme.buttonHover",
+      "type": "color",
+      "default": "#323646",
+      "value": "#323646",
+      "set": false
+    },
+    {
+      "key": "theme.opacity",
+      "type": "number",
+      "default": 1,
+      "value": 1,
+      "set": false
+    },
+    {
+      "key": "theme.fontFamily",
+      "type": "text",
+      "default": "",
+      "value": "",
+      "set": false
+    },
+    {
+      "key": "theme.fontSize",
+      "type": "number",
+      "default": 12,
+      "value": 12,
+      "set": false
+    },
+    {
+      "key": "theme.timerStyle",
+      "type": "text",
+      "default": "none",
+      "value": "none",
+      "set": false,
+      "choices": [
+        "none",
+        "line",
+        "circle",
+        "frame"
+      ]
+    },
+    {
+      "key": "theme.radius",
+      "type": "number",
+      "default": 12,
+      "value": 12,
+      "set": false
+    },
+    {
+      "key": "theme.tokens",
+      "type": "text",
+      "default": "auto",
+      "value": "auto",
+      "set": false
+    },
+    {
+      "key": "transfer.chart",
+      "type": "text",
+      "default": "line",
+      "value": "line",
+      "set": false,
+      "choices": [
+        "bars",
+        "line",
+        "heatmap"
+      ]
+    },
+    {
+      "key": "center.anchor",
+      "type": "text",
+      "default": "bottom-right",
+      "value": "bottom-right",
+      "set": false,
+      "choices": [
+        "top-left",
+        "top-center",
+        "top-right",
+        "middle-left",
+        "center",
+        "middle-right",
+        "bottom-left",
+        "bottom-center",
+        "bottom-right",
+        "free"
+      ]
+    },
+    {
+      "key": "center.keep",
+      "type": "number",
+      "default": 50,
+      "value": 50,
+      "set": false
+    }
+  ]
+}

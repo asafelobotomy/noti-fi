@@ -1,8 +1,18 @@
-Answers of the `notify` commands the page runs, as `--json` prints them (noti-fi 0.18):
+Answers of the `notify` commands the page runs, as `--json` prints them (noti-fi 0.19):
 
   status.json              `notify status --json` with noti-fi running (a StatusReport: the state is under `daemon`)
   status-not-running.json  the same while noti-fi isn't running (`daemon` is null; the exit code is 0)
   settings.json            `notify settings --json` (crates/notify-cli/tests/settings.rs checks it against the real command)
   focus-list.json          `notify focus list --json`
+  config.json              `notify config show --json` for a rules file that sets maxVisible and theme.card
+                           (crates/notify-cli/tests/config.rs checks it; its `file` differs per machine)
+  history.json             `notify history --json --no-text` (config.rs writes and checks it)
+  history-clear-plan.json  `notify --json history --clear --dry-run`: the plan Settings shows before Clear history
+  config-set-plan.json     `notify --json config set --dry-run width 420`: the plan document shape
+  doctor.json              `notify doctor --json`, shortened (a real run is longer; the page reads `checks`, `summary`, `rules`)
+  rules.json               `notify rules --json`
+  update-check.json        `notify upgrade --json` with a newer release
+  update-plan.json         `notify --json upgrade --plan`, as written by hand: it needs the network, so no test runs it
 
-status.json's `latest.summary` is notification text; the page must never show it.
+status.json's `latest.summary` is notification text; the page must never show it. history.json holds no text: the page
+asks for `--no-text`, and config.rs fails if the flag leaves any in.
