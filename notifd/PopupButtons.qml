@@ -8,7 +8,6 @@ Flow {
     readonly property bool hovered: hover.hovered
     spacing: 6
     HoverHandler { id: hover }
-    FocusApp { id: focusApp }
     Repeater {
         model: row.popup.acts
         delegate: Rectangle {
@@ -21,7 +20,7 @@ Flow {
             HoverHandler { id: btn }
             TapHandler {
                 enabled: row.popup.active
-                onTapped: { btnRect.modelData.invoke(); focusApp.raise(row.popup.notif); if (!row.popup.resident) row.popup.dismissed() }
+                onTapped: { btnRect.modelData.invoke(); row.popup.actionRan(); if (!row.popup.resident) row.popup.dismissed() }
             }
             Text {
                 id: btnLabel
