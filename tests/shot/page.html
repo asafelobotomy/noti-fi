@@ -1,6 +1,0 @@
-<!doctype html><title>t</title><script>
-(async()=>{const r=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;
-const p=await Notification.requestPermission();
-await r.showNotification('Dana',{body:'hey <b>there</b> & more',icon:'icon.png',image:'big.png',actions:[{action:'reply',title:'Reply'},{action:'read',title:'Mark read'}],requireInteraction:true,tag:'a'});
-await r.showNotification('Quiet',{body:'low',silent:true,tag:'b'});
-document.title='done'})()</script>
