@@ -50,7 +50,8 @@ Rectangle {
     readonly property color cButtonHover: theme.buttonHover ?? "#323646"
 
     // A notification object can vanish (closed) while its popup is still fading out; read through guards.
-    readonly property var acts: (notif && notif.actions) ? notif.actions : []
+    // the buttons: every action but "default", which is the click on the notification itself (Chromium sends it as "Activate")
+    readonly property var acts: (notif && notif.actions) ? notif.actions.filter(a => a.identifier !== "default") : []
     readonly property bool resident: notif ? notif.resident === true : false
     // freedesktop "value" hint: 0-100 progress, or -1 when absent
     readonly property int progress: {

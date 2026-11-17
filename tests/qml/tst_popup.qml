@@ -50,6 +50,13 @@ Item {
             compare(host.dismissed, 1)
         }
 
+        function test_default_action_is_not_a_button() {
+            card.notif = ({ appName: "app", summary: "Hello", body: "", hints: {}, image: "", appIcon: "", desktopEntry: "", resident: false,
+                            actions: [{ identifier: "default", text: "Activate" }, { identifier: "0", text: "Reply" }, { identifier: "settings", text: "Settings" }] })
+            compare(card.acts.length, 2)
+            compare(card.acts[0].text, "Reply")
+        }
+
         function test_click_through_ignores_taps() {
             card.clickThrough = true
             mouseClick(card, 200, 100)
