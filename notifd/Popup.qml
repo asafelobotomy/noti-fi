@@ -35,6 +35,7 @@ Rectangle {
 
     signal dismissed()
     signal actionRan()      // one of the buttons ran: the daemon may bring the app's window forward
+    signal clicked()        // the card itself was clicked (not a button): the daemon runs the app's "default" action, if it has one
     signal expired()
     signal pinToggled()
     signal stackToggled()
@@ -110,7 +111,7 @@ Rectangle {
     TapHandler { enabled: card.active && !card.clickThrough; onTapped: {
         if (actionsRow.hovered || replyBox.hovered || pinHover.hovered || mediaHover.hovered || graphBox.hovered || gripArea.containsMouse || gripArea.pressed) return
         // a collapsed stack opens when clicked; anything else is dismissed
-        if (card.stackCount > 1 && !card.stackExpanded) card.stackToggled(); else card.dismissed()
+        if (card.stackCount > 1 && !card.stackExpanded) card.stackToggled(); else { card.clicked(); card.dismissed() }
     } }
 
     // zone accent stripe
@@ -271,7 +272,8 @@ Rectangle {
 
         Image {      // a large picture (web push images, screenshots, covers); small images stay as the icon
             id: bigImage
-            source: card.media && card.notif && !card.hideText ? card.iconSource(card.notif.image) : ""
+            // a browser's picture arrives as a body <img>, which notify serve moves to the x-notifi-image hint
+            source: card.media && card.notif && !card.hideText ? card.iconSource((card.notif.hints && card.notif.hints["x-notifi-image"]) || card.notif.image) : ""
             visible: status === Image.Ready && implicitWidth >= 200
             Layout.fillWidth: true
             Layout.preferredHeight: visible ? Math.min(180, Math.round(width * implicitHeight / Math.max(1, implicitWidth))) : 0

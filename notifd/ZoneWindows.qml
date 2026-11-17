@@ -244,6 +244,7 @@ Variants {
                         onStackToggled: root.layout.toggleStack(slot.zone, slot.stackKey)
                         onDismissed: { const n = root.byId[slot.nid]; if (n && !slot.leaving) n.dismiss() }
                         onActionRan: root.focusApp.raise(root.byId[slot.nid])
+                        onClicked: root.pressDefault(slot.nid)
                         onExpired:   { if (!slot.leaving) root.timedOut(slot.nid) }
                         onPinToggled: root.layout.setPinned(slot.nid, !slot.pinned)
                         onResized: w => root.layout.setUserWidth(slot.nid, w)

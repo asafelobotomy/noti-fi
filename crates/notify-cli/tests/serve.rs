@@ -111,7 +111,7 @@ fn notify_serve_forwards_everything_and_answers_inhibit() {
     assert!(owned, "notify serve did not take the notification name");
 
     let caps: Vec<String> = app.call_method(Some(NAME), PATH, Some(NAME), "GetCapabilities", &()).unwrap().body().deserialize().unwrap();
-    k.check("GetCapabilities is Quickshell's, plus inhibitions and x-kde-origin-name (so a browser sends the site as a hint)", caps.contains(&"actions".to_string()) && caps.contains(&"inhibitions".to_string()) && caps.contains(&"x-kde-origin-name".to_string()), || format!("{caps:?}"));
+    k.check("GetCapabilities is Quickshell's, plus inhibitions, x-kde-origin-name and body-images (so a browser sends the site as a hint, and its picture)", caps.contains(&"actions".to_string()) && caps.contains(&"inhibitions".to_string()) && caps.contains(&"x-kde-origin-name".to_string()) && caps.contains(&"body-images".to_string()), || format!("{caps:?}"));
     let info: (String, String, String, String) = app.call_method(Some(NAME), PATH, Some(NAME), "GetServerInformation", &()).unwrap().body().deserialize().unwrap();
     k.check("GetServerInformation is passed through", !info.0.is_empty() && info.3 == "1.2", || format!("{info:?}"));
 
@@ -119,6 +119,10 @@ fn notify_serve_forwards_everything_and_answers_inhibit() {
     let signals = MessageIterator::for_match_rule(zbus::MatchRule::builder().msg_type(zbus::message::Type::Signal).interface(NAME).unwrap().build(), &app, Some(32)).unwrap();
     let id = notify(&app, "through the proxy", &["open", "Open"], 0);
     let seen = wait_until(5, || control(&s, "history", json!({"limit": 5})).as_array().is_some_and(|h| h.iter().any(|e| e["id"] == id && e["summary"] == "through the proxy")));
+    // a browser's picture arrives as an <img> in the body: the proxy takes it out, so history and rules see only the text
+    let img: u32 = app.call_method(Some(NAME), PATH, Some(NAME), "Notify", &("Brave", 0u32, "", "with a picture", "hi\n<img src=\"file:///tmp/x/image.png\" alt=\"\"/>", Vec::<String>::new(), HashMap::<String, OwnedValue>::new(), 0i32)).unwrap().body().deserialize().unwrap();
+    let clean = wait_until(5, || control(&s, "history", json!({"limit": 5})).as_array().is_some_and(|h| h.iter().any(|e| e["id"] == img && e["body"] == "hi")));
+    k.check("a body picture is moved out of the text", clean, || control(&s, "history", json!({"limit": 5})).to_string());
     k.check("a notification sent to the session bus reaches notifd", id > 0 && seen, || control(&s, "history", json!({"limit": 5})).to_string());
     control(&s, "invoke", json!({"id": id, "key": "open"}));
     let next = |it: &mut MessageIterator| -> Option<(String, Vec<u8>)> {

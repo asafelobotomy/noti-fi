@@ -17,7 +17,74 @@ pub const PATH: &str = "/org/freedesktop/Notifications";
 /// Capabilities notifd adds to Quickshell's own. `inhibitions` is the KDE inhibit extension. `x-kde-origin-name` tells a browser
 /// to send a web page's site as the `x-kde-origin-name` hint (which the `origin` a rule matches on comes from); without it
 /// Chromium and Brave fold the site into the notification text, and every site rule falls through to the default group.
-pub const EXTRA_CAPABILITIES: &[&str] = &["inhibitions", "x-kde-origin-name"];
+/// `body-images` makes a browser send the large picture of an image notification (the web `image` option) as an `<img>` in the
+/// body, which `take_body_image` turns into the `x-notifi-image` hint for the popup.
+pub const EXTRA_CAPABILITIES: &[&str] = &["inhibitions", "x-kde-origin-name", "body-images"];
+
+/// The hint a body's local picture is passed to notifd in (a file path).
+pub const IMAGE_HINT: &str = "x-notifi-image";
+
+/// Remove every `<img ...>` tag from a notification body and return the first one that names a local file (`file:///...`), as a
+/// path. Remote pictures are dropped and never fetched; so are paths with `..` or a NUL.
+pub fn take_body_image(body: &str) -> (String, Option<String>) {
+    let lower = body.to_ascii_lowercase(); // same byte offsets as `body`
+    let (mut out, mut at, mut found) = (String::with_capacity(body.len()), 0, None);
+    while let Some(rel) = lower[at..].find("<img") {
+        let start = at + rel;
+        let after = lower.as_bytes().get(start + 4).copied().unwrap_or(b'>');
+        let Some(end) = lower[start..].find('>').map(|e| start + e + 1).filter(|_| after.is_ascii_whitespace() || after == b'/' || after == b'>') else {
+            out.push_str(&body[at..start + 4]); // "<imgur" and the like: not a picture tag
+            at = start + 4;
+            continue;
+        };
+        out.push_str(&body[at..start]);
+        if found.is_none() {
+            found = attr_src(&body[start..end]).and_then(|u| local_path(&u));
+        }
+        at = end;
+    }
+    out.push_str(&body[at..]);
+    (out.trim_matches('\n').to_string(), found)
+}
+
+/// The value of `src="..."` (or `'...'`) in one tag.
+fn attr_src(tag: &str) -> Option<String> {
+    let lower = tag.to_ascii_lowercase();
+    let mut from = 0;
+    while let Some(rel) = lower[from..].find("src") {
+        let i = from + rel;
+        from = i + 3;
+        let rest = tag[i + 3..].trim_start();
+        let Some(rest) = rest.strip_prefix('=') else { continue };
+        let rest = rest.trim_start();
+        let quote = rest.chars().next().filter(|c| *c == '"' || *c == '\'')?;
+        let inner = &rest[1..];
+        return inner.find(quote).map(|e| inner[..e].to_string());
+    }
+    None
+}
+
+/// `file:///tmp/x%20y/image.png` -> `/tmp/x y/image.png`, when that is a plain absolute path.
+fn local_path(url: &str) -> Option<String> {
+    let enc = url.strip_prefix("file://")?;
+    if !enc.starts_with('/') || enc.len() > 1024 {
+        return None;
+    }
+    let (mut bytes, raw) = (Vec::with_capacity(enc.len()), enc.as_bytes());
+    let mut i = 0;
+    while i < raw.len() {
+        if raw[i] == b'%' {
+            let hex = std::str::from_utf8(raw.get(i + 1..i + 3)?).ok()?;
+            bytes.push(u8::from_str_radix(hex, 16).ok()?);
+            i += 3;
+        } else {
+            bytes.push(raw[i]);
+            i += 1;
+        }
+    }
+    let path = String::from_utf8(bytes).ok()?;
+    (!path.contains('\0') && !path.split('/').any(|c| c == "..")).then_some(path)
+}
 
 /// One app asking for notifications to be held.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -101,9 +168,15 @@ impl Front {
         summary: String,
         body: String,
         actions: Vec<String>,
-        hints: HashMap<String, OwnedValue>,
+        mut hints: HashMap<String, OwnedValue>,
         expire_timeout: i32,
     ) -> fdo::Result<u32> {
+        // only this proxy sets the picture hint (from a body `<img>`), so one an app sends itself is dropped
+        hints.remove(IMAGE_HINT);
+        let (body, image) = take_body_image(&body);
+        if let Some(path) = image {
+            hints.insert(IMAGE_HINT.into(), zbus::zvariant::Value::from(path).try_into().expect("a string is a valid value"));
+        }
         self.forward("Notify", &(app_name, replaces_id, app_icon, summary, body, actions, hints, expire_timeout))
     }
 
@@ -182,6 +255,26 @@ mod tests {
         let mut caps = vec!["actions".to_string(), "inhibitions".to_string()];
         add_extra_capabilities(&mut caps);
         add_extra_capabilities(&mut caps);
-        assert_eq!(caps, ["actions", "inhibitions", "x-kde-origin-name"], "added once, existing ones kept");
+        assert_eq!(caps, ["actions", "inhibitions", "x-kde-origin-name", "body-images"], "added once, existing ones kept");
+    }
+
+    #[test]
+    fn a_browsers_picture_moves_from_the_body_to_a_hint() {
+        let body = "hello <b>there</b>\n<img src=\"file:///tmp/org.chromium.Chromium.scoped_dir.abc/image%20one.png\" alt=\"\"/>";
+        assert_eq!(take_body_image(body), ("hello <b>there</b>".into(), Some("/tmp/org.chromium.Chromium.scoped_dir.abc/image one.png".into())));
+        // exactly what Chromium 153 sent for a web notification with an `image`, captured from a real run
+        let real = "hey &lt;b&gt;there&lt;/b&gt; &amp; more\n<img src=\"file:///tmp/org.chromium.Chromium.scoped_dir.oenr8p/image.png\" alt=\"\"/>";
+        assert_eq!(take_body_image(real), ("hey &lt;b&gt;there&lt;/b&gt; &amp; more".into(), Some("/tmp/org.chromium.Chromium.scoped_dir.oenr8p/image.png".into())));
+        assert_eq!(take_body_image("no picture"), ("no picture".into(), None));
+    }
+
+    #[test]
+    fn only_local_pictures_are_kept_and_every_tag_is_dropped() {
+        let (body, img) = take_body_image("a <IMG SRC='https://evil.example/x.png'> b <img src=\"file:///tmp/ok.png\"> c");
+        assert_eq!((body.as_str(), img.as_deref()), ("a  b  c", Some("/tmp/ok.png")), "the remote one is dropped, the later local one still found");
+        for bad in ["file:///tmp/../etc/x.png", "file://host/x.png", "http://x/y.png", "file:///tmp/a%00b.png", "/tmp/x.png", "file:///tmp/%zz"] {
+            assert_eq!(take_body_image(&format!("<img src=\"{bad}\">")), ("".into(), None), "{bad}");
+        }
+        assert_eq!(take_body_image("see <imgur> and <img"), ("see <imgur> and <img".into(), None), "not picture tags: left alone");
     }
 }

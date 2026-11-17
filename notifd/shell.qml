@@ -240,6 +240,15 @@ ShellRoot {
         touch()
         sound.play(n)
     }
+    // The popup itself was clicked: run the app's "default" action if it has one (a browser opens the page's tab, a chat app its
+    // conversation), then bring the app forward like a button does. The popup closes either way.
+    function pressDefault(nid) {
+        const n = byId[nid]
+        const a = n ? (n.actions || []).find(x => x.identifier === "default") : undefined
+        if (!a) return
+        a.invoke()
+        focusApp.raise(n)
+    }
     // Its popup timed out: keep it for the notification center (the app still holds it), or close it
     function timedOut(nid) {
         const n = byId[nid]
