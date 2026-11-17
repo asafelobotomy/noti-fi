@@ -2,6 +2,8 @@ name: shot
 on:
   push:
     branches: [claude/project-thread-b9661x]
+permissions:
+  contents: read
 jobs:
   shot:
     runs-on: ubuntu-latest
