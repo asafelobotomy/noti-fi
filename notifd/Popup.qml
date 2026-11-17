@@ -35,6 +35,7 @@ Rectangle {
 
     signal dismissed()
     signal actionRan()      // one of the buttons ran: the daemon may bring the app's window forward
+    signal clicked()        // the card itself was clicked (not a button): the daemon runs the app's "default" action, if it has one
     signal expired()
     signal pinToggled()
     signal stackToggled()
@@ -49,7 +50,8 @@ Rectangle {
     readonly property color cButtonHover: theme.buttonHover ?? "#323646"
 
     // A notification object can vanish (closed) while its popup is still fading out; read through guards.
-    readonly property var acts: (notif && notif.actions) ? notif.actions : []
+    // the buttons: every action but "default", which is the click on the notification itself (Chromium sends it as "Activate")
+    readonly property var acts: (notif && notif.actions) ? notif.actions.filter(a => a.identifier !== "default") : []
     readonly property bool resident: notif ? notif.resident === true : false
     // freedesktop "value" hint: 0-100 progress, or -1 when absent
     readonly property int progress: {
@@ -110,7 +112,7 @@ Rectangle {
     TapHandler { enabled: card.active && !card.clickThrough; onTapped: {
         if (actionsRow.hovered || replyBox.hovered || pinHover.hovered || mediaHover.hovered || graphBox.hovered || gripArea.containsMouse || gripArea.pressed) return
         // a collapsed stack opens when clicked; anything else is dismissed
-        if (card.stackCount > 1 && !card.stackExpanded) card.stackToggled(); else card.dismissed()
+        if (card.stackCount > 1 && !card.stackExpanded) card.stackToggled(); else { card.clicked(); card.dismissed() }
     } }
 
     // zone accent stripe
@@ -271,7 +273,8 @@ Rectangle {
 
         Image {      // a large picture (web push images, screenshots, covers); small images stay as the icon
             id: bigImage
-            source: card.media && card.notif && !card.hideText ? card.iconSource(card.notif.image) : ""
+            // a browser's picture arrives as a body <img>, which notify serve moves to the x-notifi-image hint
+            source: card.media && card.notif && !card.hideText ? card.iconSource((card.notif.hints && card.notif.hints["x-notifi-image"]) || card.notif.image) : ""
             visible: status === Image.Ready && implicitWidth >= 200
             Layout.fillWidth: true
             Layout.preferredHeight: visible ? Math.min(180, Math.round(width * implicitHeight / Math.max(1, implicitWidth))) : 0

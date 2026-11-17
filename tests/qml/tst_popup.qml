@@ -8,6 +8,7 @@ Item {
     width: 600; height: 400
 
     property int dismissed: 0
+    property int clicked: 0
     property int pinToggled: 0
     property int stackToggled: 0
     property real lastWidth: 0
@@ -19,6 +20,7 @@ Item {
             timeoutMs: 0
             notif: ({ appName: "app", summary: "Hello", body: "text", actions: [], hints: {}, image: "", appIcon: "", desktopEntry: "", resident: false })
             onDismissed: host.dismissed++
+            onClicked: host.clicked++
             onPinToggled: host.pinToggled++
             onStackToggled: host.stackToggled++
             onResized: w => host.lastWidth = w
@@ -32,7 +34,7 @@ Item {
         property var card: null
 
         function init() {
-            host.dismissed = 0; host.pinToggled = 0; host.stackToggled = 0; host.lastWidth = 0
+            host.dismissed = 0; host.clicked = 0; host.pinToggled = 0; host.stackToggled = 0; host.lastWidth = 0
             card = createTemporaryObject(cardComp, host)
             wait(300)                       // the slide-in
         }
@@ -40,6 +42,19 @@ Item {
         function test_tap_dismisses() {
             mouseClick(card, 200, 100)
             compare(host.dismissed, 1)
+        }
+
+        function test_tap_reports_a_click_before_it_dismisses() {
+            mouseClick(card, 200, 100)
+            compare(host.clicked, 1, "the daemon runs the app's default action on this")
+            compare(host.dismissed, 1)
+        }
+
+        function test_default_action_is_not_a_button() {
+            card.notif = ({ appName: "app", summary: "Hello", body: "", hints: {}, image: "", appIcon: "", desktopEntry: "", resident: false,
+                            actions: [{ identifier: "default", text: "Activate" }, { identifier: "0", text: "Reply" }, { identifier: "settings", text: "Settings" }] })
+            compare(card.acts.length, 2)
+            compare(card.acts[0].text, "Reply")
         }
 
         function test_click_through_ignores_taps() {
@@ -59,6 +74,7 @@ Item {
             mouseClick(card, 200, 100)
             compare(host.stackToggled, 1)
             compare(host.dismissed, 0)
+            compare(host.clicked, 0, "opening a stack is not a click on the notification")
             card.stackExpanded = true
             mouseClick(card, 200, 100)
             compare(host.dismissed, 1)
