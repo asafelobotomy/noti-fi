@@ -14,6 +14,11 @@ use zbus::{fdo, interface};
 pub const NAME: &str = "org.freedesktop.Notifications";
 pub const PATH: &str = "/org/freedesktop/Notifications";
 
+/// Capabilities notifd adds to Quickshell's own. `inhibitions` is the KDE inhibit extension. `x-kde-origin-name` tells a browser
+/// to send a web page's site as the `x-kde-origin-name` hint (which the `origin` a rule matches on comes from); without it
+/// Chromium and Brave fold the site into the notification text, and every site rule falls through to the default group.
+pub const EXTRA_CAPABILITIES: &[&str] = &["inhibitions", "x-kde-origin-name"];
+
 /// One app asking for notifications to be held.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Inhibition {
@@ -70,6 +75,14 @@ impl Front {
 }
 
 /// The app name to show for an inhibition: its desktop entry, else what it gave as its reason's owner, else its bus name.
+fn add_extra_capabilities(caps: &mut Vec<String>) {
+    for extra in EXTRA_CAPABILITIES {
+        if !caps.iter().any(|c| c == extra) {
+            caps.push((*extra).into());
+        }
+    }
+}
+
 fn app_label(desktop_entry: &str, hints: &HashMap<String, OwnedValue>, sender: &str) -> String {
     if !desktop_entry.is_empty() {
         return desktop_entry.to_string();
@@ -100,9 +113,7 @@ impl Front {
 
     fn get_capabilities(&self) -> fdo::Result<Vec<String>> {
         let mut caps: Vec<String> = self.forward("GetCapabilities", &())?;
-        if !caps.iter().any(|c| c == "inhibitions") {
-            caps.push("inhibitions".into());
-        }
+        add_extra_capabilities(&mut caps);
         Ok(caps)
     }
 
@@ -164,5 +175,13 @@ mod tests {
         let hints = HashMap::new();
         assert_eq!(app_label("org.kde.okular", &hints, ":1.9"), "org.kde.okular");
         assert_eq!(app_label("", &hints, ":1.9"), ":1.9");
+    }
+
+    #[test]
+    fn browsers_are_told_to_send_the_site_as_a_hint() {
+        let mut caps = vec!["actions".to_string(), "inhibitions".to_string()];
+        add_extra_capabilities(&mut caps);
+        add_extra_capabilities(&mut caps);
+        assert_eq!(caps, ["actions", "inhibitions", "x-kde-origin-name"], "added once, existing ones kept");
     }
 }
