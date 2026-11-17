@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- chrono (flagged unmaintained, RUSTSEC-2026-0543) is replaced by jiff for the few local-time stamps the CLI prints.
+
+- **Website rules now work for Chromium browsers (Brave, Chrome, Chromium):** `notify serve` now advertises the `x-kde-origin-name` capability. Without it a browser folds the site into the notification text instead of sending it as the origin hint, so a rule matching a site's `origin` never matched and its notifications fell through to the default group (Personal). Restart the browser after updating, since it reads the capabilities once.
+
 ## 0.20.0
 
 - **A rebuilt Notifications page in uQ Settings (needs uq_api 3):** six tabs laid out like uQ's own pages. Overview: Do Not Disturb, focus mode, counts of what is on screen and unread, and a test notification. Quiet: a switch per group, automatic Do Not Disturb, urgent notifications. History: how much is kept, and the recent notifications by app (with its icon), group, time and why it was held back, filterable to what was held back; the notification's words are never read. Clear history first shows how many notifications would go, by app. Rules: their names, and the verdict of `notify rules`. Health: the `notify doctor` check-up grouped by area, and update checks and installs with a progress bar. Preferences: every setting `notify config` lists (popup timing and size, sound, colours, font, the list and transfer chart), followed live from `rules.json`, each row showing the daemon's own refusal and a Reset. Skeleton bars show while something loads.

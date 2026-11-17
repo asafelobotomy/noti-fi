@@ -111,7 +111,7 @@ fn notify_serve_forwards_everything_and_answers_inhibit() {
     assert!(owned, "notify serve did not take the notification name");
 
     let caps: Vec<String> = app.call_method(Some(NAME), PATH, Some(NAME), "GetCapabilities", &()).unwrap().body().deserialize().unwrap();
-    k.check("GetCapabilities is Quickshell's, plus inhibitions", caps.contains(&"actions".to_string()) && caps.contains(&"inhibitions".to_string()), || format!("{caps:?}"));
+    k.check("GetCapabilities is Quickshell's, plus inhibitions and x-kde-origin-name (so a browser sends the site as a hint)", caps.contains(&"actions".to_string()) && caps.contains(&"inhibitions".to_string()) && caps.contains(&"x-kde-origin-name".to_string()), || format!("{caps:?}"));
     let info: (String, String, String, String) = app.call_method(Some(NAME), PATH, Some(NAME), "GetServerInformation", &()).unwrap().body().deserialize().unwrap();
     k.check("GetServerInformation is passed through", !info.0.is_empty() && info.3 == "1.2", || format!("{info:?}"));
 
