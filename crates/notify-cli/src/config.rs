@@ -119,7 +119,6 @@ pub fn print_plan(ctx: &Ctx, key: &str, shown: &str, p: &Proposal) {
 
 /// `history --clear --dry-run`: how much would go, grouped by app. Nothing is changed.
 pub fn print_history_plan(ctx: &Ctx, c: &mut notify_client::Client) -> Result<()> {
-    use chrono::{Local, TimeZone};
     let count = c.status()?.history;
     let rows = c.history(100_000)?;
     let mut apps: Vec<(String, usize)> = Vec::new();
@@ -130,7 +129,7 @@ pub fn print_history_plan(ctx: &Ctx, c: &mut notify_client::Client) -> Result<()
         }
     }
     apps.sort_by_key(|(_, n)| std::cmp::Reverse(*n));
-    let when = |t: i64| Local.timestamp_millis_opt(t).single().map(|d| d.format("%Y-%m-%d %H:%M").to_string()).unwrap_or_default();
+    let when = |t: i64| jiff::Timestamp::from_millisecond(t).ok().map(|d| d.to_zoned(jiff::tz::TimeZone::system()).strftime("%Y-%m-%d %H:%M").to_string()).unwrap_or_default();
     let (newest, oldest) = (rows.iter().map(|r| r.t).max(), rows.iter().map(|r| r.t).min());
     let noun = |n: usize| format!("{n} notification{}", if n == 1 { "" } else { "s" });
     let refusal = if count == 0 { "The history is already empty." } else { "" };

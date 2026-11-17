@@ -4,7 +4,6 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use anyhow::{Context, Result, anyhow, bail};
-use chrono::{Local, TimeZone};
 use notify_protocol::{SimResult, Status, Urgency};
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -151,7 +150,7 @@ pub fn history(ctx: &Ctx, a: HistoryArgs) -> Result<()> {
         return Ok(());
     }
     for i in &items {
-        let t = Local.timestamp_millis_opt(i.t).single().map(|d| d.format("%H:%M:%S").to_string()).unwrap_or_else(|| "??:??:??".into());
+        let t = jiff::Timestamp::from_millisecond(i.t).ok().map(|d| d.to_zoned(jiff::tz::TimeZone::system()).strftime("%H:%M:%S").to_string()).unwrap_or_else(|| "??:??:??".into());
         let flag = if i.shown { String::new() } else { format!("  [{}]", i.why) };
         let site = if i.origin.is_empty() { String::new() } else { format!(" ({})", i.origin) };
         let upd = match i.updates {

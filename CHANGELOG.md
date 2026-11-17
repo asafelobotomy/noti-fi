@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- chrono (flagged unmaintained, RUSTSEC-2026-0543) is replaced by jiff for the few local-time stamps the CLI prints.
+
 - **Website rules now work for Chromium browsers (Brave, Chrome, Chromium):** `notify serve` now advertises the `x-kde-origin-name` capability. Without it a browser folds the site into the notification text instead of sending it as the origin hint, so a rule matching a site's `origin` never matched and its notifications fell through to the default group (Personal). Restart the browser after updating, since it reads the capabilities once.
 
 ## 0.20.0
