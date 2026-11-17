@@ -1,0 +1,18 @@
+name: shot
+on:
+  push:
+    branches: [claude/project-thread-b9661x]
+jobs:
+  shot:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --cap-add=SYS_NICE
+    steps:
+      - run: pacman -Syu --noconfirm --needed base-devel git rust qt6-base qt6-declarative kirigami qqc2-desktop-style quickshell labwc dbus libnotify sqlite grim chromium xorg-server-xvfb xorg-xauth nodejs npm python glib2 ttf-dejavu
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - run: cargo build --locked -p notify-cli
+      - run: tests/shot/run.sh
+        continue-on-error: true
+      - uses: actions/upload-artifact@v4
+        with: {name: shots, path: shots}
