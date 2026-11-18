@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.21.2
+
 - **The group-colour stripe sits beside the card.** On popups and Center rows the coloured bar on the left no longer draws over the card's border and rounded corner; it is its own bar just outside the card edge.
 
 ## 0.21.1
