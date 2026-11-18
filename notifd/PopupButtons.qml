@@ -13,7 +13,7 @@ Flow {
         delegate: Rectangle {
             id: btnRect
             required property var modelData
-            radius: 6
+            radius: Math.max(0, (row.popup.theme.radius ?? 12) - 2)
             color: btn.hovered ? row.popup.cButtonHover : row.popup.cButton
             implicitWidth: btnLabel.implicitWidth + 20
             implicitHeight: 26

@@ -332,7 +332,7 @@ Rectangle {
             visible: card.notif !== null && card.notif.hasInlineReply === true && !card.noFocus
             Layout.fillWidth: true
             active: card.active; placeholder: card.notif && card.notif.inlineReplyPlaceholder && !card.hideText ? card.notif.inlineReplyPlaceholder : "Reply…"
-            cText: card.cText; cSub: card.cSub; cButton: card.cButton; accent: card.accent; fontFamily: card.fontFamily; fontSize: card.fontSize
+            cText: card.cText; cSub: card.cSub; cButton: card.cButton; controlRadius: Math.max(0, (card.theme.radius ?? 12) - 2); accent: card.accent; fontFamily: card.fontFamily; fontSize: card.fontSize
             onSubmitted: text => card.sendReply(text)
             onCancelled: card.dismissed()
         }

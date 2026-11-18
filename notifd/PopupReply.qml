@@ -9,6 +9,7 @@ Rectangle {
     property color cText: "#f2f3f7"
     property color cSub: "#b9bccb"
     property color cButton: "#272a36"
+    property real controlRadius: 10
     property string fontFamily: ""
     property real fontSize: 12
     readonly property bool hovered: replyHover.hovered
@@ -18,7 +19,7 @@ Rectangle {
     function clear() { replyInput.text = "" }
 
     implicitHeight: 32
-    radius: 6
+    radius: r.controlRadius
     color: r.cButton
     border.width: replyInput.activeFocus ? 1 : 0
     border.color: r.accent
