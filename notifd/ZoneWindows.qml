@@ -212,8 +212,10 @@ Variants {
 
                     Popup {
                         id: popup
-                        width: slot.userWidth > 0 ? slot.userWidth : slot.cardWidth
-                        x: win.atRight ? stack.width - width : (win.atCenter ? (stack.width - width) / 2 : 0)
+                        // the accent stripe sits beside the card, so the card gives up 7px (4 + 3 gap) of its slot on the left
+                        readonly property real stripeSpace: 7
+                        width: (slot.userWidth > 0 ? slot.userWidth : slot.cardWidth) - stripeSpace
+                        x: (win.atRight ? stack.width - width : (win.atCenter ? (stack.width - width + stripeSpace) / 2 : stripeSpace))
                         y: slot.headH + slot.stackHeaderH
                         notif: { root.rev; return root.byId[slot.nid] ?? null }
                         theme: root.cfg.theme
@@ -247,7 +249,7 @@ Variants {
                         onClicked: root.pressDefault(slot.nid)
                         onExpired:   { if (!slot.leaving) root.timedOut(slot.nid) }
                         onPinToggled: root.layout.setPinned(slot.nid, !slot.pinned)
-                        onResized: w => root.layout.setUserWidth(slot.nid, w)
+                        onResized: w => root.layout.setUserWidth(slot.nid, w + popup.stripeSpace)
                     }
                 }
             }

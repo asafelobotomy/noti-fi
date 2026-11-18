@@ -115,9 +115,9 @@ Rectangle {
         if (card.stackCount > 1 && !card.stackExpanded) card.stackToggled(); else { card.clicked(); card.dismissed() }
     } }
 
-    // zone accent stripe
+    // zone accent stripe: its own bar beside the card (outside its edge, so it never covers the border or the rounded corner)
     Rectangle {
-        anchors { left: parent.left; top: parent.top; bottom: parent.bottom; margins: 1 }
+        x: -(width + 3); y: 0; height: parent.height
         width: 4; radius: 2; color: card.accent
     }
 
@@ -148,7 +148,7 @@ Rectangle {
 
     ColumnLayout {
         id: content
-        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12; leftMargin: 18 }
+        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
         spacing: 6
 
         RowLayout {

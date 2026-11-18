@@ -192,7 +192,11 @@ Scope {
                     }
                     Component {
                         id: itemCard
-                        CenterItem {
+                        Item {
+                          implicitHeight: card.implicitHeight
+                          CenterItem {
+                            id: card
+                            x: 7; width: parent.width - 7; height: parent.height     // 7px on the left for the group-colour bar
                             entry: row.modelData.entry
                             accent: center.accent(row.modelData.zone)
                             theme: center.theme
@@ -203,6 +207,7 @@ Scope {
                             onOpened: center.open_(row.modelData.entry, live)
                             onInvoked: key => center.press(row.modelData.entry.id, key)
                             onRemoved: center.shell.api.removeHistory(row.modelData.entry.id, row.modelData.entry.t)
+                          }
                         }
                     }
                 }
