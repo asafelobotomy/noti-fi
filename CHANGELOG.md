@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **The group-colour stripe sits beside the card.** On popups and Center rows the coloured bar on the left no longer draws over the card's border and rounded corner; it is its own bar just outside the card edge.
+
 ## 0.21.1
 
 - **Controls follow the theme radius.** Buttons, the reply box and Center rows round to uQ's radius minus 2, like uQ's own controls, instead of a fixed 6 or 8.

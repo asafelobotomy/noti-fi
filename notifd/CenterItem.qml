@@ -44,8 +44,8 @@ Rectangle {
     HoverHandler { id: hover }
     TapHandler { onTapped: item.opened() }
 
-    Rectangle {          // the group's colour, down the left edge
-        x: 0; y: 8; width: 3; height: parent.height - 16; radius: 1.5
+    Rectangle {          // the group's colour, in its own bar beside the card (outside its edge)
+        x: -(width + 3); y: 0; width: 4; height: parent.height; radius: 2
         color: item.accent
         opacity: item.unread ? 1 : 0.4
     }
