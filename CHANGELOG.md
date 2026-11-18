@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Controls follow the theme radius.** Buttons, the reply box and Center rows round to uQ's radius minus 2, like uQ's own controls, instead of a fixed 6 or 8.
+- **Less idle work:** notifd no longer re-reads uQ's theme file every 2 s. It follows the file and its folder for changes and keeps a 30 s read as a safety net, so a theme change still shows at once.
+
 ## 0.21.0
 
 - chrono (flagged unmaintained, RUSTSEC-2026-0543) is replaced by jiff for the few local-time stamps the CLI prints.

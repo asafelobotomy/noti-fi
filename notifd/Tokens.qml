@@ -3,9 +3,9 @@ import Quickshell
 import Quickshell.Io
 
 // A desktop's design tokens as the base of notifd's theme (theme.tokens): "auto" = uQ's tokens.json when it exists, a path = that
-// file, "" or "off" = none. Settings in rules.json's `theme` still win over the tokens. The file is read again every 2 s rather than
-// watched: uQ replaces its whole theme folder at once, which leaves a watch on the old file stale. A file that is missing,
-// unreadable or not valid keeps the last good tokens.
+// file, "" or "off" = none. Settings in rules.json's `theme` still win over the tokens. uQ replaces its whole theme folder at once, which
+// leaves a watch on the old file stale, so the file's folder (uq/) is watched too and the file is read again on either change;
+// a 30 s read stays as a safety net. A file that is missing, unreadable or not valid keeps the last good tokens.
 Scope {
     id: tokens
     required property var shell          // cfg; reapply() when the tokens change
@@ -51,7 +51,18 @@ Scope {
         path: tokens.path
         blockLoading: false
         printErrors: false
+        watchChanges: true
+        onFileChanged: reload()
         onLoaded: tokens.take(text())
     }
-    Timer { interval: 2000; repeat: true; running: tokens.path !== ""; onTriggered: file.reload() }
+    // The file's folder: uQ swaps theme/ as a whole, so the file's own watch goes stale but the folder's changes.
+    FileView {
+        id: dirWatch
+        path: tokens.path === "" ? "" : tokens.path.replace(/\/[^/]*\/[^/]*$/, "")
+        preload: false
+        printErrors: false
+        watchChanges: true
+        onFileChanged: file.reload()
+    }
+    Timer { interval: 30000; repeat: true; running: tokens.path !== ""; onTriggered: file.reload() }
 }

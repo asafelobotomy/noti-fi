@@ -34,7 +34,7 @@ Rectangle {
     }
 
     implicitHeight: col.implicitHeight + 16
-    radius: 8
+    radius: Math.max(0, (theme.radius ?? 12) - 2)
     color: hover.hovered ? (theme.buttonHover ?? "#323646") : (theme.button ?? "#272a36")
     border.width: current ? 2 : 1
     border.color: current ? accent : unread ? Qt.rgba(accent.r, accent.g, accent.b, 0.55) : "transparent"

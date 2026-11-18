@@ -9,7 +9,7 @@ Rectangle {
 
     implicitWidth: label.implicitWidth + 20
     implicitHeight: 26
-    radius: 6
+    radius: Math.max(0, (theme.radius ?? 12) - 2)
     opacity: enabled ? 1 : 0.45
     color: area.containsMouse && enabled ? (theme.buttonHover ?? "#323646") : (theme.button ?? "#272a36")
     border.width: activeFocus ? 2 : 1                   // reached with Tab: Enter or Space presses it
