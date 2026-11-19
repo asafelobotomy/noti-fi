@@ -22,7 +22,7 @@ serde_json.workspace = true
 anyhow.workspace = true
 clap = { version = "4", features = ["derive"] }
 regress = "0.12"
-jiff = { version = "0.2", default-features = false, features = ["std", "tz-system"] }
+jiff = { version = "1.0", default-features = false, features = ["std", "tz-system"] }
 rusqlite = "0.43"   # links the system libsqlite3 (qt6-base already needs it)
 
 [dev-dependencies]

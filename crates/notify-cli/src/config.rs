@@ -129,7 +129,7 @@ pub fn print_history_plan(ctx: &Ctx, c: &mut notify_client::Client) -> Result<()
         }
     }
     apps.sort_by_key(|(_, n)| std::cmp::Reverse(*n));
-    let when = |t: i64| jiff::Timestamp::from_millisecond(t).ok().map(|d| d.to_zoned(jiff::tz::TimeZone::system()).strftime("%Y-%m-%d %H:%M").to_string()).unwrap_or_default();
+    let when = |t: i64| jiff::Timestamp::from_millisecond(t).ok().map(|d| d.to_zoned_datetime(jiff::tz::TimeZone::system()).strftime("%Y-%m-%d %H:%M").to_string()).unwrap_or_default();
     let (newest, oldest) = (rows.iter().map(|r| r.t).max(), rows.iter().map(|r| r.t).min());
     let noun = |n: usize| format!("{n} notification{}", if n == 1 { "" } else { "s" });
     let refusal = if count == 0 { "The history is already empty." } else { "" };

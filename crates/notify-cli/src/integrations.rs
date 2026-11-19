@@ -267,7 +267,7 @@ pub fn adapt(ctx: &Ctx, a: AdaptArgs) -> Result<()> {
                     failed = true;
                     continue;
                 }
-                let stamp = paths().backups.join(jiff::Zoned::now().strftime("%Y%m%d-%H%M%S").to_string()).join(name.replace(' ', "-"));
+                let stamp = paths().backups.join(jiff::ZonedDateTime::now().strftime("%Y%m%d-%H%M%S").to_string()).join(name.replace(' ', "-"));
                 // the profile files can hold account details: the backups are private (folder 0700, files 0600)
                 fs::create_dir_all(&stamp)?;
                 for d in [paths().backups, stamp.parent().map(Path::to_path_buf).unwrap_or_default(), stamp.clone()] {
