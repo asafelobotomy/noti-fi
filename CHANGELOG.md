@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.21.4
+
+- The panel follows the uQ theme live: colours, icons and font change with uQ's theme without reopening it (it kept the colours it started with). Nothing changes outside uQ.
+- `notify doctor` no longer says another program owns notifications when nothing does; it names the owner when there is one and says how to install the takeover.
+
 ## 0.21.3
 
 - Dependency updates: rusqlite 0.43 and jiff 1.0 (no change in behaviour).

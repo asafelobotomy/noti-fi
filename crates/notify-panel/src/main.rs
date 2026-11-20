@@ -4,6 +4,7 @@
 //!   --page=history   --quit-after=N   --report   --selftest
 
 mod model;
+mod theme;
 
 use notify_panel_core::shell::{self, Claim};
 
@@ -26,6 +27,9 @@ fn main() {
     QGuiApplication::set_desktop_file_name(&QString::from("org.notify.Panel"));
     // follow the Plasma theme (Breeze, your accent colour and fonts)
     QQuickStyle::set_style(&QString::from("org.kde.desktop"));
+
+    // under uQ, follow its theme live (colours, icons, font); elsewhere nothing changes
+    theme::ffi::notifi_follow_uq_theme();
 
     let mut engine = QQmlApplicationEngine::new();
     if let Some(mut engine) = engine.as_mut() {
