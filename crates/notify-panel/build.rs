@@ -78,6 +78,8 @@ fn main() {
     .qrc_resources(qml_dir(".js")) // helpers the pages import by relative path (`import "Json.js" as Json`)
     .qt_module("Quick")
     .qt_module("QuickControls2")
-    .files(["src/model.rs"])
+    .qt_module("Gui")
+    .files(["src/model.rs", "src/theme.rs"])
+    .cpp_file("cpp/theme.cpp")
     .build();
 }

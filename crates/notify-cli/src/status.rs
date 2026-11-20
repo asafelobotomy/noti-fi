@@ -119,7 +119,11 @@ pub fn doctor(ctx: &Ctx) -> anyhow::Result<bool> {
     let installed = p.takeover_state.exists();
     let plain = crate::install::read_state(&p).is_some_and(|s| s.plain);
     let what = if plain { "installed as a plain user service (starts with your graphical session)" } else { "takeover installed (starts at login)" };
-    add("Install", if installed { OK } else { INFO }, if installed { what.into() } else { "takeover not installed (another program owns notifications)".into() }, None);
+    let not_installed = match &st.owner {
+        Some(o) if !st.notifd_owns => format!("takeover not installed ({} owns notifications)", o.comm),
+        _ => "takeover not installed".to_string(),
+    };
+    add("Install", if installed { OK } else { INFO }, if installed { what.into() } else { not_installed }, if installed { None } else { Some("see what it changes: notify takeover --dry-run; then: notify takeover --now") });
     if installed {
         let (_, enabled) = sh("systemctl", &["--user", "is-enabled", "notifd.service"]);
         add("Install", if enabled == "enabled" { OK } else { WARN }, format!("notifd.service: {}", if enabled.is_empty() { "unknown" } else { &enabled }), None);
