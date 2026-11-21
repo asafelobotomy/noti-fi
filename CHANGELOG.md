@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.21.5
 
 - **Badges, pills and the OSD follow the theme radius.** The Urgent/High and Pin badges, the graph's mode buttons, a stack's header and back cards, the "+N more" pill and the volume/brightness OSD round to uQ's radius (controls: radius minus 2, capped at a pill) instead of fixed 6 to 26 px. The panel's popup preview draws the configured radius too.
 
