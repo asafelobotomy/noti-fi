@@ -43,8 +43,10 @@ jobs:
         run: cargo test --locked -p notify-jobs --test bridge
       - name: Daemon, sound, CLI, client and panel tests (headless Wayland)
         run: tests/ci-daemon.sh
-      - name: Clippy (reported, not blocking)
-        run: cargo clippy --workspace --all-targets --locked || true
+      - name: Formatting (rustfmt.toml is the house style)
+        run: cargo fmt --all --check
+      - name: Clippy (warnings fail the build)
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
   # noti-fi's page in uQ Settings (uq/pages/noti-fi): its Node and QML tests, the packaging, and uQ's own checker of the folder.
   uq:

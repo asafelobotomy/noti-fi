@@ -68,7 +68,7 @@ pub mod qobject {
         #[qproperty(QString, settings_json)]
         // start at login (the autostart entry exists)
         #[qproperty(bool, autostart)]
-        #[qproperty(QString, update_state)]   // idle | checking | current | available | installing | installed | error
+        #[qproperty(QString, update_state)] // idle | checking | current | available | installing | installed | error
         #[qproperty(QString, update_latest)]
         #[qproperty(QString, update_message)]
         #[qproperty(QString, update_page)]
@@ -80,7 +80,7 @@ pub mod qobject {
         // apps
         #[qproperty(QString, apps_json)]
         #[qproperty(bool, apps_scanning)]
-        #[qproperty(QString, system_json)]   // System page: {checks, summary, busy, output, ok, applied, action, error}
+        #[qproperty(QString, system_json)] // System page: {checks, summary, busy, output, ok, applied, action, error}
         type PanelModel = super::PanelModelRust;
     }
 

@@ -31,10 +31,10 @@ pub struct Run {
 impl Run {
     pub fn report(&self) -> Value {
         for l in self.stdout.lines() {
-            if let Ok(v) = serde_json::from_str::<Value>(l) {
-                if let Some(r) = v.get("report") {
-                    return r.clone();
-                }
+            if let Ok(v) = serde_json::from_str::<Value>(l)
+                && let Some(r) = v.get("report")
+            {
+                return r.clone();
             }
         }
         Value::Null
@@ -103,6 +103,9 @@ pub fn run_panel_env(socket: &std::path::Path, args: &[&str], env: &[(&str, &std
     });
     let o = o.wait_with_output().expect("wait for notify-panel");
     done.store(true, std::sync::atomic::Ordering::SeqCst);
-    Run { code: o.status.code().unwrap_or(-1), stdout: String::from_utf8_lossy(&o.stdout).into_owned(), stderr: String::from_utf8_lossy(&o.stderr).into_owned() }
+    Run {
+        code: o.status.code().unwrap_or(-1),
+        stdout: String::from_utf8_lossy(&o.stdout).into_owned(),
+        stderr: String::from_utf8_lossy(&o.stderr).into_owned(),
+    }
 }
-

@@ -39,7 +39,9 @@ fn contract_against_a_real_daemon() {
     let cg = c.config_get().expect("configGet parses into the Rust types");
     k.check("the daemon accepted the config written from Rust types", c.config_status().map(|s| s.ok).unwrap_or(false), || "config rejected".into());
     k.check("configGet.raw is the file we wrote", Config::from_json(&cg.raw).map(|x| x == cfg).unwrap_or(false), || cg.raw.clone());
-    k.check("the daemon's effective config equals the Rust config (no field lost or invented)", cg.effective == cfg, || format!("{:?}\n!=\n{:?}", cg.effective, cfg));
+    k.check("the daemon's effective config equals the Rust config (no field lost or invented)", cg.effective == cfg, || {
+        format!("{:?}\n!=\n{:?}", cg.effective, cfg)
+    });
     let shipped = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../notifd/rules.json")).unwrap();
     let shipped_cfg = Config::from_json(&shipped);
     k.check("the shipped rules.json parses into the Rust Config", shipped_cfg.is_ok(), || format!("{:?}", shipped_cfg.as_ref().err()));
@@ -50,11 +52,15 @@ fn contract_against_a_real_daemon() {
 
     // ---- status and controls
     let st = c.status().unwrap();
-    k.check("status parses; zones match", {
-        let mut z = st.zones.clone();
-        z.sort();
-        z == ["business", "personal", "system"]
-    }, || format!("{st:?}"));
+    k.check(
+        "status parses; zones match",
+        {
+            let mut z = st.zones.clone();
+            z.sort();
+            z == ["business", "personal", "system"]
+        },
+        || format!("{st:?}"),
+    );
     let st = c.dnd("on").unwrap();
     k.check("dnd on is reflected in the typed status", st.dnd && st.holding == "dnd", || format!("{st:?}"));
     c.dnd("off").unwrap();
@@ -91,11 +97,22 @@ fn contract_against_a_real_daemon() {
         })
     };
     let r = sim(&mut c, "kernel", Urgency::Normal, false, None).unwrap();
-    k.check("simulate: the kernel is in the System group, built in (no rule can move it)", r.zone == "system" && r.decided_by.zone.as_deref() == Some("System (built in)") && r.would_show, || format!("{r:?}"));
+    k.check(
+        "simulate: the kernel is in the System group, built in (no rule can move it)",
+        r.zone == "system" && r.decided_by.zone.as_deref() == Some("System (built in)") && r.would_show,
+        || format!("{r:?}"),
+    );
     let r = sim(&mut c, "Steam", Urgency::Normal, false, None).unwrap();
-    k.check("simulate: unmatched app uses the default zone and timeout", r.zone == "personal" && r.decided_by.zone.is_none() && r.timeout == 1500 && r.matched.is_empty(), || format!("{r:?}"));
+    k.check(
+        "simulate: unmatched app uses the default zone and timeout",
+        r.zone == "personal" && r.decided_by.zone.is_none() && r.timeout == 1500 && r.matched.is_empty(),
+        || format!("{r:?}"),
+    );
     let mut draft = cfg.clone();
-    draft.rules.insert(0, Rule { name: Some("all to system".into()), matches: BTreeMap::new(), zone: Some("system".into()), timeout: None, silent: None, ..Default::default() });
+    draft.rules.insert(
+        0,
+        Rule { name: Some("all to system".into()), matches: BTreeMap::new(), zone: Some("system".into()), timeout: None, silent: None, ..Default::default() },
+    );
     let r = sim(&mut c, "Steam", Urgency::Normal, false, Some(draft)).unwrap();
     k.check("simulate can evaluate a typed draft config", r.zone == "system" && r.decided_by.zone.as_deref() == Some("all to system"), || format!("{r:?}"));
     c.dnd("on").unwrap();
@@ -103,7 +120,11 @@ fn contract_against_a_real_daemon() {
     let crit = sim(&mut c, "Steam", Urgency::Critical, false, None).unwrap();
     let ign = sim(&mut c, "Steam", Urgency::Normal, true, None).unwrap();
     c.dnd("off").unwrap();
-    k.check("simulate: DND holds normal, passes critical, and ignore_state shows the rule outcome", held.hold == "dnd" && !held.would_show && crit.would_show && ign.would_show, || format!("{held:?} {crit:?} {ign:?}"));
+    k.check(
+        "simulate: DND holds normal, passes critical, and ignore_state shows the rule outcome",
+        held.hold == "dnd" && !held.would_show && crit.would_show && ign.would_show,
+        || format!("{held:?} {crit:?} {ign:?}"),
+    );
     let e = sim(&mut c, "x", Urgency::Normal, false, Some(Config { default_zone: "ghost".into(), ..cfg.clone() })).unwrap_err();
     k.check("simulate with an invalid draft is bad_params", e.code() == Some("bad_params"), || format!("{e}"));
 
@@ -136,7 +157,11 @@ fn contract_against_a_real_daemon() {
     broken.default_zone = "ghost".into();
     d.write_config(&broken);
     let e = ev.wait_event(Duration::from_secs(6), |e| matches!(e, Event::Config(c) if !c.ok)).unwrap();
-    k.check("a rejected config pushes a typed config event with the reason", matches!(&e, Some(EventEnvelope { event: Event::Config(c), .. }) if !c.error.is_empty()), || format!("{e:?}"));
+    k.check(
+        "a rejected config pushes a typed config event with the reason",
+        matches!(&e, Some(EventEnvelope { event: Event::Config(c), .. }) if !c.error.is_empty()),
+        || format!("{e:?}"),
+    );
     d.write_config(&cfg);
     let e = ev.wait_event(Duration::from_secs(6), |e| matches!(e, Event::Config(c) if c.ok)).unwrap();
     k.check("the good config is accepted again (event)", e.is_some(), || "no ok config event".into());
@@ -161,19 +186,33 @@ fn contract_against_a_real_daemon() {
     let held = wait_until(SHORT, || c.history(5).map(|h| h.iter().any(|x| x.summary == "held one")).unwrap_or(false));
     let hist = c.history(10).unwrap();
     c.dnd("off").unwrap();
-    k.check("history parses and records why a notification was held", held && hist.iter().any(|x| x.summary == "held one" && !x.shown && x.why == "dnd"), || format!("{hist:?}"));
+    k.check(
+        "history parses and records why a notification was held",
+        held && hist.iter().any(|x| x.summary == "held one" && !x.shown && x.why == "dnd"),
+        || format!("{hist:?}"),
+    );
 
     // ---- apps that have sent notifications (kept even though history is off)
     d.send("who am i", "Contractapp", 400, &[], "normal");
     d.send("who am i again", "Contractapp", 400, &[], "normal");
     let got = wait_until(SHORT, || c.seen_apps().map(|a| a.iter().any(|x| x.app == "Contractapp" && x.count >= 2)).unwrap_or(false));
     let seen = c.seen_apps().unwrap();
-    k.check("seenApps lists each app once with a count and a recent time", got && seen.iter().filter(|x| x.app == "Contractapp").count() == 1 && seen.iter().all(|x| x.last > 1_600_000_000_000), || format!("{seen:?}"));
+    k.check(
+        "seenApps lists each app once with a count and a recent time",
+        got && seen.iter().filter(|x| x.app == "Contractapp").count() == 1 && seen.iter().all(|x| x.last > 1_600_000_000_000),
+        || format!("{seen:?}"),
+    );
     d.send("typed", "Contractapp", 300, &["string:category:im.received"], "critical");
-    let typed = wait_until(SHORT, || c.seen_apps().map(|a| a.iter().any(|x| x.app == "Contractapp" && x.types.iter().any(|t| t.category == "im.received"))).unwrap_or(false));
+    let typed = wait_until(SHORT, || {
+        c.seen_apps().map(|a| a.iter().any(|x| x.app == "Contractapp" && x.types.iter().any(|t| t.category == "im.received"))).unwrap_or(false)
+    });
     let seen = c.seen_apps().unwrap();
     let t = seen.iter().find(|x| x.app == "Contractapp").and_then(|x| x.types.iter().find(|t| t.category == "im.received"));
-    k.check("seenApps carries each type with channel, capabilities and count", typed && t.is_some_and(|t| t.channel == "app" && t.caps.contains(&"critical".to_string()) && t.count == 1 && t.key == "im.received|app"), || format!("{seen:?}"));
+    k.check(
+        "seenApps carries each type with channel, capabilities and count",
+        typed && t.is_some_and(|t| t.channel == "app" && t.caps.contains(&"critical".to_string()) && t.count == 1 && t.key == "im.received|app"),
+        || format!("{seen:?}"),
+    );
     k.check("seenApps is newest first", seen.windows(2).all(|w| w[0].last >= w[1].last), || format!("{seen:?}"));
 
     // ---- ordering
@@ -184,7 +223,11 @@ fn contract_against_a_real_daemon() {
     while let Ok(Some(e)) = ev.next_event(Duration::from_millis(1200)) {
         seqs.push(e.seq);
     }
-    k.check("event sequence numbers are strictly increasing and continue from the snapshot", !seqs.is_empty() && seqs.windows(2).all(|w| w[1] > w[0]) && seqs[0] >= seq0, || format!("{seqs:?} (snapshot {seq0})"));
+    k.check(
+        "event sequence numbers are strictly increasing and continue from the snapshot",
+        !seqs.is_empty() && seqs.windows(2).all(|w| w[1] > w[0]) && seqs[0] >= seq0,
+        || format!("{seqs:?} (snapshot {seq0})"),
+    );
     c.dismiss_all().unwrap();
 
     // ---- several clients at once
@@ -193,13 +236,17 @@ fn contract_against_a_real_daemon() {
         m.subscribe().unwrap();
     }
     d.send("fan-out", "Steam", 500, &[], "normal");
-    let got: Vec<Option<u64>> = many.iter_mut().map(|m| m.wait_event(SHORT, |e| matches!(e, Event::Notification(n) if n.summary == "fan-out")).unwrap().map(|e| e.seq)).collect();
-    k.check("four subscribers receive the same event with the same seq", got.iter().all(Option::is_some) && got.windows(2).all(|w| w[0] == w[1]), || format!("{got:?}"));
+    let got: Vec<Option<u64>> =
+        many.iter_mut().map(|m| m.wait_event(SHORT, |e| matches!(e, Event::Notification(n) if n.summary == "fan-out")).unwrap().map(|e| e.seq)).collect();
+    k.check("four subscribers receive the same event with the same seq", got.iter().all(Option::is_some) && got.windows(2).all(|w| w[0] == w[1]), || {
+        format!("{got:?}")
+    });
 
     // ---- the log must be clean
     drop(many);
     let log = fs::read_to_string(d.dir.join("log")).unwrap_or_default();
-    let bad: Vec<&str> = log.lines().filter(|l| ["TypeError", "ReferenceError", "Cannot close destroyed", "is not a function"].iter().any(|w| l.contains(w))).collect();
+    let bad: Vec<&str> =
+        log.lines().filter(|l| ["TypeError", "ReferenceError", "Cannot close destroyed", "is not a function"].iter().any(|w| l.contains(w))).collect();
     k.check("the daemon log has no script errors", bad.is_empty(), || bad.join("\n"));
 
     println!("\n{} passed, {} failed", k.passed, k.failed.len());

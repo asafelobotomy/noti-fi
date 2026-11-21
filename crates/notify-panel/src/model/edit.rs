@@ -199,7 +199,13 @@ impl qobject::PanelModel {
     }
 
     pub fn app_set(mut self: Pin<&mut Self>, match_field: &QString, match_value: &QString, label: &QString, what: &QString, text: &QString) {
-        let res = self.as_mut().rust_mut().draft.set_app_routing(&label.to_string(), &match_field.to_string(), &match_value.to_string(), &what.to_string(), &text.to_string());
+        let res = self.as_mut().rust_mut().draft.set_app_routing(
+            &label.to_string(),
+            &match_field.to_string(),
+            &match_value.to_string(),
+            &what.to_string(),
+            &text.to_string(),
+        );
         match res {
             Ok(()) => self.after_edit(),
             Err(why) => {
@@ -275,5 +281,4 @@ impl qobject::PanelModel {
         };
         self.send(Cmd::Save { path: draft::rules_path(), text, expected_base, force });
     }
-
 }

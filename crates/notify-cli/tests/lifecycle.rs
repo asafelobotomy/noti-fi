@@ -83,15 +83,30 @@ fn takeover_update_and_restore_in_a_fake_home() {
 
     let (c, out, err) = h.run(&["takeover"]);
     k.check("takeover succeeds", c == 0 && out.contains("Undo any time with: notify restore"), || format!("{out}{err}"));
-    for f in ["config/systemd/user/notifd.service", "config/systemd/user/notifd-fallback.service", "config/systemd/user/notifd-jobs.service",
-              "data/dbus-1/services/org.freedesktop.Notifications.service", "config/notifd/rules.json", "state/notifd/takeover.json",
-              "data/notifd/shell.qml", "data/notifd/Center.qml"] {
+    for f in [
+        "config/systemd/user/notifd.service",
+        "config/systemd/user/notifd-fallback.service",
+        "config/systemd/user/notifd-jobs.service",
+        "data/dbus-1/services/org.freedesktop.Notifications.service",
+        "config/notifd/rules.json",
+        "state/notifd/takeover.json",
+        "data/notifd/shell.qml",
+        "data/notifd/Center.qml",
+    ] {
         k.check(&format!("takeover writes {f}"), h.p(f).exists(), || format!("{:?}", h.files()));
     }
     let unit = std::fs::read_to_string(h.p("config/systemd/user/notifd-jobs.service")).unwrap_or_default();
-    k.check("the job bridge unit starts before plasmashell and runs `notify jobs`", unit.contains("Before=plasma-plasmashell.service") && unit.contains(" jobs"), || unit.clone());
+    k.check(
+        "the job bridge unit starts before plasmashell and runs `notify jobs`",
+        unit.contains("Before=plasma-plasmashell.service") && unit.contains(" jobs"),
+        || unit.clone(),
+    );
     let unit = std::fs::read_to_string(h.p("config/systemd/user/notifd.service")).unwrap_or_default();
-    k.check("notifd.service runs `notify serve` on the installed daemon files", unit.contains(" serve --payload ") && unit.contains("BusName=org.freedesktop.Notifications"), || unit.clone());
+    k.check(
+        "notifd.service runs `notify serve` on the installed daemon files",
+        unit.contains(" serve --payload ") && unit.contains("BusName=org.freedesktop.Notifications"),
+        || unit.clone(),
+    );
     let (c, _, _) = h.run(&["takeover"]);
     k.check("a second takeover is refused", c != 0, String::new);
 
@@ -106,8 +121,16 @@ fn takeover_update_and_restore_in_a_fake_home() {
     let (c, out, err) = h.run(&["update"]);
     k.check("update succeeds", c == 0, || format!("{out}{err}"));
     let d = rules(&h);
-    k.check("update merges new defaults and keeps user values", d.get("sound").is_some() && d["center"]["anchor"] == "bottom-right" && d["defaultTimeout"] == 9999, || d.to_string());
-    k.check("update restores the daemon files and keeps the previous version", h.p("data/notifd/Center.qml").exists() && h.p("data/notifd.prev/shell.qml").exists(), || format!("{:?}", h.files()));
+    k.check(
+        "update merges new defaults and keeps user values",
+        d.get("sound").is_some() && d["center"]["anchor"] == "bottom-right" && d["defaultTimeout"] == 9999,
+        || d.to_string(),
+    );
+    k.check(
+        "update restores the daemon files and keeps the previous version",
+        h.p("data/notifd/Center.qml").exists() && h.p("data/notifd.prev/shell.qml").exists(),
+        || format!("{:?}", h.files()),
+    );
 
     // portal: refuses to overwrite a file notify did not create
     let (c, out, err) = h.run(&["portal", "--remove"]);
@@ -116,7 +139,11 @@ fn takeover_update_and_restore_in_a_fake_home() {
     let portal = std::fs::read_dir(h.p("config/xdg-desktop-portal")).unwrap().count();
     std::fs::write(h.p("config/xdg-desktop-portal/kde-portals.conf"), "[preferred]\n").unwrap();
     let (c, _, _) = h.run(&["portal"]);
-    k.check("portal refuses to overwrite a foreign file", c != 0 && std::fs::read_to_string(h.p("config/xdg-desktop-portal/kde-portals.conf")).unwrap() == "[preferred]\n", || portal.to_string());
+    k.check(
+        "portal refuses to overwrite a foreign file",
+        c != 0 && std::fs::read_to_string(h.p("config/xdg-desktop-portal/kde-portals.conf")).unwrap() == "[preferred]\n",
+        || portal.to_string(),
+    );
     std::fs::remove_file(h.p("config/xdg-desktop-portal/kde-portals.conf")).unwrap();
 
     // restore: the shortcuts' launchers go too
@@ -130,9 +157,15 @@ fn takeover_update_and_restore_in_a_fake_home() {
     let units_gone = !left.iter().any(|f| f.contains("systemd/user/notifd") || f.contains("dbus-1/services") || f.contains("takeover.json"));
     k.check("restore removes the units, the D-Bus override and the state record", units_gone, || format!("{left:?}"));
     k.check("...and the shortcuts' launchers", !left.iter().any(|f| f.starts_with("data/applications/")), || format!("{left:?}"));
-    k.check("...and keeps the config and the installed daemon", h.p("config/notifd/rules.json").exists() && h.p("data/notifd/shell.qml").exists(), || format!("{left:?}"));
+    k.check("...and keeps the config and the installed daemon", h.p("config/notifd/rules.json").exists() && h.p("data/notifd/shell.qml").exists(), || {
+        format!("{left:?}")
+    });
     let (c, _, _) = h.run(&["restore", "--purge"]);
-    k.check("restore --purge removes the daemon files but keeps the config", c == 0 && !h.p("data/notifd").exists() && !h.p("data/notifd.prev").exists() && h.p("config/notifd/rules.json").exists(), || format!("{:?}", h.files()));
+    k.check(
+        "restore --purge removes the daemon files but keeps the config",
+        c == 0 && !h.p("data/notifd").exists() && !h.p("data/notifd.prev").exists() && h.p("config/notifd/rules.json").exists(),
+        || format!("{:?}", h.files()),
+    );
     k.finish();
 }
 
@@ -146,8 +179,12 @@ fn bad_configs_are_reported_line_by_line() {
     let mut bad: Value = serde_json::from_str(&std::fs::read_to_string(&shipped).unwrap()).unwrap();
     bad["zones"]["system"]["anchor"] = "middle".into();
     bad["defualtZone"] = "x".into();
-    for r in [r#"{"name": "named group", "match": {"appName": "(?P<x>steam)"}}"#, r#"{"name": "inline flag", "match": {"appName": "(?i)steam"}}"#,
-              r#"{"name": "ghost zone", "match": {}, "zone": "ghost"}"#, r#"{"name": "bad field", "match": {"nope": "a"}}"#] {
+    for r in [
+        r#"{"name": "named group", "match": {"appName": "(?P<x>steam)"}}"#,
+        r#"{"name": "inline flag", "match": {"appName": "(?i)steam"}}"#,
+        r#"{"name": "ghost zone", "match": {}, "zone": "ghost"}"#,
+        r#"{"name": "bad field", "match": {"nope": "a"}}"#,
+    ] {
         bad["rules"].as_array_mut().unwrap().push(serde_json::from_str(r).unwrap());
     }
     let f = h.p("bad.json");
@@ -166,21 +203,36 @@ fn json_progress_events_for_the_panel() {
     let mut k = Checks::default();
     let (_, lines) = h.json_lines(&["takeover", "--dry-run"]);
     let plan = lines.iter().find(|l| l["type"] == "plan").cloned().unwrap_or_default();
-    k.check("takeover --json --dry-run emits a plan listing every step", plan["dry_run"] == true && plan["total"].as_u64() == plan["steps"].as_array().map(|s| s.len() as u64) && plan["total"].as_u64() >= Some(9), || plan.to_string());
+    k.check(
+        "takeover --json --dry-run emits a plan listing every step",
+        plan["dry_run"] == true && plan["total"].as_u64() == plan["steps"].as_array().map(|s| s.len() as u64) && plan["total"].as_u64() >= Some(9),
+        || plan.to_string(),
+    );
     k.check("...and a closing result", lines.last().is_some_and(|l| l["type"] == "result" && l["ok"] == true), || format!("{:?}", lines.last()));
 
     let (_, lines) = h.json_lines(&["takeover"]);
     let total = lines.first().and_then(|l| l["total"].as_u64()).unwrap_or(0);
-    let steps: Vec<(u64, String)> = lines.iter().filter(|l| l["type"] == "step").map(|l| (l["n"].as_u64().unwrap_or(0), l["status"].as_str().unwrap_or("").to_string())).collect();
+    let steps: Vec<(u64, String)> =
+        lines.iter().filter(|l| l["type"] == "step").map(|l| (l["n"].as_u64().unwrap_or(0), l["status"].as_str().unwrap_or("").to_string())).collect();
     let want: Vec<(u64, String)> = (1..=total).flat_map(|n| [(n, "running".to_string()), (n, "done".to_string())]).collect();
     k.check("a real run reports every step as running then done, in order", total > 0 && steps == want, || format!("{steps:?}"));
-    k.check("...ending with a successful result", lines.last().is_some_and(|l| l["ok"] == true && l["message"].as_str().unwrap_or("").contains("notify restore")), || format!("{:?}", lines.last()));
+    k.check(
+        "...ending with a successful result",
+        lines.last().is_some_and(|l| l["ok"] == true && l["message"].as_str().unwrap_or("").contains("notify restore")),
+        || format!("{:?}", lines.last()),
+    );
 
     let (c, lines) = h.json_lines(&["takeover"]);
-    k.check("a refused command reports a failed result and exits 1", c == 1 && lines.last().is_some_and(|l| l["type"] == "result" && l["ok"] == false), || format!("{c} {:?}", lines.last()));
+    k.check("a refused command reports a failed result and exits 1", c == 1 && lines.last().is_some_and(|l| l["type"] == "result" && l["ok"] == false), || {
+        format!("{c} {:?}", lines.last())
+    });
     let (_, lines) = h.json_lines(&["restore"]);
     let done = lines.iter().filter(|l| l["status"] == "done").count() as u64;
-    k.check("restore --json streams a plan, steps and a result", lines.first().is_some_and(|l| l["type"] == "plan" && l["total"].as_u64() == Some(done)) && lines.last().is_some_and(|l| l["ok"] == true), || format!("{lines:?}"));
+    k.check(
+        "restore --json streams a plan, steps and a result",
+        lines.first().is_some_and(|l| l["type"] == "plan" && l["total"].as_u64() == Some(done)) && lines.last().is_some_and(|l| l["ok"] == true),
+        || format!("{lines:?}"),
+    );
     k.finish();
 }
 
@@ -192,17 +244,31 @@ fn on_hyprland_takeover_installs_a_plain_user_service() {
     let (c, out, err) = h.run(&["takeover"]);
     k.check("takeover on Hyprland says it installs a plain user service", c == 0 && out.contains("plain user service"), || format!("{out}{err}"));
     let unit = std::fs::read_to_string(h.p("config/systemd/user/notifd.service")).unwrap_or_default();
-    k.check("notifd starts with the graphical session, with no Plasma ordering or fallback", unit.contains("WantedBy=graphical-session.target") && !unit.contains("plasma") && !unit.contains("OnFailure"), || unit.clone());
+    k.check(
+        "notifd starts with the graphical session, with no Plasma ordering or fallback",
+        unit.contains("WantedBy=graphical-session.target") && !unit.contains("plasma") && !unit.contains("OnFailure"),
+        || unit.clone(),
+    );
     let jobs = std::fs::read_to_string(h.p("config/systemd/user/notifd-jobs.service")).unwrap_or_default();
-    k.check("the job bridge too (KDE apps on other desktops report their copies there)", jobs.contains("WantedBy=graphical-session.target") && !jobs.contains("plasma"), || jobs.clone());
-    k.check("no fallback unit (there is no Plasma to hand back to)", !h.p("config/systemd/user/notifd-fallback.service").exists(), || format!("{:?}", h.files()));
+    k.check(
+        "the job bridge too (KDE apps on other desktops report their copies there)",
+        jobs.contains("WantedBy=graphical-session.target") && !jobs.contains("plasma"),
+        || jobs.clone(),
+    );
+    k.check("no fallback unit (there is no Plasma to hand back to)", !h.p("config/systemd/user/notifd-fallback.service").exists(), || {
+        format!("{:?}", h.files())
+    });
     let state: Value = serde_json::from_str(&std::fs::read_to_string(h.p("state/notifd/takeover.json")).unwrap()).unwrap();
     k.check("the install is recorded as plain", state["plain"] == true, || state.to_string());
     let (c, out, err) = h.run(&["update"]);
     let unit = std::fs::read_to_string(h.p("config/systemd/user/notifd.service")).unwrap_or_default();
-    k.check("update keeps it plain", c == 0 && !unit.contains("plasma") && !h.p("config/systemd/user/notifd-fallback.service").exists(), || format!("{out}{err}{unit}"));
+    k.check("update keeps it plain", c == 0 && !unit.contains("plasma") && !h.p("config/systemd/user/notifd-fallback.service").exists(), || {
+        format!("{out}{err}{unit}")
+    });
     let (c, out, err) = h.run(&["restore"]);
-    k.check("restore removes it", c == 0 && !h.p("config/systemd/user/notifd.service").exists() && !h.p("state/notifd/takeover.json").exists(), || format!("{out}{err}"));
+    k.check("restore removes it", c == 0 && !h.p("config/systemd/user/notifd.service").exists() && !h.p("state/notifd/takeover.json").exists(), || {
+        format!("{out}{err}")
+    });
     h.desktop = "KDE".into();
     let (c, out, _) = h.run(&["takeover", "--dry-run", "--plain"]);
     k.check("--plain forces it on Plasma too", c == 0 && out.contains("plain user service") && !out.contains("fallback"), || out.clone());

@@ -12,7 +12,10 @@ impl Draft {
         }
         let id = format!("zone{n}");
         let used: Vec<&str> = zones.values().filter_map(|z| z.get("anchor").and_then(Value::as_str)).collect();
-        let anchor = ["top-right", "top-left", "bottom-right", "bottom-left", "top-center", "bottom-center", "middle-right", "middle-left", "center"].into_iter().find(|a| !used.contains(a)).unwrap_or("top-right");
+        let anchor = ["top-right", "top-left", "bottom-right", "bottom-left", "top-center", "bottom-center", "middle-right", "middle-left", "center"]
+            .into_iter()
+            .find(|a| !used.contains(a))
+            .unwrap_or("top-right");
         zones.insert(id.clone(), json!({"anchor": anchor, "accent": "#34d399", "label": format!("Zone {n}")}));
         id
     }

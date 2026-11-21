@@ -150,7 +150,10 @@ pub fn history(ctx: &Ctx, a: HistoryArgs) -> Result<()> {
         return Ok(());
     }
     for i in &items {
-        let t = jiff::Timestamp::from_millisecond(i.t).ok().map(|d| d.to_zoned_datetime(jiff::tz::TimeZone::system()).strftime("%H:%M:%S").to_string()).unwrap_or_else(|| "??:??:??".into());
+        let t = jiff::Timestamp::from_millisecond(i.t)
+            .ok()
+            .map(|d| d.to_zoned_datetime(jiff::tz::TimeZone::system()).strftime("%H:%M:%S").to_string())
+            .unwrap_or_else(|| "??:??:??".into());
         let flag = if i.shown { String::new() } else { format!("  [{}]", i.why) };
         let site = if i.origin.is_empty() { String::new() } else { format!(" ({})", i.origin) };
         let upd = match i.updates {
@@ -216,15 +219,18 @@ const SAMPLES: [Sample; 6] = [
 
 pub fn test(ctx: &Ctx, timeout: i64) -> Result<()> {
     for (app, urgency, summary, body, origin, entry) in SAMPLES {
-        notify_send(ctx, &SendArgs {
-            summary: summary.into(),
-            body: Some(body.into()),
-            app: app.into(),
-            urgency: urgency.into(),
-            timeout,
-            origin: origin.map(Into::into),
-            desktop_entry: entry.map(Into::into),
-        })?;
+        notify_send(
+            ctx,
+            &SendArgs {
+                summary: summary.into(),
+                body: Some(body.into()),
+                app: app.into(),
+                urgency: urgency.into(),
+                timeout,
+                origin: origin.map(Into::into),
+                desktop_entry: entry.map(Into::into),
+            },
+        )?;
         crate::sys::sleep_ms(300);
     }
     ctx.out.result(true, &format!("sent {} sample notifications", SAMPLES.len()));
@@ -350,19 +356,25 @@ pub fn print_rules(ctx: &Ctx, rep: &RulesReport, text: Option<&str>, is_file: bo
     for w in &rep.warnings {
         ctx.out.line(WARN, w, None);
     }
-    if rep.errors.is_empty() {
-        if let Some(Ok(v)) = text.map(serde_json::from_str::<Value>) {
-            let z = v.get("zones").and_then(Value::as_object).map(|m| m.len()).unwrap_or(0);
-            let r = v.get("rules").and_then(Value::as_array).map(|m| m.len()).unwrap_or(0);
-            ctx.out.line(OK, &format!("{z} zones, {r} rules: valid"), None);
-        }
+    if rep.errors.is_empty()
+        && let Some(Ok(v)) = text.map(serde_json::from_str::<Value>)
+    {
+        let z = v.get("zones").and_then(Value::as_object).map(|m| m.len()).unwrap_or(0);
+        let r = v.get("rules").and_then(Value::as_array).map(|m| m.len()).unwrap_or(0);
+        ctx.out.line(OK, &format!("{z} zones, {r} rules: valid"), None);
     }
     match &rep.daemon {
         None => ctx.out.line(INFO, "daemon not running; only the static lint above applies", None),
-        Some(d) if d["ok"] == json!(true) => ctx.out.line(OK, &format!("the running daemon accepts this config{}", if is_file { " (checked without applying it)" } else { "" }), None),
+        Some(d) if d["ok"] == json!(true) => {
+            ctx.out.line(OK, &format!("the running daemon accepts this config{}", if is_file { " (checked without applying it)" } else { "" }), None)
+        }
         Some(d) => ctx.out.line(
             BAD,
-            &format!("the running daemon {} {}", if is_file { "REJECTS this config:" } else { "REJECTED the config and is using the previous one:" }, d["error"].as_str().unwrap_or("")),
+            &format!(
+                "the running daemon {} {}",
+                if is_file { "REJECTS this config:" } else { "REJECTED the config and is using the previous one:" },
+                d["error"].as_str().unwrap_or("")
+            ),
             None,
         ),
     }

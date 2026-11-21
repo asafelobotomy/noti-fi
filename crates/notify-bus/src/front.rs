@@ -264,7 +264,10 @@ mod tests {
         assert_eq!(take_body_image(body), ("hello <b>there</b>".into(), Some("/tmp/org.chromium.Chromium.scoped_dir.abc/image one.png".into())));
         // exactly what Chromium 153 sent for a web notification with an `image`, captured from a real run
         let real = "hey &lt;b&gt;there&lt;/b&gt; &amp; more\n<img src=\"file:///tmp/org.chromium.Chromium.scoped_dir.oenr8p/image.png\" alt=\"\"/>";
-        assert_eq!(take_body_image(real), ("hey &lt;b&gt;there&lt;/b&gt; &amp; more".into(), Some("/tmp/org.chromium.Chromium.scoped_dir.oenr8p/image.png".into())));
+        assert_eq!(
+            take_body_image(real),
+            ("hey &lt;b&gt;there&lt;/b&gt; &amp; more".into(), Some("/tmp/org.chromium.Chromium.scoped_dir.oenr8p/image.png".into()))
+        );
         assert_eq!(take_body_image("no picture"), ("no picture".into(), None));
     }
 

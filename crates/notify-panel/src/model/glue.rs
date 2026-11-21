@@ -73,8 +73,15 @@ impl qobject::PanelModel {
                 active: (*me.active()).max(0) as u32,
                 focus: me.focus_mode().to_string(),
                 focus_modes: json(me.focus_modes_json()).iter().map(|m| (text(m, "name"), text(m, "label"))).collect(),
-                zones: json(me.zones_json()).iter().map(|z| (text(z, "name"), text(z, "label"), z.get("muted").and_then(Value::as_bool).unwrap_or(false))).collect(),
-                unread: json(me.zones_json()).iter().map(|z| (text(z, "label"), text(z, "accent"), z.get("unread").and_then(Value::as_u64).unwrap_or(0) as u32)).filter(|u| u.2 > 0).collect(),
+                zones: json(me.zones_json())
+                    .iter()
+                    .map(|z| (text(z, "name"), text(z, "label"), z.get("muted").and_then(Value::as_bool).unwrap_or(false)))
+                    .collect(),
+                unread: json(me.zones_json())
+                    .iter()
+                    .map(|z| (text(z, "label"), text(z, "accent"), z.get("unread").and_then(Value::as_u64).unwrap_or(0) as u32))
+                    .filter(|u| u.2 > 0)
+                    .collect(),
                 recent: r
                     .history_all
                     .iter()

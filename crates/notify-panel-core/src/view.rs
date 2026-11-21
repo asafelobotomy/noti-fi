@@ -12,7 +12,9 @@ pub enum Conn {
     /// Nothing is listening on the control socket.
     NoDaemon,
     /// The daemon speaks a different protocol version.
-    Incompatible { daemon: u32 },
+    Incompatible {
+        daemon: u32,
+    },
     /// The connection was working and dropped (or the daemon misbehaved).
     Lost(String),
 }
@@ -37,13 +39,16 @@ impl Conn {
     /// The same, knowing whether notifd is installed on this machine: if it is not, starting it cannot help and the advice is to install it.
     pub fn message_with(&self, daemon_installed: bool) -> String {
         match self {
-            Conn::NoDaemon if !daemon_installed => "notifd is not installed on this machine. See what installing it changes with: notify takeover --dry-run, then run: notify takeover --now".into(),
+            Conn::NoDaemon if !daemon_installed => {
+                "notifd is not installed on this machine. See what installing it changes with: notify takeover --dry-run, then run: notify takeover --now"
+                    .into()
+            }
             Conn::Connecting => "Connecting to notifd...".into(),
             Conn::Connected => String::new(),
             Conn::NoDaemon => "notifd is not running. Start it with: systemctl --user start notifd".into(),
-            Conn::Incompatible { daemon } => format!(
-                "notifd speaks protocol {daemon} but this panel needs protocol {PROTOCOL_VERSION}. Update the daemon with: notify update"
-            ),
+            Conn::Incompatible { daemon } => {
+                format!("notifd speaks protocol {daemon} but this panel needs protocol {PROTOCOL_VERSION}. Update the daemon with: notify update")
+            }
             Conn::Lost(why) => format!("Lost the connection to notifd ({why}). Reconnecting..."),
         }
     }
@@ -51,7 +56,10 @@ impl Conn {
 
 /// Has `notify takeover` been run (it leaves a record in the state folder)?
 pub fn daemon_installed() -> bool {
-    let state = std::env::var_os("XDG_STATE_HOME").filter(|v| !v.is_empty()).map(std::path::PathBuf::from).or_else(|| std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".local/state")));
+    let state = std::env::var_os("XDG_STATE_HOME")
+        .filter(|v| !v.is_empty())
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".local/state")));
     state.is_some_and(|s| s.join("notifd/takeover.json").exists())
 }
 
@@ -161,7 +169,7 @@ pub fn sim_view(r: &SimResult) -> serde_json::Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use notify_protocol::{Auto, Urgency, Zone, Anchor};
+    use notify_protocol::{Anchor, Auto, Urgency, Zone};
     use std::collections::BTreeMap;
 
     fn status() -> Status {
@@ -193,7 +201,26 @@ mod tests {
     }
 
     fn entry(app: &str, summary: &str, zone: &str, shown: bool) -> HistoryEntry {
-        HistoryEntry { t: 0, id: 1, app: app.into(), summary: summary.into(), body: String::new(), zone: zone.into(), origin: String::new(), urgency: Urgency::Normal, shown, why: if shown { String::new() } else { "dnd".into() }, updates: None, desktop_entry: String::new(), category: String::new(), channel: String::new(), read: false, icon: String::new(), live: false, actions: vec![] }
+        HistoryEntry {
+            t: 0,
+            id: 1,
+            app: app.into(),
+            summary: summary.into(),
+            body: String::new(),
+            zone: zone.into(),
+            origin: String::new(),
+            urgency: Urgency::Normal,
+            shown,
+            why: if shown { String::new() } else { "dnd".into() },
+            updates: None,
+            desktop_entry: String::new(),
+            category: String::new(),
+            channel: String::new(),
+            read: false,
+            icon: String::new(),
+            live: false,
+            actions: vec![],
+        }
     }
 
     #[test]
@@ -211,7 +238,8 @@ mod tests {
 
     #[test]
     fn history_filter_matches_text_and_held_only() {
-        let all = vec![entry("Steam", "Friend online", "personal", true), entry("Brave", "Tip", "business", false), entry("kernel", "Disk full", "system", true)];
+        let all =
+            vec![entry("Steam", "Friend online", "personal", true), entry("Brave", "Tip", "business", false), entry("kernel", "Disk full", "system", true)];
         assert_eq!(filter_history(&all, "", false).len(), 3);
         assert_eq!(filter_history(&all, "STEAM", false).len(), 1);
         assert_eq!(filter_history(&all, "business", false).len(), 1, "zone names are searched too");
@@ -246,10 +274,16 @@ mod tests {
     fn sim_results_are_presented_in_plain_words() {
         use notify_protocol::{DecidedBy, DecidedIdx};
         let r = SimResult {
-            ok: true, zone: "business".into(), timeout: 0, silent: false, would_show: true, hold: String::new(),
+            ok: true,
+            zone: "business".into(),
+            timeout: 0,
+            silent: false,
+            would_show: true,
+            hold: String::new(),
             matched: vec!["Business sites".into()],
             decided_by: DecidedBy { zone: Some("Business sites".into()), timeout: None, silent: None },
-            matched_idx: vec![0], decided_idx: DecidedIdx { zone: Some(0), timeout: None, silent: None },
+            matched_idx: vec![0],
+            decided_idx: DecidedIdx { zone: Some(0), timeout: None, silent: None },
             style: json!({"opacity": 0.7, "width": 500, "fontFamily": "Serif", "fontSize": 16, "clickThrough": true, "noFocus": false, "group": "Mail"}),
         };
         let v = sim_view(&r);

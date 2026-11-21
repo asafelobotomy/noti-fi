@@ -1,6 +1,5 @@
 //! Simulation, preview, history and "seen apps" messages.
 
-
 use serde::{Deserialize, Serialize};
 
 use crate::{Config, Urgency};

@@ -106,11 +106,11 @@ pub fn run_plan(out: &Out, name: &str, steps: Vec<Step>, dry: bool) -> Result<()
             continue;
         }
         out.event(json!({"type": "step", "n": n, "total": total, "desc": s.desc, "status": "running"}));
-        if let Some(a) = s.action {
-            if let Err(e) = a() {
-                out.event(json!({"type": "step", "n": n, "total": total, "desc": s.desc, "status": "failed", "error": format!("{e:#}")}));
-                return Err(e);
-            }
+        if let Some(a) = s.action
+            && let Err(e) = a()
+        {
+            out.event(json!({"type": "step", "n": n, "total": total, "desc": s.desc, "status": "failed", "error": format!("{e:#}")}));
+            return Err(e);
         }
         out.event(json!({"type": "step", "n": n, "total": total, "desc": s.desc, "status": "done"}));
     }

@@ -19,7 +19,9 @@ fn writable_prefix() -> Result<PathBuf> {
     let exe = fs::canonicalize(&exe).unwrap_or(exe);
     let prefix = install_prefix(&exe).ok_or_else(|| anyhow!("{} is not in a `bin` folder, so it looks like a build rather than an installed copy. Install from a release archive first (see the README), then run this from there.", exe.display()))?;
     let probe = prefix.join("bin").join(".notify-upgrade-probe");
-    fs::write(&probe, b"").map_err(|e| anyhow!("cannot write to {} ({e}). For a system-wide install, update with your package tool or run this with run0.", prefix.join("bin").display()))?;
+    fs::write(&probe, b"").map_err(|e| {
+        anyhow!("cannot write to {} ({e}). For a system-wide install, update with your package tool or run this with run0.", prefix.join("bin").display())
+    })?;
     let _ = fs::remove_file(&probe);
     Ok(prefix)
 }
@@ -100,7 +102,8 @@ pub fn upgrade(ctx: &Ctx, apply: bool, plan_only: bool) -> Result<()> {
             let prefix = prefix.clone();
             move || {
                 let work = crate::sys::private_dir("notify-upgrade")?;
-                let r = notify_update::install_archive(&b2.borrow(), &rel2.version, &prefix, &work, notify_update::host_qt_version().as_deref()).map_err(|e| anyhow!(e));
+                let r = notify_update::install_archive(&b2.borrow(), &rel2.version, &prefix, &work, notify_update::host_qt_version().as_deref())
+                    .map_err(|e| anyhow!(e));
                 let _ = fs::remove_dir_all(&work);
                 *skipped2.borrow_mut() = r?.panel_skipped;
                 Ok(())

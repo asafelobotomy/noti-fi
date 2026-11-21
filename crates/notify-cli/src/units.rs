@@ -60,7 +60,11 @@ WantedBy={wanted_by}
 /// Plasma takes org.kde.JobViewServer without allowing replacement, so this must hold it before plasmashell starts.
 /// Without Plasma (plain mode) nobody else claims the names, so KDE apps on other desktops report their copies here too.
 pub fn jobs_unit_text(plain: bool) -> String {
-    let order = if plain { "After=graphical-session.target notifd.service" } else { "After=plasma-kwin_wayland.service notifd.service\nBefore=plasma-plasmashell.service" };
+    let order = if plain {
+        "After=graphical-session.target notifd.service"
+    } else {
+        "After=plasma-kwin_wayland.service notifd.service\nBefore=plasma-plasmashell.service"
+    };
     format!(
         "[Unit]
 Description=noti-fi job bridge (shows file copy/move/delete progress through notifd; owns org.kde.JobViewServer)

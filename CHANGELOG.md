@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Less idle work:** automatic Do Not Disturb's 4-second keep-alive check no longer runs when both its triggers (full screen, screen sharing) are off. Turning a trigger off now also stops the KWin full-screen watcher.
+- CI enforces `cargo fmt` (house style in `rustfmt.toml`) and `cargo clippy -D warnings`; the code is formatted and lint-clean. No change in behaviour.
+
 ## 0.21.4
 
 - The panel follows the uQ theme live: colours, icons and font change with uQ's theme without reopening it (it kept the colours it started with). Nothing changes outside uQ.

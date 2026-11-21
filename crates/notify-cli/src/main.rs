@@ -65,17 +65,48 @@ fn run(cli: Cli) -> Result<bool> {
         Cmd::Hotkey { keys, center, remove, dry_run } => {
             hotkey::hotkey(&ctx, if center { hotkey::Target::Center } else { hotkey::Target::Dnd }, keys.as_deref(), remove, dry_run)?
         }
-        Cmd::Autodnd { action } => integrations::autodnd(&ctx, match action { Toggle::Status => "status", Toggle::Install => "install", Toggle::Remove => "remove" })?,
-        Cmd::Tray { action } => integrations::tray(&ctx, match action { TrayAction::Status => "status", TrayAction::Hide => "hide", TrayAction::Show => "show" })?,
+        Cmd::Autodnd { action } => integrations::autodnd(
+            &ctx,
+            match action {
+                Toggle::Status => "status",
+                Toggle::Install => "install",
+                Toggle::Remove => "remove",
+            },
+        )?,
+        Cmd::Tray { action } => integrations::tray(
+            &ctx,
+            match action {
+                TrayAction::Status => "status",
+                TrayAction::Hide => "hide",
+                TrayAction::Show => "show",
+            },
+        )?,
         Cmd::Settings => settings::settings(&ctx)?,
         Cmd::Config { action } => config::run(&ctx, action)?,
         Cmd::Set { key, value } => settings::set(&ctx, key, &value)?,
         Cmd::Focus { mode } => controls::focus(&ctx, mode.as_deref())?,
-        Cmd::Dnd { mode } => controls::dnd(&ctx, match mode { Mode::On => "on", Mode::Off => "off", Mode::Toggle => "toggle", Mode::Status => "status" })?,
+        Cmd::Dnd { mode } => controls::dnd(
+            &ctx,
+            match mode {
+                Mode::On => "on",
+                Mode::Off => "off",
+                Mode::Toggle => "toggle",
+                Mode::Status => "status",
+            },
+        )?,
         Cmd::Mute { zone } => controls::mute(&ctx, &zone, true)?,
         Cmd::Unmute { zone } => controls::mute(&ctx, &zone, false)?,
-        Cmd::History { n, zone, app, missed, full, no_text, clear, dry_run } => controls::history(&ctx, controls::HistoryArgs { n, zone, app, missed, full, no_text, clear, dry_run })?,
-        Cmd::Center { action } => controls::center(&ctx, match action { CenterAction::Toggle => "toggle", CenterAction::Open => "open", CenterAction::Close => "close" })?,
+        Cmd::History { n, zone, app, missed, full, no_text, clear, dry_run } => {
+            controls::history(&ctx, controls::HistoryArgs { n, zone, app, missed, full, no_text, clear, dry_run })?
+        }
+        Cmd::Center { action } => controls::center(
+            &ctx,
+            match action {
+                CenterAction::Toggle => "toggle",
+                CenterAction::Open => "open",
+                CenterAction::Close => "close",
+            },
+        )?,
         Cmd::Dismiss => controls::dismiss(&ctx)?,
         Cmd::Reply { id, text } => controls::reply(&ctx, id, &text)?,
         Cmd::Send { summary, body, app, urgency, timeout, origin, desktop_entry } => {

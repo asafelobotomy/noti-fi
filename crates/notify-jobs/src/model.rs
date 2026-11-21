@@ -4,8 +4,8 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-pub use crate::url::{local_path, pretty_url};
 use crate::url::tilde;
+pub use crate::url::{local_path, pretty_url};
 
 /// KIO's "the user cancelled" error (KJob::KilledJobError): the job ends without a notification.
 pub const ERR_USER_CANCELED: u32 = 1;
@@ -209,7 +209,12 @@ impl Job {
         if !self.dest_url.is_empty() {
             return Some(format!("To {}", esc(&pretty_url(&self.dest_url))));
         }
-        let lines: Vec<String> = self.desc.iter().filter(|(_, v)| !v.is_empty()).map(|(l, v)| if l.is_empty() { esc(&pretty_url(v)) } else { format!("{}: {}", esc(l.trim_end_matches(':')), esc(&pretty_url(v))) }).collect();
+        let lines: Vec<String> = self
+            .desc
+            .iter()
+            .filter(|(_, v)| !v.is_empty())
+            .map(|(l, v)| if l.is_empty() { esc(&pretty_url(v)) } else { format!("{}: {}", esc(l.trim_end_matches(':')), esc(&pretty_url(v))) })
+            .collect();
         (!lines.is_empty()).then(|| lines.join("\n"))
     }
 
@@ -232,7 +237,13 @@ impl Job {
     /// The notification for the job's current state; None means "no notification" (a cancelled job, or a
     /// transient one that succeeded), so any popup it has should close.
     pub fn render(&self) -> Option<Notice> {
-        let heading = if !self.title.is_empty() { self.title.clone() } else if !self.app_name.is_empty() { self.app_name.clone() } else { "File operation".to_string() };
+        let heading = if !self.title.is_empty() {
+            self.title.clone()
+        } else if !self.app_name.is_empty() {
+            self.app_name.clone()
+        } else {
+            "File operation".to_string()
+        };
         let mut lines: Vec<String> = Vec::new();
         match &self.state {
             State::Done { error, message } => {
@@ -243,7 +254,15 @@ impl Job {
                 if error != 0 {
                     lines.push(esc(if message.is_empty() { "Something went wrong" } else { message }));
                     lines.extend(self.where_line());
-                    return Some(Notice { summary: format!("{heading} failed"), body: lines.join("\n"), percent: None, actions: vec![], category: "transfer.error", resident: false, expire_ms: -1 });
+                    return Some(Notice {
+                        summary: format!("{heading} failed"),
+                        body: lines.join("\n"),
+                        percent: None,
+                        actions: vec![],
+                        category: "transfer.error",
+                        resident: false,
+                        expire_ms: -1,
+                    });
                 }
                 let mut what = Vec::new();
                 what.extend(self.count_text(&self.total, None));
@@ -255,7 +274,15 @@ impl Job {
                 }
                 lines.extend(self.where_line());
                 let actions = if self.dest_path().is_some() { vec![("default", "Open".to_string()), ("open", "Open folder".to_string())] } else { vec![] };
-                Some(Notice { summary: finished(&heading), body: lines.join("\n"), percent: None, actions, category: "transfer.complete", resident: false, expire_ms: -1 })
+                Some(Notice {
+                    summary: finished(&heading),
+                    body: lines.join("\n"),
+                    percent: None,
+                    actions,
+                    category: "transfer.complete",
+                    resident: false,
+                    expire_ms: -1,
+                })
             }
             state => {
                 let mut parts = Vec::new();
@@ -287,7 +314,15 @@ impl Job {
                     actions.push(("cancel", "Cancel".to_string()));
                 }
                 let summary = if paused { format!("{heading} (paused)") } else { heading };
-                Some(Notice { summary, body: lines.join("\n"), percent: self.percent_now().map(|p| p as i32), actions, category: "transfer", resident: true, expire_ms: 0 })
+                Some(Notice {
+                    summary,
+                    body: lines.join("\n"),
+                    percent: self.percent_now().map(|p| p as i32),
+                    actions,
+                    category: "transfer",
+                    resident: true,
+                    expire_ms: 0,
+                })
             }
         }
     }

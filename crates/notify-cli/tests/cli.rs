@@ -43,15 +43,27 @@ fn the_notify_binary_end_to_end() {
 
     // ---- discoverability
     let (c, out, _) = cli.run(&["--help"]);
-    k.check("--help lists the commands", c == 0 && ["status", "doctor", "takeover", "update", "restore", "simulate", "preview"].iter().all(|w| out.contains(w)), || out.clone());
+    k.check(
+        "--help lists the commands",
+        c == 0 && ["status", "doctor", "takeover", "update", "restore", "simulate", "preview"].iter().all(|w| out.contains(w)),
+        || out.clone(),
+    );
     let (c, out, _) = cli.run(&["--version"]);
     k.check("--version prints a version", c == 0 && out.starts_with("notify "), || out.clone());
 
     // ---- status
     let (c, out, _) = cli.run(&["status"]);
-    k.check("status says who owns notifications and the daemon state", c == 0 && out.contains("Notification ownership") && out.contains("Do Not Disturb off"), || out.clone());
+    k.check(
+        "status says who owns notifications and the daemon state",
+        c == 0 && out.contains("Notification ownership") && out.contains("Do Not Disturb off"),
+        || out.clone(),
+    );
     let j = cli.json(&["status", "--json"]);
-    k.check("status --json has owner, daemon and config sections", j.get("daemon").is_some() && j["daemon"]["zones"].as_array().map(|z| z.len()) == Some(3) && j["config"]["ok"] == true, || j.to_string());
+    k.check(
+        "status --json has owner, daemon and config sections",
+        j.get("daemon").is_some() && j["daemon"]["zones"].as_array().map(|z| z.len()) == Some(3) && j["config"]["ok"] == true,
+        || j.to_string(),
+    );
 
     // ---- Do Not Disturb and mutes
     let (c, out, _) = cli.run(&["dnd", "on"]);
@@ -92,7 +104,11 @@ fn the_notify_binary_end_to_end() {
 
     // ---- simulate
     let (c, out, _) = cli.run(&["simulate", "x", "--app", "kernel"]);
-    k.check("simulate names the zone and what decided it (the system's own notifications are in System, built in)", c == 0 && out.contains("zone:     system (rule 'System (built in)')") && out.contains("outcome:  shown"), || out.clone());
+    k.check(
+        "simulate names the zone and what decided it (the system's own notifications are in System, built in)",
+        c == 0 && out.contains("zone:     system (rule 'System (built in)')") && out.contains("outcome:  shown"),
+        || out.clone(),
+    );
     let j = cli.json(&["simulate", "x", "--app", "Brave Origin", "--origin", "example-shop.com", "--json"]);
     k.check("simulate --json returns typed fields", j["zone"] == "business" && j["wouldShow"] == true && j["matched"][0] == "business sites", || j.to_string());
     let (c, out, _) = cli.run(&["simulate", "x", "--app", "Steam", "--timeout", "0"]);
@@ -101,7 +117,9 @@ fn the_notify_binary_end_to_end() {
     let (_, held, _) = cli.run(&["simulate", "x", "--app", "Steam"]);
     let (_, free, _) = cli.run(&["simulate", "x", "--app", "Steam", "--ignore-state"]);
     cli.run(&["dnd", "off"]);
-    k.check("simulate shows the hold, and --ignore-state shows the rule outcome", held.contains("NOT shown: dnd") && free.contains("outcome:  shown"), || format!("{held}\n{free}"));
+    k.check("simulate shows the hold, and --ignore-state shows the rule outcome", held.contains("NOT shown: dnd") && free.contains("outcome:  shown"), || {
+        format!("{held}\n{free}")
+    });
 
     // ---- rules lint (daemon-checked)
     let draft_dir = d.dir.join("drafts");
@@ -113,9 +131,19 @@ fn the_notify_binary_end_to_end() {
     let bad = draft_dir.join("bad.json");
     std::fs::write(&bad, r#"{"defualtZone":"x","zones":{"a":{"anchor":"middle"}},"rules":[{"name":"r","match":{"appName":"(?P<x>a)"}}]}"#).unwrap();
     let (c, out, _) = cli.run(&["rules", "--file", bad.to_str().unwrap()]);
-    k.check("rules --file rejects a bad draft with every reason", c == 1 && out.contains("anchor must be") && out.contains("named groups") && out.contains("unknown setting 'defualtZone'") && out.contains("REJECTS"), || out.clone());
+    k.check(
+        "rules --file rejects a bad draft with every reason",
+        c == 1 && out.contains("anchor must be") && out.contains("named groups") && out.contains("unknown setting 'defualtZone'") && out.contains("REJECTS"),
+        || out.clone(),
+    );
     let j = cli.json(&["rules", "--file", bad.to_str().unwrap(), "--json"]);
-    k.check("rules --json lists errors, warnings and the daemon verdict", j["errors"].as_array().map(|e| !e.is_empty()) == Some(true) && j["warnings"][0].as_str().unwrap_or("").contains("defualtZone") && j["daemon"]["ok"] == false, || j.to_string());
+    k.check(
+        "rules --json lists errors, warnings and the daemon verdict",
+        j["errors"].as_array().map(|e| !e.is_empty()) == Some(true)
+            && j["warnings"][0].as_str().unwrap_or("").contains("defualtZone")
+            && j["daemon"]["ok"] == false,
+        || j.to_string(),
+    );
 
     // ---- history, send, test
     let (c, _, _) = cli.run(&["send", "hello from the cli", "body", "-a", "Steam", "-t", "800"]);
@@ -129,7 +157,11 @@ fn the_notify_binary_end_to_end() {
     cli.run(&["dnd", "off"]);
     k.check("history --missed lists held notifications with the reason", out.contains("held by dnd") && out.contains("[dnd]"), || out.clone());
     let j = cli.json(&["history", "-n", "2", "--json"]);
-    k.check("history --json is a typed list", j.as_array().map(|a| a.len() == 2 && a[0]["summary"].is_string() && a[0]["shown"].is_boolean()) == Some(true), || j.to_string());
+    k.check(
+        "history --json is a typed list",
+        j.as_array().map(|a| a.len() == 2 && a[0]["summary"].is_string() && a[0]["shown"].is_boolean()) == Some(true),
+        || j.to_string(),
+    );
     let (_, out, _) = cli.run(&["history", "--app", "^steam$", "-n", "5"]);
     k.check("history --app filters by regex", out.contains("Steam") && !out.contains("Brave"), || out.clone());
     let before = cli.json(&["history", "-n", "100", "--json"]).as_array().map(|a| a.len()).unwrap_or(0);
@@ -138,31 +170,50 @@ fn the_notify_binary_end_to_end() {
     let grew = wait_until(Duration::from_secs(6), || cli.json(&["history", "-n", "100", "--json"]).as_array().map(|a| a.len()).unwrap_or(0) >= before + 6);
     k.check("...and they all reach the daemon", grew, || "fewer than 6 new entries".into());
     let (c, out, _) = cli.run(&["history", "--clear"]);
-    k.check("history --clear empties it", c == 0 && out.contains("history cleared") && cli.json(&["history", "--json"]).as_array().map(|a| a.is_empty()) == Some(true), || out.clone());
+    k.check(
+        "history --clear empties it",
+        c == 0 && out.contains("history cleared") && cli.json(&["history", "--json"]).as_array().map(|a| a.is_empty()) == Some(true),
+        || out.clone(),
+    );
 
     // ---- preview, dismiss, reply
     let (c, out, _) = cli.run(&["preview", "--seconds", "2"]);
     k.check("preview shows five sample popups", c == 0 && out.contains("previewing 5 sample popups for 2s"), || out.clone());
     let (c, _, _) = cli.run(&["preview", "--end"]);
-    k.check("preview --end stops it", c == 0 && wait_until(Duration::from_secs(12), || cli.json(&["status", "--json"])["daemon"]["active"] == 0), || "still previewing".into());
+    k.check("preview --end stops it", c == 0 && wait_until(Duration::from_secs(12), || cli.json(&["status", "--json"])["daemon"]["active"] == 0), || {
+        "still previewing".into()
+    });
     cli.run(&["send", "stay", "-a", "Steam", "-t", "0"]);
     wait_until(Duration::from_secs(4), || cli.json(&["status", "--json"])["daemon"]["active"] == 1);
     let (c, _, _) = cli.run(&["dismiss"]);
-    k.check("dismiss clears popups", c == 0 && wait_until(Duration::from_secs(4), || cli.json(&["status", "--json"])["daemon"]["active"] == 0), || "popup remained".into());
+    k.check("dismiss clears popups", c == 0 && wait_until(Duration::from_secs(4), || cli.json(&["status", "--json"])["daemon"]["active"] == 0), || {
+        "popup remained".into()
+    });
     let (c, _, err) = cli.run(&["reply", "999999", "hi"]);
     k.check("reply to a missing notification fails clearly", c == 1 && err.contains("no such notification"), || err.clone());
 
     // ---- doctor (fake home: nothing installed)
     let j = cli.json(&["doctor", "--json"]);
-    k.check("doctor --json has checks, status, rules, apps and a summary", ["checks", "status", "rules", "apps", "summary"].iter().all(|w| j.get(*w).is_some()), || j.to_string());
+    k.check(
+        "doctor --json has checks, status, rules, apps and a summary",
+        ["checks", "status", "rules", "apps", "summary"].iter().all(|w| j.get(*w).is_some()),
+        || j.to_string(),
+    );
     let (c, out, _) = cli.run(&["doctor"]);
     k.check("doctor (text) reports takeover not installed in a fresh home", c == 0 && out.contains("takeover not installed"), || out.clone());
 
     // ---- no daemon
     let o = Command::new(env!("CARGO_BIN_EXE_notify")).args(["dnd", "status"]).env("NOTIFD_SOCKET", d.dir.join("nothing-here.sock")).output().unwrap();
     let err = String::from_utf8_lossy(&o.stderr);
-    k.check("without a daemon, commands fail with advice", o.status.code() == Some(1) && err.contains("notifd is not running") && (err.contains("systemctl --user start notifd") || err.contains("notify takeover")), || err.to_string());
-    let o = Command::new(env!("CARGO_BIN_EXE_notify")).args(["--json", "dnd", "status"]).env("NOTIFD_SOCKET", d.dir.join("nothing-here.sock")).output().unwrap();
+    k.check(
+        "without a daemon, commands fail with advice",
+        o.status.code() == Some(1)
+            && err.contains("notifd is not running")
+            && (err.contains("systemctl --user start notifd") || err.contains("notify takeover")),
+        || err.to_string(),
+    );
+    let o =
+        Command::new(env!("CARGO_BIN_EXE_notify")).args(["--json", "dnd", "status"]).env("NOTIFD_SOCKET", d.dir.join("nothing-here.sock")).output().unwrap();
     let last: Value = serde_json::from_str(String::from_utf8_lossy(&o.stdout).trim()).unwrap_or(Value::Null);
     k.check("...and in --json mode with a failed result object", last["type"] == "result" && last["ok"] == false, || last.to_string());
 

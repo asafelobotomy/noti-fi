@@ -70,11 +70,7 @@ impl Incoming {
     /// Parse one line from the daemon.
     pub fn parse(line: &str) -> Result<Incoming, serde_json::Error> {
         let v: Value = serde_json::from_str(line)?;
-        if v.get("event").is_some() {
-            Ok(Incoming::Event(Box::new(serde_json::from_value(v)?)))
-        } else {
-            Ok(Incoming::Response(serde_json::from_value(v)?))
-        }
+        if v.get("event").is_some() { Ok(Incoming::Event(Box::new(serde_json::from_value(v)?))) } else { Ok(Incoming::Response(serde_json::from_value(v)?)) }
     }
 }
 

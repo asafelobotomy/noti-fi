@@ -315,10 +315,13 @@ impl Client {
 
     /// Mark these history entries read (by notification id), or all of them with `None`.
     pub fn mark_read(&mut self, ids: Option<&[i64]>) -> Result<Status> {
-        self.call("markRead", &match ids {
-            Some(ids) => json!({ "ids": ids }),
-            None => json!({}),
-        })
+        self.call(
+            "markRead",
+            &match ids {
+                Some(ids) => json!({ "ids": ids }),
+                None => json!({}),
+            },
+        )
     }
 
     /// Press a live notification's button (`key` from its history entry's `actions`; "default" = clicking it).

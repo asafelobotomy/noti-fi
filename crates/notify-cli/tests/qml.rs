@@ -38,12 +38,7 @@ fn run_qml(file: &str) {
         return;
     };
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let out = Command::new(runner)
-        .env("QT_QPA_PLATFORM", "offscreen")
-        .arg("-input")
-        .arg(root.join("tests/qml").join(file))
-        .output()
-        .unwrap();
+    let out = Command::new(runner).env("QT_QPA_PLATFORM", "offscreen").arg("-input").arg(root.join("tests/qml").join(file)).output().unwrap();
     let text = String::from_utf8_lossy(&out.stdout);
     assert!(out.status.success() && text.contains(" 0 failed"), "{file} failed:\n{text}\n{}", String::from_utf8_lossy(&out.stderr));
 }

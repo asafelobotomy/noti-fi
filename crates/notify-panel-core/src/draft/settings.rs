@@ -35,7 +35,11 @@ impl Draft {
         let Some((_, kind)) = SETTING_DEFAULTS.iter().find(|(p, _)| *p == path) else { return Err(format!("unknown setting '{path}'")) };
         let value = match *kind {
             Kind::Text(_) | Kind::Color(_) => {
-                if text.is_empty() { None } else { Some(json!(text)) }
+                if text.is_empty() {
+                    None
+                } else {
+                    Some(json!(text))
+                }
             }
             Kind::Bool(_) => match text {
                 "true" => Some(json!(true)),

@@ -64,7 +64,12 @@ mod tests {
 
     fn on_disk() -> Vec<String> {
         let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../notifd");
-        let mut v: Vec<String> = fs::read_dir(dir).unwrap().flatten().map(|e| e.file_name().to_string_lossy().into_owned()).filter(|n| n.ends_with(".qml") || n == "rules.schema.json").collect();
+        let mut v: Vec<String> = fs::read_dir(dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .filter(|n| n.ends_with(".qml") || n == "rules.schema.json")
+            .collect();
         v.sort();
         v
     }

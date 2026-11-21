@@ -145,10 +145,17 @@ pub fn serve(listener: UnixListener, on_show: impl Fn() + Send + 'static) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
 
     fn tmp(label: &str) -> PathBuf {
-        let d = std::env::temp_dir().join(format!("notify-shell-{label}-{}-{}", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let d = std::env::temp_dir().join(format!(
+            "notify-shell-{label}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+        ));
         fs::create_dir_all(&d).unwrap();
         d
     }
@@ -165,11 +172,11 @@ mod tests {
         assert!(t.contains("X-GNOME-Autostart-enabled=true"));
         let l = fs::read_to_string(launcher_file(&d)).unwrap();
         assert!(l.contains("Exec=\"/opt/my apps/notify-panel\"\n") && !l.contains("--background"), "the app-menu launcher opens the window:\n{l}");
-        set_autostart(&c, &d, exe, true).unwrap();            // idempotent
+        set_autostart(&c, &d, exe, true).unwrap(); // idempotent
         set_autostart(&c, &d, exe, false).unwrap();
         assert!(!autostart_enabled(&c) && !autostart_file(&c).exists());
         assert!(launcher_file(&d).exists(), "the launcher stays");
-        set_autostart(&c, &d, exe, false).unwrap();           // turning off twice is fine
+        set_autostart(&c, &d, exe, false).unwrap(); // turning off twice is fine
     }
 
     #[test]
@@ -183,11 +190,15 @@ mod tests {
         let Claim::First(l) = claim_instance(&sock).unwrap() else { panic!("the first launch must win") };
         let shown = Arc::new(AtomicUsize::new(0));
         let s2 = shown.clone();
-        serve(l, move || { s2.fetch_add(1, Ordering::SeqCst); });
+        serve(l, move || {
+            s2.fetch_add(1, Ordering::SeqCst);
+        });
         assert!(matches!(claim_instance(&sock).unwrap(), Claim::Other));
         assert!(matches!(claim_instance(&sock).unwrap(), Claim::Other));
         for _ in 0..50 {
-            if shown.load(Ordering::SeqCst) == 2 { break; }
+            if shown.load(Ordering::SeqCst) == 2 {
+                break;
+            }
             std::thread::sleep(Duration::from_millis(50));
         }
         assert_eq!(shown.load(Ordering::SeqCst), 2, "each later launch asks once");
@@ -196,7 +207,7 @@ mod tests {
     #[test]
     fn a_stale_socket_from_a_crash_is_replaced() {
         let sock = tmp("stale").join("p.sock");
-        drop(UnixListener::bind(&sock).unwrap());             // the file stays, nobody listens
+        drop(UnixListener::bind(&sock).unwrap()); // the file stays, nobody listens
         assert!(sock.exists());
         assert!(matches!(claim_instance(&sock).unwrap(), Claim::First(_)), "a leftover socket must not block the panel from starting");
     }

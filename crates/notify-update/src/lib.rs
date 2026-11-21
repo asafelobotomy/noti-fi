@@ -45,11 +45,7 @@ impl Fetch for Curl {
             .arg(url)
             .output()
             .map_err(|e| format!("cannot run curl (is it installed?): {e}"))?;
-        if out.status.success() {
-            Ok(out.stdout)
-        } else {
-            Err(format!("download failed: {}", String::from_utf8_lossy(&out.stderr).trim()))
-        }
+        if out.status.success() { Ok(out.stdout) } else { Err(format!("download failed: {}", String::from_utf8_lossy(&out.stderr).trim())) }
     }
 }
 
@@ -158,7 +154,15 @@ fn replace_file(from: &Path, to: &Path, mode: u32) -> Result<(), String> {
 
 /// The Qt 6 version installed here (`major.minor.patch`), if it can be told.
 pub fn host_qt_version() -> Option<String> {
-    let run = |cmd: &str, args: &[&str]| Command::new(cmd).args(args).output().ok().filter(|o| o.status.success()).map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string()).filter(|s| !s.is_empty());
+    let run = |cmd: &str, args: &[&str]| {
+        Command::new(cmd)
+            .args(args)
+            .output()
+            .ok()
+            .filter(|o| o.status.success())
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+            .filter(|s| !s.is_empty())
+    };
     run("pkg-config", &["--modversion", "Qt6Core"]).or_else(|| run("qmake6", &["-query", "QT_VERSION"]))
 }
 
@@ -231,7 +235,8 @@ pub fn install_archive(archive: &[u8], version: &str, prefix: &Path, work: &Path
         replace_file(&desktop, &to, 0o644)?;
         // name the program by its full path: a prefix such as ~/.local/bin is not on every launcher's PATH
         let text = fs::read_to_string(&to).map_err(|e| format!("{}: {e}", to.display()))?;
-        fs::write(&to, text.replace("\nExec=notify-panel", &format!("\nExec={}", prefix.join("bin/notify-panel").display()))).map_err(|e| format!("{}: {e}", to.display()))?;
+        fs::write(&to, text.replace("\nExec=notify-panel", &format!("\nExec={}", prefix.join("bin/notify-panel").display())))
+            .map_err(|e| format!("{}: {e}", to.display()))?;
         done.files.push(to);
     }
     Ok(done)

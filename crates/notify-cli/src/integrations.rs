@@ -56,7 +56,9 @@ pub fn kwin_loaded() -> bool {
 
 pub fn autodnd_install() -> bool {
     let d = paths().kwin_script;
-    if atomic_write(&d.join("metadata.json"), &(serde_json::to_string_pretty(&kwin_meta()).unwrap_or_default() + "\n")).is_err() || atomic_write(&d.join("contents/code/main.js"), KWIN_JS).is_err() {
+    if atomic_write(&d.join("metadata.json"), &(serde_json::to_string_pretty(&kwin_meta()).unwrap_or_default() + "\n")).is_err()
+        || atomic_write(&d.join("contents/code/main.js"), KWIN_JS).is_err()
+    {
         return false;
     }
     sh("kwriteconfig6", &["--file", "kwinrc", "--group", "Plugins", "--key", &format!("{KWIN_ID}Enabled"), "true"]);
@@ -87,7 +89,10 @@ pub fn autodnd(ctx: &Ctx, action: &str) -> Result<()> {
         "install" => {
             ctx.out.text("installing the KWin script that reports full-screen windows to notifd...");
             let ok = autodnd_install();
-            ctx.out.result(ok, if ok { "  installed and running" } else { "  installed, but KWin did not load it; log out and in, or check: qdbus6 org.kde.KWin /Scripting" });
+            ctx.out.result(
+                ok,
+                if ok { "  installed and running" } else { "  installed, but KWin did not load it; log out and in, or check: qdbus6 org.kde.KWin /Scripting" },
+            );
             if ok { Ok(()) } else { bail!("KWin did not load the script") }
         }
         "remove" => {
@@ -106,10 +111,23 @@ pub fn autodnd(ctx: &Ctx, action: &str) -> Result<()> {
                 }));
                 return Ok(());
             }
-            ctx.out.line(if d.exists() { OK } else { INFO }, &format!("KWin script files: {}", if d.exists() { "present" } else { "not installed (run: notify autodnd install)" }), None);
+            ctx.out.line(
+                if d.exists() { OK } else { INFO },
+                &format!("KWin script files: {}", if d.exists() { "present" } else { "not installed (run: notify autodnd install)" }),
+                None,
+            );
             ctx.out.line(if loaded { OK } else { INFO }, &format!("KWin script loaded: {}", if loaded { "yes" } else { "no" }), None);
             if let Some(s) = daemon {
-                ctx.out.line(INFO, &format!("daemon sees: fullscreen={} screen-share={}; holding notifications: {}", s.auto.fullscreen, s.auto.share, if s.holding.is_empty() { "no" } else { &s.holding }), None);
+                ctx.out.line(
+                    INFO,
+                    &format!(
+                        "daemon sees: fullscreen={} screen-share={}; holding notifications: {}",
+                        s.auto.fullscreen,
+                        s.auto.share,
+                        if s.holding.is_empty() { "no" } else { &s.holding }
+                    ),
+                    None,
+                );
             }
             Ok(())
         }
@@ -234,7 +252,10 @@ pub fn adapt(ctx: &Ctx, a: AdaptArgs) -> Result<()> {
         ctx.out.heading(name);
         let base = cfg.join(rel);
         let (prefs_f, ls_f) = (base.join("Default/Preferences"), base.join("Local State"));
-        let (mut prefs, mut ls): (Value, Value) = match (fs::read_to_string(&prefs_f).ok().and_then(|t| serde_json::from_str(&t).ok()), fs::read_to_string(&ls_f).ok().and_then(|t| serde_json::from_str(&t).ok())) {
+        let (mut prefs, mut ls): (Value, Value) = match (
+            fs::read_to_string(&prefs_f).ok().and_then(|t| serde_json::from_str(&t).ok()),
+            fs::read_to_string(&ls_f).ok().and_then(|t| serde_json::from_str(&t).ok()),
+        ) {
             (Some(p), Some(l)) => (p, l),
             _ => {
                 ctx.out.line(BAD, "cannot read profile", None);
@@ -251,7 +272,15 @@ pub fn adapt(ctx: &Ctx, a: AdaptArgs) -> Result<()> {
         let subs = get_path(&prefs, "gcm.push_messaging_application_id_map").and_then(Value::as_object).map(|m| m.len()).unwrap_or(0);
         ctx.out.line(INFO, &format!("{subs} sites currently hold a push subscription"), None);
         let bg = get_path(&ls, "background_mode.enabled").and_then(Value::as_bool).unwrap_or(false);
-        ctx.out.line(INFO, &format!("keeps running after the last window closes: {}{}", if bg { "yes" } else { "no" }, if a.background || bg { "" } else { "   (--background to enable; push only arrives while Brave runs)" }), None);
+        ctx.out.line(
+            INFO,
+            &format!(
+                "keeps running after the last window closes: {}{}",
+                if bg { "yes" } else { "no" },
+                if a.background || bg { "" } else { "   (--background to enable; push only arrives while Brave runs)" }
+            ),
+            None,
+        );
         if a.background && !bg {
             changes.push(Change { file: ls_f.clone(), key: "background_mode.enabled", label: "keep running in the background" });
         }
@@ -263,7 +292,11 @@ pub fn adapt(ctx: &Ctx, a: AdaptArgs) -> Result<()> {
             }
             if a.apply {
                 if exe_running(&running_needles(entry)) {
-                    ctx.out.line(BAD, &format!("{name} is running; it would overwrite the change on exit"), Some("close all Brave windows (and its tray icon), then retry"));
+                    ctx.out.line(
+                        BAD,
+                        &format!("{name} is running; it would overwrite the change on exit"),
+                        Some("close all Brave windows (and its tray icon), then retry"),
+                    );
                     failed = true;
                     continue;
                 }
@@ -295,11 +328,16 @@ pub fn adapt(ctx: &Ctx, a: AdaptArgs) -> Result<()> {
             let exe = which(if *entry == "brave-origin" { "brave-origin" } else { "brave-browser" }).or_else(|| which("brave"));
             let ent = paths().autostart.join(format!("notify-{entry}.desktop"));
             ctx.out.line(INFO, &format!("autostart at login (hidden, no window): {}", ent.display()), None);
-            if a.apply {
-                if let Some(exe) = exe {
-                    atomic_write(&ent, &format!("[Desktop Entry]\nType=Application\nName={name} (background, for notifications)\nExec={exe} --no-startup-window\nX-GNOME-Autostart-enabled=true\n"))?;
-                    ctx.out.line(OK, "autostart entry written", None);
-                }
+            if a.apply
+                && let Some(exe) = exe
+            {
+                atomic_write(
+                    &ent,
+                    &format!(
+                        "[Desktop Entry]\nType=Application\nName={name} (background, for notifications)\nExec={exe} --no-startup-window\nX-GNOME-Autostart-enabled=true\n"
+                    ),
+                )?;
+                ctx.out.line(OK, "autostart entry written", None);
             }
         }
     }

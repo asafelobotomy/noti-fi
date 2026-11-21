@@ -11,7 +11,8 @@ pub const MATCH_FIELDS: [&str; 9] = ["appName", "desktopEntry", "origin", "summa
 pub const MAX_PATTERN: usize = 500;
 pub const PRIORITIES: [&str; 4] = ["low", "normal", "high", "urgent"];
 pub const CHARTS: [&str; 3] = ["bars", "line", "heatmap"];
-pub const ANCHORS: [&str; 10] = ["top-left", "top-center", "top-right", "middle-left", "center", "middle-right", "bottom-left", "bottom-center", "bottom-right", "free"];
+pub const ANCHORS: [&str; 10] =
+    ["top-left", "top-center", "top-right", "middle-left", "center", "middle-right", "bottom-left", "bottom-center", "bottom-right", "free"];
 
 /// Why a regex does not work in the daemon (None = fine). Adds a hint when it looks like Python/PCRE syntax.
 pub fn regex_problem(pat: &str) -> Option<String> {
@@ -173,10 +174,10 @@ pub fn lint_config(cfg: &Value) -> Vec<String> {
                         }
                     }
                 }
-                if let Some(acc) = zz.get("accent") {
-                    if !acc.as_str().map(is_hex_colour).unwrap_or(false) {
-                        errs.push(format!("zone '{z}': accent must be a #hex colour"));
-                    }
+                if let Some(acc) = zz.get("accent")
+                    && !acc.as_str().map(is_hex_colour).unwrap_or(false)
+                {
+                    errs.push(format!("zone '{z}': accent must be a #hex colour"));
                 }
             }
             _ => errs.push(format!("zone '{z}': anchor must be one of {}", ANCHORS.join(", "))),
@@ -187,10 +188,10 @@ pub fn lint_config(cfg: &Value) -> Vec<String> {
         errs.push(format!("defaultZone '{dz}' is not a defined zone"));
     }
     for k in ["defaultTimeout", "width", "margin", "spacing", "maxVisible"] {
-        if let Some(v) = obj.get(k) {
-            if !non_negative_number(v) {
-                errs.push(format!("{k} must be a number >= 0"));
-            }
+        if let Some(v) = obj.get(k)
+            && !non_negative_number(v)
+        {
+            errs.push(format!("{k} must be a number >= 0"));
         }
     }
     if let Some(th) = obj.get("theme").and_then(Value::as_object) {
@@ -199,10 +200,10 @@ pub fn lint_config(cfg: &Value) -> Vec<String> {
     if let Some(f) = obj.get("focus") {
         errs.extend(focus_problems(f).into_iter().map(|p| format!("focus: {p}")));
     }
-    if let Some(t) = obj.get("transfer") {
-        if !t.get("chart").is_none_or(|c| c.as_str().is_some_and(|c| CHARTS.contains(&c))) {
-            errs.push(format!("transfer.chart must be {}", CHARTS.join(", ")));
-        }
+    if let Some(t) = obj.get("transfer")
+        && !t.get("chart").is_none_or(|c| c.as_str().is_some_and(|c| CHARTS.contains(&c)))
+    {
+        errs.push(format!("transfer.chart must be {}", CHARTS.join(", ")));
     }
     let ad = obj.get("autoDnd");
     if let Some(a) = ad {
@@ -255,10 +256,10 @@ pub fn lint_config(cfg: &Value) -> Vec<String> {
             }
         }
         errs.extend(style_problems(ro, true).into_iter().map(|p| format!("rule '{name}': {p}")));
-        if let Some(t) = ro.get("timeout") {
-            if !non_negative_number(t) {
-                errs.push(format!("rule '{name}': timeout must be a number >= 0"));
-            }
+        if let Some(t) = ro.get("timeout")
+            && !non_negative_number(t)
+        {
+            errs.push(format!("rule '{name}': timeout must be a number >= 0"));
         }
         if ro.get("silent").is_some_and(|s| !s.is_boolean()) {
             errs.push(format!("rule '{name}': silent must be true or false"));

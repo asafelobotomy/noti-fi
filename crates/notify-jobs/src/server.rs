@@ -84,7 +84,8 @@ impl Shared {
             let entry = Entry { job, owner, v3, path: path.clone(), created: Instant::now(), nid: 0, shown: false, hidden: false, last: None, due: None };
             jobs.insert(id, entry);
         }
-        let added = if v3 { server.at(path.as_str(), ViewV3 { id, sh: self.clone() }).await } else { server.at(path.as_str(), ViewV2 { id, sh: self.clone() }).await };
+        let added =
+            if v3 { server.at(path.as_str(), ViewV3 { id, sh: self.clone() }).await } else { server.at(path.as_str(), ViewV2 { id, sh: self.clone() }).await };
         if let Err(e) = added {
             self.jobs.lock().unwrap_or_else(|e| e.into_inner()).remove(&id);
             return Err(fdo::Error::Failed(e.to_string()));

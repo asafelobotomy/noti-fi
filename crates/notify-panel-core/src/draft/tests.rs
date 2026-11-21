@@ -14,7 +14,11 @@ const SAMPLE: &str = r#"{
 "#;
 
 fn tmpdir(label: &str) -> PathBuf {
-    let d = std::env::temp_dir().join(format!("notify-draft-{label}-{}-{}", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+    let d = std::env::temp_dir().join(format!(
+        "notify-draft-{label}-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+    ));
     fs::create_dir_all(&d).unwrap();
     d
 }
@@ -51,7 +55,11 @@ fn zones_can_be_added_edited_and_deleted_safely() {
     d.set_zone_field(&id, "anchor", "center").unwrap();
     assert!(d.set_zone_field(&id, "anchor", "somewhere").is_err());
     d.set_zone_position(&id, 0.25, 1.7).unwrap();
-    assert_eq!((d.value()["zones"][&id]["anchor"].as_str(), d.value()["zones"][&id]["x"].as_f64(), d.value()["zones"][&id]["y"].as_f64()), (Some("free"), Some(0.25), Some(1.0)), "clamped to the screen");
+    assert_eq!(
+        (d.value()["zones"][&id]["anchor"].as_str(), d.value()["zones"][&id]["x"].as_f64(), d.value()["zones"][&id]["y"].as_f64()),
+        (Some("free"), Some(0.25), Some(1.0)),
+        "clamped to the screen"
+    );
     d.set_zone_field(&id, "anchor", "top-center").unwrap();
     assert!(d.value()["zones"][&id].get("x").is_none(), "leaving free drops the position");
     d.set_zone_field(&id, "anchor", "free").unwrap();
@@ -111,7 +119,10 @@ fn style_keys_are_set_on_rules_zones_apps_and_kinds_of_notification() {
     d.set_rule_style(0, "fontFamily", "Serif").unwrap();
     d.set_rule_style(0, "group", "Sites").unwrap();
     let r = &d.value()["rules"][0];
-    assert_eq!((r["opacity"].as_f64(), r["clickThrough"].as_bool(), r["noFocus"].as_bool(), r["width"].as_i64()), (Some(0.6), Some(true), Some(false), Some(480)));
+    assert_eq!(
+        (r["opacity"].as_f64(), r["clickThrough"].as_bool(), r["noFocus"].as_bool(), r["width"].as_i64()),
+        (Some(0.6), Some(true), Some(false), Some(480))
+    );
     assert_eq!(d.rules()[0].style["clickThrough"], "true");
     assert_eq!(d.rules()[0].style["noFocus"], "false", "an explicit false is kept: it overrides a later rule");
     d.set_rule_style(0, "clickThrough", "").unwrap();

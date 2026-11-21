@@ -13,13 +13,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::ctx::Ctx;
-use crate::units::{dbus_text, fallback_unit_text, jobs_unit_text, unit_text};
 use crate::integrations;
 use crate::lint;
 use crate::out::{Out, Step, run_plan, slot};
 use crate::paths::{Paths, paths};
 use crate::payload::{self, Payload};
 use crate::sys::{atomic_write, is_notifd, notifd_owns, owner, owner_of, sh, sh_timeout, sleep_ms, which};
+use crate::units::{dbus_text, fallback_unit_text, jobs_unit_text, unit_text};
 
 pub const PORTAL_MARK: &str = "# managed by notify: routes portal notifications through notifd";
 
@@ -120,7 +120,10 @@ pub fn portal(ctx: &Ctx, remove: bool, dry: bool) -> Result<()> {
         }
         return Ok(());
     }
-    ctx.out.text(&format!("  write {}: Notification backend plasmanotify -> gtk (the GTK backend sends through org.freedesktop.Notifications)", p.portal.display()));
+    ctx.out.text(&format!(
+        "  write {}: Notification backend plasmanotify -> gtk (the GTK backend sends through org.freedesktop.Notifications)",
+        p.portal.display()
+    ));
     ctx.out.text("  restart xdg-desktop-portal (apps keep running; portal dialogs may blink for a second)");
     if dry {
         ctx.out.result(true, "\nDry run only; nothing was changed.");
@@ -166,11 +169,11 @@ pub fn preflight(payload: &Payload, rules_text: &str) -> bool {
             if matches!(child.try_wait(), Ok(Some(_))) {
                 break; // it exited: a broken QML file exits immediately
             }
-            if let Ok(mut c) = Client::connect(&sock) {
-                if c.ping().is_ok() {
-                    up = true;
-                    break;
-                }
+            if let Ok(mut c) = Client::connect(&sock)
+                && c.ping().is_ok()
+            {
+                up = true;
+                break;
             }
             sleep_ms(300);
         }
@@ -197,20 +200,20 @@ pub fn healthy(abandoned_if_missing: Option<&Path>, timeout: Duration) -> bool {
     let payload = paths().payload;
     while Instant::now() < end {
         if notifd_owns() {
-            if let Ok(mut c) = Client::connect(notify_client::default_socket_path()) {
-                if c.ping().is_ok() {
-                    return true;
-                }
+            if let Ok(mut c) = Client::connect(notify_client::default_socket_path())
+                && c.ping().is_ok()
+            {
+                return true;
             }
             let (rc, out) = sh("qs", &["-p", &payload.to_string_lossy(), "ipc", "call", "notifd", "status"]);
             if rc == 0 && !out.is_empty() {
                 return true;
             }
         }
-        if let Some(f) = abandoned_if_missing {
-            if !f.exists() {
-                return false;
-            }
+        if let Some(f) = abandoned_if_missing
+            && !f.exists()
+        {
+            return false;
         }
         sleep_ms(500);
     }
@@ -234,7 +237,11 @@ pub fn takeover(ctx: &Ctx, now: bool, dry: bool, no_portal: bool, no_autodnd: bo
     if p.takeover_state.exists() {
         bail!("notifd takeover is already installed (use 'notify update' to change it, or 'notify restore' first)");
     }
-    ctx.out.text(&format!("{}takeover plan{}", if dry { "DRY RUN - " } else { "" }, if plain { " (plain user service: no Plasma here to take over from)" } else { "" }));
+    ctx.out.text(&format!(
+        "{}takeover plan{}",
+        if dry { "DRY RUN - " } else { "" },
+        if plain { " (plain user service: no Plasma here to take over from)" } else { "" }
+    ));
     let pl = std::rc::Rc::new(pl);
     let nosys = ctx.no_systemctl;
     let mut steps: Vec<Step> = Vec::new();
@@ -267,15 +274,21 @@ pub fn takeover(ctx: &Ctx, now: bool, dry: bool, no_portal: bool, no_autodnd: bo
     }
     if !plain {
         let f = p.fallback_unit.clone();
-        steps.push(Step::new(format!("write fallback unit {} (hands back to Plasma if notifd keeps failing)", p.fallback_unit.display()), move || atomic_write(&f, &fallback_unit_text())));
+        steps.push(Step::new(format!("write fallback unit {} (hands back to Plasma if notifd keeps failing)", p.fallback_unit.display()), move || {
+            atomic_write(&f, &fallback_unit_text())
+        }));
     }
     {
         let f = p.jobs_unit.clone();
-        steps.push(Step::new(format!("write job bridge unit {} (KDE apps' copy/move/delete progress through notifd)", p.jobs_unit.display()), move || atomic_write(&f, &jobs_unit_text(plain))));
+        steps.push(Step::new(format!("write job bridge unit {} (KDE apps' copy/move/delete progress through notifd)", p.jobs_unit.display()), move || {
+            atomic_write(&f, &jobs_unit_text(plain))
+        }));
     }
     {
         let f = p.dbus.clone();
-        steps.push(Step::new(format!("write D-Bus activation override {} (restarts notifd if it ever stops)", p.dbus.display()), move || atomic_write(&f, dbus_text())));
+        steps.push(Step::new(format!("write D-Bus activation override {} (restarts notifd if it ever stops)", p.dbus.display()), move || {
+            atomic_write(&f, dbus_text())
+        }));
     }
     let autodnd_done = slot(false);
     if !no_autodnd && !plain {
@@ -342,19 +355,22 @@ pub fn takeover(ctx: &Ctx, now: bool, dry: bool, no_portal: bool, no_autodnd: bo
         }));
     } else if now {
         let c2 = ctx.clone();
-        steps.push(Step::new("NOW: stop plasmashell, start notifd and the job bridge, start plasmashell (panel disappears ~5s); auto-rollback if notifd is not the owner", move || {
-            let sys = |a: &[&str]| systemctl(&c2, a);
-            sys(&["stop", "plasma-plasmashell.service"]);
-            let rc = sys(&["start", "notifd.service"]);
-            sys(&["start", "notifd-jobs.service"]);
-            sys(&["start", "plasma-plasmashell.service"]);
-            if !c2.no_systemctl && (rc != 0 || !notifd_owns()) {
-                c2.out.text("  ! takeover did not take effect; rolling back");
-                do_restore(&c2)?;
-                bail!("takeover did not take effect and was rolled back");
-            }
-            Ok(())
-        }));
+        steps.push(Step::new(
+            "NOW: stop plasmashell, start notifd and the job bridge, start plasmashell (panel disappears ~5s); auto-rollback if notifd is not the owner",
+            move || {
+                let sys = |a: &[&str]| systemctl(&c2, a);
+                sys(&["stop", "plasma-plasmashell.service"]);
+                let rc = sys(&["start", "notifd.service"]);
+                sys(&["start", "notifd-jobs.service"]);
+                sys(&["start", "plasma-plasmashell.service"]);
+                if !c2.no_systemctl && (rc != 0 || !notifd_owns()) {
+                    c2.out.text("  ! takeover did not take effect; rolling back");
+                    do_restore(&c2)?;
+                    bail!("takeover did not take effect and was rolled back");
+                }
+                Ok(())
+            },
+        ));
     } else {
         steps.push(Step::note("(no --now: nothing running changes; notifd takes over at next login)"));
     }
@@ -367,7 +383,7 @@ pub fn takeover(ctx: &Ctx, now: bool, dry: bool, no_portal: bool, no_autodnd: bo
 
 mod update;
 pub use update::update;
-mod restore;
 mod handover;
+mod restore;
 use handover::{handover_note, plain_start_timeout};
 pub use restore::{do_restore, restore};

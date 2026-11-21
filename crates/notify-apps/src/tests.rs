@@ -1,7 +1,11 @@
 use super::*;
 
 fn tmp(label: &str) -> PathBuf {
-    let d = std::env::temp_dir().join(format!("notify-apps-{label}-{}-{}", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+    let d = std::env::temp_dir().join(format!(
+        "notify-apps-{label}-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+    ));
     fs::create_dir_all(&d).unwrap();
     d
 }
@@ -13,17 +17,28 @@ fn fixture() -> Roots {
     fs::create_dir_all(root.join("share/knotifications6")).unwrap();
     fs::create_dir_all(root.join("config")).unwrap();
     let w = |n: &str, t: &str| fs::write(apps.join(n), t).unwrap();
-    w("org.telegram.desktop.desktop", "[Desktop Entry]\nType=Application\nName=Telegram\nIcon=telegram\nCategories=Network;InstantMessaging;\nX-GNOME-UsesNotifications=true\n");
+    w(
+        "org.telegram.desktop.desktop",
+        "[Desktop Entry]\nType=Application\nName=Telegram\nIcon=telegram\nCategories=Network;InstantMessaging;\nX-GNOME-UsesNotifications=true\n",
+    );
     w("calc.desktop", "[Desktop Entry]\nType=Application\nName=Calculator\nIcon=calc\nCategories=Utility;\n");
     w("hidden.desktop", "[Desktop Entry]\nType=Application\nName=Hidden\nNoDisplay=true\nX-GNOME-UsesNotifications=true\n");
     w("mailer.desktop", "[Desktop Entry]\nType=Application\nName=Mailer\nCategories=Office;Email;\n[Desktop Action x]\nName=Compose\n");
-    fs::write(root.join("share/knotifications6/bluedevil.notifyrc"), "[Global]\nIconName=bluetooth\nName=Bluetooth\nDesktopEntry=org.kde.bluedevilwizard\n").unwrap();
+    fs::write(root.join("share/knotifications6/bluedevil.notifyrc"), "[Global]\nIconName=bluetooth\nName=Bluetooth\nDesktopEntry=org.kde.bluedevilwizard\n")
+        .unwrap();
     fs::write(root.join("config/plasmanotifyrc"), "[Applications][brave-origin]\nSeen=true\n\n[Applications][org.telegram.desktop]\nSeen=true\n").unwrap();
     Roots { data_dirs: vec![root.join("share")], config_dir: root.join("config"), flatpak: false }
 }
 
 fn seen(app: &str, entry: &str, count: u64, last: i64) -> SeenApp {
-    SeenApp { key: if entry.is_empty() { app.to_lowercase() } else { entry.to_lowercase() }, app: app.into(), desktop_entry: entry.into(), count, last, types: Vec::new() }
+    SeenApp {
+        key: if entry.is_empty() { app.to_lowercase() } else { entry.to_lowercase() },
+        app: app.into(),
+        desktop_entry: entry.into(),
+        count,
+        last,
+        types: Vec::new(),
+    }
 }
 
 #[test]

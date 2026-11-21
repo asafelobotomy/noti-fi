@@ -50,15 +50,15 @@ impl qobject::PanelModel {
             let r = me.rust();
             (r.draft_loaded, r.draft.is_dirty(), r.draft.base_raw() == raw)
         };
-        if !loaded || (!dirty && !base_matches) {
-            if let Ok(d) = Draft::from_raw(raw) {
-                let mut r = self.as_mut().rust_mut();
-                r.draft = d;
-                r.draft_loaded = true;
-                self.as_mut().set_external_changed(false);
-                self.after_edit();
-                return;
-            }
+        if (!loaded || (!dirty && !base_matches))
+            && let Ok(d) = Draft::from_raw(raw)
+        {
+            let mut r = self.as_mut().rust_mut();
+            r.draft = d;
+            r.draft_loaded = true;
+            self.as_mut().set_external_changed(false);
+            self.after_edit();
+            return;
         }
         self.as_mut().set_external_changed(dirty && !base_matches);
     }
@@ -186,8 +186,10 @@ impl qobject::PanelModel {
         let list: Vec<Value> = rows
             .into_iter()
             .take(150)
-            .map(|e| json!({ "app": e.app, "summary": e.summary, "body": e.body, "origin": e.origin, "urgency": e.urgency, "zone": e.zone, "shown": e.shown,
-                             "desktopEntry": e.desktop_entry, "category": e.category, "channel": e.channel }))
+            .map(|e| {
+                json!({ "app": e.app, "summary": e.summary, "body": e.body, "origin": e.origin, "urgency": e.urgency, "zone": e.zone, "shown": e.shown,
+                             "desktopEntry": e.desktop_entry, "category": e.category, "channel": e.channel })
+            })
             .collect();
         QString::from(&json!(list).to_string())
     }

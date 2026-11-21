@@ -57,7 +57,9 @@ fn no_source_file_exceeds_400_lines_unless_it_is_baselined_and_not_growing() {
         seen.push(rel.clone());
         match (lines > LIMIT, base.get(&rel)) {
             (true, None) => problems.push(format!("{rel}: {lines} lines (limit {LIMIT}); split it into smaller files")),
-            (true, Some(max)) if lines > *max => problems.push(format!("{rel}: grew to {lines} lines, but it may not exceed {max} (and should shrink toward {LIMIT})")),
+            (true, Some(max)) if lines > *max => {
+                problems.push(format!("{rel}: grew to {lines} lines, but it may not exceed {max} (and should shrink toward {LIMIT})"))
+            }
             (false, Some(_)) => problems.push(format!("{rel}: now {lines} lines, within the limit; remove it from tests/loc-baseline.txt")),
             _ => {}
         }

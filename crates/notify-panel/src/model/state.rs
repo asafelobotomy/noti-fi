@@ -7,9 +7,9 @@ use std::sync::mpsc::Sender;
 use cxx_qt_lib::QString;
 use notify_apps::AppEntry;
 use notify_panel_core::draft::{Draft, SimInput};
-use notify_panel_core::{shell, view};
 use notify_panel_core::view::Conn;
 use notify_panel_core::worker::Cmd;
+use notify_panel_core::{shell, view};
 use notify_protocol::{DecidedIdx, HistoryEntry};
 
 pub struct PanelModelRust {

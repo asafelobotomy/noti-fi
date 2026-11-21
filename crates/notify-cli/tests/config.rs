@@ -135,7 +135,8 @@ fn show_lists_every_setting_with_its_default_and_whether_the_file_sets_it() {
     assert_eq!(f.json(&["config", "show", "--json"]), doc, "bare `config` and `config show` agree");
     let (c, out, _) = f.run(&["config"]);
     assert!(c == 0 && out.contains("maxVisible: 7") && out.contains("width: 380  (default)"), "{out}");
-    let fixture: Value = serde_json::from_str(&std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/uq/fixtures/config.json")).unwrap()).unwrap();
+    let fixture: Value =
+        serde_json::from_str(&std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/uq/fixtures/config.json")).unwrap()).unwrap();
     let mut shown = doc.clone();
     shown["file"] = fixture["file"].clone(); // the path differs per machine
     assert_eq!(shown, fixture, "tests/uq/fixtures/config.json is out of date");
@@ -158,7 +159,13 @@ fn show_works_without_a_daemon() {
 #[test]
 fn set_and_reset_change_one_key_and_keep_the_rest() {
     let f = fixture("set", vec![]);
-    for (key, value, want) in [("width", "420", json!(420)), ("sound.enabled", "off", json!(false)), ("theme.card", "#222233", json!("#222233")), ("theme.timerStyle", "line,circle", json!("line,circle")), ("center.anchor", "top-left", json!("top-left"))] {
+    for (key, value, want) in [
+        ("width", "420", json!(420)),
+        ("sound.enabled", "off", json!(false)),
+        ("theme.card", "#222233", json!("#222233")),
+        ("theme.timerStyle", "line,circle", json!("line,circle")),
+        ("center.anchor", "top-left", json!("top-left")),
+    ] {
         let (c, out, err) = f.run(&["config", "set", key, value]);
         assert_eq!(c, 0, "{key}: {err}");
         assert!(out.contains(key), "{out}");
@@ -228,10 +235,13 @@ fn clear_history_dry_run_counts_by_app_and_clears_nothing() {
     let doc = f.json(&["--json", "history", "--clear", "--dry-run"]);
     assert_eq!(doc["summary"], "Clear 3 notifications");
     assert_eq!(doc["would_remove"], 3);
-    assert_eq!(doc["changes"], json!([
-        {"group": "History", "label": "Chat", "detail": "2 notifications", "reversible": false},
-        {"group": "History", "label": "Mail", "detail": "1 notification", "reversible": false},
-    ]));
+    assert_eq!(
+        doc["changes"],
+        json!([
+            {"group": "History", "label": "Chat", "detail": "2 notifications", "reversible": false},
+            {"group": "History", "label": "Mail", "detail": "1 notification", "reversible": false},
+        ])
+    );
     assert_eq!((doc["oldest"].clone(), doc["newest"].clone()), (json!(1_789_000_060_000_i64), json!(1_789_000_180_000_i64)));
     assert_eq!(doc["would_refuse"], false);
     same_as_fixture("history-clear-plan.json", &doc);

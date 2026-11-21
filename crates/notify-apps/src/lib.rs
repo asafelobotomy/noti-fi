@@ -201,10 +201,10 @@ pub fn discover(roots: &Roots) -> Discovery {
             let mut files: Vec<PathBuf> = rd.filter_map(|e| e.ok().map(|e| e.path())).filter(|p| p.extension().is_some_and(|e| e == "desktop")).collect();
             files.sort();
             for f in files {
-                if let Some(l) = parse_desktop(&f, flatpak_export) {
-                    if seen_ids.insert(l.id.clone()) {
-                        d.launchers.push(l);
-                    }
+                if let Some(l) = parse_desktop(&f, flatpak_export)
+                    && seen_ids.insert(l.id.clone())
+                {
+                    d.launchers.push(l);
                 }
             }
         }
