@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Badges, pills and the OSD follow the theme radius.** The Urgent/High and Pin badges, the graph's mode buttons, a stack's header and back cards, the "+N more" pill and the volume/brightness OSD round to uQ's radius (controls: radius minus 2, capped at a pill) instead of fixed 6 to 26 px. The panel's popup preview draws the configured radius too.
+
+- **Less idle work:** automatic Do Not Disturb's 4-second keep-alive check no longer runs when both its triggers (full screen, screen sharing) are off. Turning a trigger off now also stops the KWin full-screen watcher.
+- CI enforces `cargo fmt` (house style in `rustfmt.toml`) and `cargo clippy -D warnings`; the code is formatted and lint-clean. No change in behaviour.
+
 ## 0.21.4
 
 - The panel follows the uQ theme live: colours, icons and font change with uQ's theme without reopening it (it kept the colours it started with). Nothing changes outside uQ.

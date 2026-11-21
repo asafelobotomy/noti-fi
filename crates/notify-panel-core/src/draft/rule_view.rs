@@ -36,7 +36,9 @@ fn plain_words(field: &str, p: &str) -> Option<Vec<String>> {
     let inner = match field {
         "appName" | "desktopEntry" => p.strip_prefix("^(").and_then(|x| x.strip_suffix(")$")).or_else(|| p.strip_prefix('^').and_then(|x| x.strip_suffix('$'))),
         // a closed set of values: a bare word means the same as the anchored one
-        "urgency" | "channel" | "group" => p.strip_prefix("^(").and_then(|x| x.strip_suffix(")$")).or_else(|| p.strip_prefix('^').and_then(|x| x.strip_suffix('$'))).or(Some(p)),
+        "urgency" | "channel" | "group" => {
+            p.strip_prefix("^(").and_then(|x| x.strip_suffix(")$")).or_else(|| p.strip_prefix('^').and_then(|x| x.strip_suffix('$'))).or(Some(p))
+        }
         "origin" => p.strip_prefix("\\b(").and_then(|x| x.strip_suffix(")\\b")).or_else(|| p.strip_prefix("\\b").and_then(|x| x.strip_suffix("\\b"))),
         "category" => p.strip_prefix("^(").and_then(|x| x.strip_suffix(')')).or_else(|| p.strip_prefix('^')),
         _ => Some(p),
@@ -113,15 +115,5 @@ pub(super) fn rule_view(index: usize, r: &Value) -> RuleView {
     for k in STYLE_KEYS {
         style.insert(k.into(), json!(outcome_text(r, k)));
     }
-    RuleView {
-        index,
-        title: if name.is_empty() { "(unnamed rule)".into() } else { name.clone() },
-        name,
-        summary,
-        matches,
-        zone,
-        timeout,
-        silent,
-        style,
-    }
+    RuleView { index, title: if name.is_empty() { "(unnamed rule)".into() } else { name.clone() }, name, summary, matches, zone, timeout, silent, style }
 }

@@ -41,8 +41,13 @@ pub fn paths() -> Paths {
     let config = xdg("XDG_CONFIG_HOME", ".config");
     let data = xdg("XDG_DATA_HOME", ".local/share");
     let state_home = xdg("XDG_STATE_HOME", ".local/state");
-    let runtime = std::env::var_os("XDG_RUNTIME_DIR").filter(|v| !v.is_empty()).map(PathBuf::from).unwrap_or_else(|| PathBuf::from("XDG_RUNTIME_DIR-is-not-set"));
-    let desktop = std::env::var("XDG_CURRENT_DESKTOP").ok().and_then(|d| d.split(':').next().map(str::to_lowercase)).filter(|d| !d.is_empty()).unwrap_or_else(|| "kde".into());
+    let runtime =
+        std::env::var_os("XDG_RUNTIME_DIR").filter(|v| !v.is_empty()).map(PathBuf::from).unwrap_or_else(|| PathBuf::from("XDG_RUNTIME_DIR-is-not-set"));
+    let desktop = std::env::var("XDG_CURRENT_DESKTOP")
+        .ok()
+        .and_then(|d| d.split(':').next().map(str::to_lowercase))
+        .filter(|d| !d.is_empty())
+        .unwrap_or_else(|| "kde".into());
     Paths {
         unit: config.join("systemd/user/notifd.service"),
         fallback_unit: config.join("systemd/user/notifd-fallback.service"),

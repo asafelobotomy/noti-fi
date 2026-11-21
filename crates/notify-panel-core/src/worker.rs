@@ -28,18 +28,40 @@ pub enum Cmd {
     Center(String),
     MarkAllRead,
     /// Ask the daemon whether this draft config is acceptable. `token` comes back with the answer.
-    Validate { token: u64, config: Value },
+    Validate {
+        token: u64,
+        config: Value,
+    },
     /// Ask the daemon what it would do with a notification (the request carries the draft config).
-    Simulate { token: u64, request: Value },
+    Simulate {
+        token: u64,
+        request: Value,
+    },
     /// Show real sample popups using this draft config.
-    Preview { config: Value, seconds: u32 },
+    Preview {
+        config: Value,
+        seconds: u32,
+    },
     EndPreview,
     /// Write rules.json (a file operation, but done here so everything the UI asks for goes through one place).
-    Save { path: std::path::PathBuf, text: String, expected_base: String, force: bool },
+    Save {
+        path: std::path::PathBuf,
+        text: String,
+        expected_base: String,
+        force: bool,
+    },
     /// Work out which apps send (or could send) notifications. Reads the launchers on disk and asks the daemon who has sent.
-    ScanApps { token: u64, roots: Roots },
+    ScanApps {
+        token: u64,
+        roots: Roots,
+    },
     /// Change an app's Flatpak notification permission (allow, deny, or forget), then scan again.
-    FlatpakPermission { token: u64, roots: Roots, app: String, allow: Option<bool> },
+    FlatpakPermission {
+        token: u64,
+        roots: Roots,
+        app: String,
+        allow: Option<bool>,
+    },
 }
 
 /// Everything the UI needs, fetched together so it is always consistent.
@@ -149,11 +171,7 @@ fn handle<F: FnMut(Msg)>(c: &mut Client, cmd: Cmd, rep: &mut Reporter<F>) -> Res
         },
         Cmd::Validate { token, config } => {
             match c.call_raw("validate", json!({ "config": config })) {
-                Ok(v) => rep.msg(Msg::Validated {
-                    token,
-                    ok: v["ok"].as_bool().unwrap_or(false),
-                    error: v["error"].as_str().unwrap_or("").to_string(),
-                }),
+                Ok(v) => rep.msg(Msg::Validated { token, ok: v["ok"].as_bool().unwrap_or(false), error: v["error"].as_str().unwrap_or("").to_string() }),
                 Err(Error::Daemon { message, .. }) => rep.msg(Msg::Validated { token, ok: false, error: message }),
                 Err(e) => return Err(e),
             }
@@ -266,10 +284,10 @@ pub fn run(socket: PathBuf, rx: Receiver<Cmd>, stop: std::sync::Arc<AtomicBool>,
         match Client::connect(&socket) {
             Err(e) => rep.state(classify(&e)),
             Ok(mut c) => {
-                if let Err(e) = session(&mut c, &rx, &stop, &mut rep) {
-                    if !stop.load(Ordering::Relaxed) {
-                        rep.state(classify(&e));
-                    }
+                if let Err(e) = session(&mut c, &rx, &stop, &mut rep)
+                    && !stop.load(Ordering::Relaxed)
+                {
+                    rep.state(classify(&e));
                 }
             }
         }

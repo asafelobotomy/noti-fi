@@ -76,7 +76,9 @@ fn draft_text(key: &str, value: &str) -> String {
             "off" | "false" | "no" => "false".into(),
             _ => bad("use on or off"),
         },
-        "color" if !(value.starts_with('#') && (4..=9).contains(&value.len()) && value[1..].chars().all(|c| c.is_ascii_hexdigit())) => bad("use a colour like #1d1f27"),
+        "color" if !(value.starts_with('#') && (4..=9).contains(&value.len()) && value[1..].chars().all(|c| c.is_ascii_hexdigit())) => {
+            bad("use a colour like #1d1f27")
+        }
         "number" if value.trim().parse::<f64>().is_err() => bad("use a number"),
         _ => {
             let parts = if key == "theme.timerStyle" { value.split(',').collect() } else { vec![value] };
@@ -105,7 +107,10 @@ pub fn print_plan(ctx: &Ctx, key: &str, shown: &str, p: &Proposal) {
     let (summary, changes) = if p.unchanged {
         (format!("{key} is already {shown}"), vec![])
     } else {
-        (format!("Set {key} to {}", word(&after)), vec![json!({ "group": "rules.json", "label": key, "detail": format!("{} to {}", word(&before), word(&after)), "reversible": true })])
+        (
+            format!("Set {key} to {}", word(&after)),
+            vec![json!({ "group": "rules.json", "label": key, "detail": format!("{} to {}", word(&before), word(&after)), "reversible": true })],
+        )
     };
     let doc = plan(&summary, changes, &p.refusal);
     if ctx.out.json {
@@ -129,12 +134,20 @@ pub fn print_history_plan(ctx: &Ctx, c: &mut notify_client::Client) -> Result<()
         }
     }
     apps.sort_by_key(|(_, n)| std::cmp::Reverse(*n));
-    let when = |t: i64| jiff::Timestamp::from_millisecond(t).ok().map(|d| d.to_zoned_datetime(jiff::tz::TimeZone::system()).strftime("%Y-%m-%d %H:%M").to_string()).unwrap_or_default();
+    let when = |t: i64| {
+        jiff::Timestamp::from_millisecond(t)
+            .ok()
+            .map(|d| d.to_zoned_datetime(jiff::tz::TimeZone::system()).strftime("%Y-%m-%d %H:%M").to_string())
+            .unwrap_or_default()
+    };
     let (newest, oldest) = (rows.iter().map(|r| r.t).max(), rows.iter().map(|r| r.t).min());
     let noun = |n: usize| format!("{n} notification{}", if n == 1 { "" } else { "s" });
     let refusal = if count == 0 { "The history is already empty." } else { "" };
     let summary = if count == 0 { "Nothing to clear".to_string() } else { format!("Clear {}", noun(count as usize)) };
-    let changes: Vec<Value> = apps.iter().map(|(a, n)| json!({ "group": "History", "label": if a.is_empty() { "(unnamed app)" } else { a }, "detail": noun(*n), "reversible": false })).collect();
+    let changes: Vec<Value> = apps
+        .iter()
+        .map(|(a, n)| json!({ "group": "History", "label": if a.is_empty() { "(unnamed app)" } else { a }, "detail": noun(*n), "reversible": false }))
+        .collect();
     let mut doc = plan(&summary, changes, refusal);
     doc["would_remove"] = json!(count);
     doc["oldest"] = json!(oldest);

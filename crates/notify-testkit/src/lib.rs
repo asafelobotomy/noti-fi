@@ -65,10 +65,10 @@ impl TestDaemon {
             .expect("dbus-run-session must be installed");
         let end = Instant::now() + Duration::from_secs(45);
         loop {
-            if let Ok(mut c) = Client::connect(&sock) {
-                if c.ping().is_ok() {
-                    break;
-                }
+            if let Ok(mut c) = Client::connect(&sock)
+                && c.ping().is_ok()
+            {
+                break;
             }
             assert!(Instant::now() < end, "daemon did not start; log:\n{}", fs::read_to_string(dir.join("log")).unwrap_or_default());
             thread::sleep(Duration::from_millis(300));
@@ -144,7 +144,6 @@ impl Checks {
     }
 }
 
-
 use std::collections::BTreeMap;
 
 /// The config every test daemon starts with (three zones, three rules, short timeouts, watchers off).
@@ -175,7 +174,6 @@ pub fn test_config() -> Config {
         ..Config::default()
     }
 }
-
 
 /// A scripted fake notifd, for testing how clients behave when the daemon misbehaves.
 pub mod fake {
@@ -264,5 +262,4 @@ pub mod fake {
         });
         (path, count)
     }
-
 }

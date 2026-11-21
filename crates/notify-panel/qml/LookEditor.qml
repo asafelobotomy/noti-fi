@@ -24,7 +24,7 @@ ColumnLayout {
     readonly property var base: ({
         card: settingsValues["theme.card"], border: settingsValues["theme.border"], text: settingsValues["theme.text"], subtext: settingsValues["theme.subtext"],
         button: settingsValues["theme.button"], opacity: settingsValues["theme.opacity"], fontFamily: settingsValues["theme.fontFamily"],
-        fontSize: settingsValues["theme.fontSize"], width: settingsValues["width"], timerStyle: settingsValues["theme.timerStyle"]
+        fontSize: settingsValues["theme.fontSize"], width: settingsValues["width"], timerStyle: settingsValues["theme.timerStyle"], radius: settingsValues["theme.radius"]
     })
     function val(k) { return root.values && root.values[k] !== undefined && root.values[k] !== null ? String(root.values[k]) : "" }
 

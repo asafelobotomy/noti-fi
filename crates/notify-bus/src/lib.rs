@@ -10,19 +10,19 @@ mod private;
 
 use std::path::Path;
 use std::process::{Child, Command};
-use std::sync::mpsc::{Receiver, channel};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{Receiver, channel};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
+use zbus::MatchRule;
 use zbus::blocking::{Connection, MessageIterator};
 use zbus::fdo::RequestNameFlags;
-use zbus::MatchRule;
 use zbus::message::Type as MessageType;
 
-pub use front::{Inhibition, Inhibitions, NAME, PATH};
 use front::Front;
+pub use front::{Inhibition, Inhibitions, NAME, PATH};
 use private::PrivateBus;
 
 /// The signals apps listen for, and their argument types.
@@ -89,7 +89,12 @@ fn forward_signals(inner: &Connection, session: Connection, alive: Arc<AtomicBoo
 
 /// Apps that leave the bus lose their inhibitions.
 fn watch_departures(session: &Connection, inh: Arc<Mutex<Inhibitions>>, changed: std::sync::mpsc::Sender<()>, alive: Arc<AtomicBool>) -> Result<()> {
-    let rule = MatchRule::builder().msg_type(MessageType::Signal).sender("org.freedesktop.DBus")?.interface("org.freedesktop.DBus")?.member("NameOwnerChanged")?.build();
+    let rule = MatchRule::builder()
+        .msg_type(MessageType::Signal)
+        .sender("org.freedesktop.DBus")?
+        .interface("org.freedesktop.DBus")?
+        .member("NameOwnerChanged")?
+        .build();
     let it = MessageIterator::for_match_rule(rule, session, Some(64))?;
     std::thread::spawn(move || {
         let _done = Flag(alive);

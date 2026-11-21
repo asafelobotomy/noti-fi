@@ -17,8 +17,8 @@ use serde_json::{Map, Value, json};
 pub const MATCH_FIELDS: [&str; 9] = ["appName", "desktopEntry", "origin", "summary", "body", "urgency", "category", "channel", "group"];
 
 /// How a popup looks and behaves: settable on a rule, on a zone, and (opacity, fontFamily, fontSize) on the theme. `group` is for rules only.
-pub const STYLE_KEYS: [&str; 11] = ["opacity", "clickThrough", "noFocus", "width", "fontFamily", "fontSize", "group", "priority", "media", "stack", "timerStyle"];
-
+pub const STYLE_KEYS: [&str; 11] =
+    ["opacity", "clickThrough", "noFocus", "width", "fontFamily", "fontSize", "group", "priority", "media", "stack", "timerStyle"];
 
 /// True when a rule still changes something (otherwise a panel-managed rule is removed).
 fn rule_has_effect(r: &Value) -> bool {
@@ -31,8 +31,6 @@ pub struct Draft {
     base_raw: String,
     base_value: Value,
 }
-
-
 
 impl Draft {
     /// Start from the file's text. Fails if it is not a JSON object.
@@ -241,7 +239,9 @@ impl Draft {
         let want: Vec<(String, String)> = matches.iter().map(|(f, v)| (f.to_string(), format!("^{}$", regex_escape(v)))).collect();
         self.value.get("rules")?.as_array()?.iter().position(|r| {
             r.get("name").and_then(Value::as_str).is_some_and(|n| n.starts_with(APP_RULE_PREFIX))
-                && r.get("match").and_then(Value::as_object).is_some_and(|m| m.len() == want.len() && want.iter().all(|(f, v)| m.get(f).and_then(Value::as_str) == Some(v.as_str())))
+                && r.get("match")
+                    .and_then(Value::as_object)
+                    .is_some_and(|m| m.len() == want.len() && want.iter().all(|(f, v)| m.get(f).and_then(Value::as_str) == Some(v.as_str())))
         })
     }
 
@@ -266,14 +266,12 @@ impl Draft {
     }
 }
 
-
 /// The places a zone can be: a 3x3 grid (row by row) and `free`.
-pub const ANCHORS: [&str; 10] = ["top-left", "top-center", "top-right", "middle-left", "center", "middle-right", "bottom-left", "bottom-center", "bottom-right", "free"];
+pub const ANCHORS: [&str; 10] =
+    ["top-left", "top-center", "top-right", "middle-left", "center", "middle-right", "bottom-left", "bottom-center", "bottom-right", "free"];
 
 /// Rules the panel creates for "this app" start with this, so it can find (and tidy up) its own.
 pub const APP_RULE_PREFIX: &str = "App: ";
-
-
 
 #[derive(Clone, Copy)]
 enum Kind {
@@ -282,7 +280,6 @@ enum Kind {
     Bool(bool),
     Num(f64),
 }
-
 
 /// Every scalar setting the panel can edit, with the daemon's default (what it uses when the key is missing).
 const SETTING_DEFAULTS: &[(&str, Kind)] = &[
@@ -307,7 +304,8 @@ const SETTING_DEFAULTS: &[(&str, Kind)] = &[
     ("theme.button", Kind::Color("#272a36")),
     ("theme.buttonHover", Kind::Color("#323646")),
     ("theme.opacity", Kind::Num(1.0)),
-    ("theme.fontFamily", Kind::Text("")), ("theme.fontSize", Kind::Num(12.0)),
+    ("theme.fontFamily", Kind::Text("")),
+    ("theme.fontSize", Kind::Num(12.0)),
     ("theme.timerStyle", Kind::Text("none")),
     ("theme.radius", Kind::Num(12.0)),
     ("theme.tokens", Kind::Text("auto")),
@@ -320,15 +318,13 @@ fn lookup<'a>(v: &'a Value, path: &str) -> Option<&'a Value> {
     path.split('.').try_fold(v, |cur, k| cur.get(k))
 }
 
-
 // ---------------------------------------------------------------- the simulator's input
-
 
 mod rule_view;
 mod style;
+use apps::regex_escape;
 pub use rule_view::RuleView;
 use rule_view::{number_text, rule_view};
-use apps::regex_escape;
 use style::{outcome_text, set_outcome, style_kind};
 mod apps;
 mod focus;

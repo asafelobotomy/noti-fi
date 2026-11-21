@@ -38,7 +38,10 @@ pub fn sh_timeout(cmd: &str, args: &[&str], timeout: Duration) -> (i32, String) 
 
 pub fn which(name: &str) -> Option<String> {
     let path = std::env::var_os("PATH")?;
-    std::env::split_paths(&path).map(|d| d.join(name)).find(|p| p.is_file() && fs::metadata(p).map(|m| m.permissions().mode() & 0o111 != 0).unwrap_or(false)).map(|p| p.to_string_lossy().into_owned())
+    std::env::split_paths(&path)
+        .map(|d| d.join(name))
+        .find(|p| p.is_file() && fs::metadata(p).map(|m| m.permissions().mode() & 0o111 != 0).unwrap_or(false))
+        .map(|p| p.to_string_lossy().into_owned())
 }
 
 /// Write a file through a temp file + rename so a crash can never leave it half-written.

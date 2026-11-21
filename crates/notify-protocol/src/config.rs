@@ -4,14 +4,9 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize, Serializer};
 
-
 /// Serialize whole numbers as integers (`6000`, not `6000.0`) so files stay tidy.
 fn ser_num<S: Serializer>(v: &f64, s: S) -> Result<S::Ok, S::Error> {
-    if v.fract() == 0.0 && v.abs() < 9.0e15 {
-        s.serialize_i64(*v as i64)
-    } else {
-        s.serialize_f64(*v)
-    }
+    if v.fract() == 0.0 && v.abs() < 9.0e15 { s.serialize_i64(*v as i64) } else { s.serialize_f64(*v) }
 }
 
 fn ser_opt_num<S: Serializer>(v: &Option<f64>, s: S) -> Result<S::Ok, S::Error> {
@@ -93,7 +88,23 @@ pub struct Zone {
 impl Zone {
     /// A zone at `anchor` with nothing else set.
     pub fn at(anchor: Anchor) -> Zone {
-        Zone { anchor, x: None, y: None, accent: None, label: None, opacity: None, click_through: None, no_focus: None, width: None, font_family: None, font_size: None, timer_style: None, priority: None, media: None, stack: None }
+        Zone {
+            anchor,
+            x: None,
+            y: None,
+            accent: None,
+            label: None,
+            opacity: None,
+            click_through: None,
+            no_focus: None,
+            width: None,
+            font_family: None,
+            font_size: None,
+            timer_style: None,
+            priority: None,
+            media: None,
+            stack: None,
+        }
     }
 }
 
@@ -221,7 +232,12 @@ pub struct FocusSettings {
 }
 impl Default for FocusSettings {
     fn default() -> Self {
-        Self { modes: BTreeMap::from([("urgent".to_string(), FocusMode { label: Some("Urgent only".into()), min_priority: Some("urgent".into()), allow: Vec::new() })]) }
+        Self {
+            modes: BTreeMap::from([(
+                "urgent".to_string(),
+                FocusMode { label: Some("Urgent only".into()), min_priority: Some("urgent".into()), allow: Vec::new() },
+            )]),
+        }
     }
 }
 
@@ -329,10 +345,7 @@ impl Default for Config {
     /// The same defaults the daemon starts with.
     fn default() -> Self {
         let mut zones = BTreeMap::new();
-        zones.insert(
-            "personal".to_string(),
-            Zone { accent: Some("#60a5fa".into()), label: Some("Personal".into()), ..Zone::at(Anchor::TopRight) },
-        );
+        zones.insert("personal".to_string(), Zone { accent: Some("#60a5fa".into()), label: Some("Personal".into()), ..Zone::at(Anchor::TopRight) });
         Self {
             screen: String::new(),
             debug: false,
@@ -367,4 +380,3 @@ impl Config {
         serde_json::to_string_pretty(self).expect("Config always serializes") + "\n"
     }
 }
-

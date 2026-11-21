@@ -89,11 +89,7 @@ pub fn run() -> Result<()> {
     listen::<(u32, u32), _>(notif, "NotificationClosed", sh.clone(), |(nid, reason)| Some(Ev::Closed(nid, reason)));
     let bus = proxy(&server, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus")?;
     listen::<(String, String, String), _>(bus, "NameOwnerChanged", sh.clone(), |(name, _old, new)| {
-        if name == "org.freedesktop.Notifications" {
-            Some(Ev::ServerChanged)
-        } else {
-            (name.starts_with(':') && new.is_empty()).then_some(Ev::OwnerGone(name))
-        }
+        if name == "org.freedesktop.Notifications" { Some(Ev::ServerChanged) } else { (name.starts_with(':') && new.is_empty()).then_some(Ev::OwnerGone(name)) }
     });
 
     worker::Worker::new(sh, server, &client)?.run(rx);

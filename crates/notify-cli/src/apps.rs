@@ -185,10 +185,13 @@ pub fn collect() -> Apps {
         }
     }
     flatpak.sort();
-    let firefox = firefox_profiles().into_iter().map(|(name, d)| {
-        let p = firefox_perms(&d);
-        Firefox { profile: name, allowed: p.map(|x| x.0), blocked: p.map(|x| x.1) }
-    }).collect();
+    let firefox = firefox_profiles()
+        .into_iter()
+        .map(|(name, d)| {
+            let p = firefox_perms(&d);
+            Firefox { profile: name, allowed: p.map(|x| x.0), blocked: p.map(|x| x.1) }
+        })
+        .collect();
     let electron = ELECTRON.iter().filter(|a| cfg.join(a).exists()).map(|s| s.to_string()).collect();
     Apps { chromium, flatpak_browsers: flatpak, firefox, electron }
 }
@@ -210,7 +213,12 @@ pub fn run(ctx: &Ctx) -> Result<()> {
             let (a, b, p) = (c.allowed.unwrap_or(0), c.blocked.unwrap_or(0), c.push.unwrap_or(false));
             o.line(
                 if a > 0 { OK } else { INFO },
-                &format!("{}{}: {a} sites allowed, {b} blocked, push (GCM) {}", c.name, if c.running { " (running)" } else { "" }, if p { "on" } else { "off/unset" }),
+                &format!(
+                    "{}{}: {a} sites allowed, {b} blocked, push (GCM) {}",
+                    c.name,
+                    if c.running { " (running)" } else { "" },
+                    if p { "on" } else { "off/unset" }
+                ),
                 None,
             );
             if c.name.starts_with("Brave") && !p {

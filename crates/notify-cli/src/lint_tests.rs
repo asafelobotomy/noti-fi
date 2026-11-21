@@ -39,12 +39,28 @@ fn checks_look_and_behavior_keys_like_the_daemon() {
         {"name": "ok", "opacity": 0.5, "clickThrough": false, "noFocus": true, "width": 400, "fontFamily": "Serif", "fontSize": 14, "group": "g", "match": {"channel": "web"}}
     ]);
     let e = lint_config(&v);
-    for want in ["theme: opacity must be", "zone 'system': group can only be set on a rule", "zone 'system': width must be", "rule 'a': opacity must be", "rule 'b': clickThrough must be", "rule 'b': fontSize must be", "rule 'b': group must be", "rule 'b': timerStyle must be",
-                 "center.anchor must be", "center.keep must be", "ignoreCaptureBy must be", "theme.radius must be", "rule 'a': silent must be"] {
+    for want in [
+        "theme: opacity must be",
+        "zone 'system': group can only be set on a rule",
+        "zone 'system': width must be",
+        "rule 'a': opacity must be",
+        "rule 'b': clickThrough must be",
+        "rule 'b': fontSize must be",
+        "rule 'b': group must be",
+        "rule 'b': timerStyle must be",
+        "center.anchor must be",
+        "center.keep must be",
+        "ignoreCaptureBy must be",
+        "theme.radius must be",
+        "rule 'a': silent must be",
+    ] {
         assert!(e.iter().any(|x| x.contains(want)), "missing `{want}` in {e:?}");
     }
     assert!(!e.iter().any(|x| x.contains("rule 'ok'")), "a valid rule must pass: {e:?}");
-    assert!(lint_warnings(&json!({"rules": [{"name": "ok", "opacity": 0.5, "group": "g", "match": {"category": "x"}}]})).is_empty(), "the schema must know the new keys");
+    assert!(
+        lint_warnings(&json!({"rules": [{"name": "ok", "opacity": 0.5, "group": "g", "match": {"category": "x"}}]})).is_empty(),
+        "the schema must know the new keys"
+    );
 }
 
 #[test]

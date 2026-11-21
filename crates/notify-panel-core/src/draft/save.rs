@@ -22,7 +22,17 @@ pub struct SimInput {
 
 impl Default for SimInput {
     fn default() -> Self {
-        Self { app_name: String::new(), desktop_entry: String::new(), origin: String::new(), category: String::new(), summary: String::new(), body: String::new(), urgency: "normal".into(), never_expires: false, ignore_state: true }
+        Self {
+            app_name: String::new(),
+            desktop_entry: String::new(),
+            origin: String::new(),
+            category: String::new(),
+            summary: String::new(),
+            body: String::new(),
+            urgency: "normal".into(),
+            never_expires: false,
+            ignore_state: true,
+        }
     }
 }
 
@@ -65,9 +75,10 @@ pub fn rules_path() -> PathBuf {
     if let Some(p) = std::env::var_os("NOTIFD_RULES").filter(|p| !p.is_empty()) {
         return PathBuf::from(p);
     }
-    let cfg = std::env::var_os("XDG_CONFIG_HOME").filter(|v| !v.is_empty()).map(PathBuf::from).unwrap_or_else(|| {
-        PathBuf::from(std::env::var_os("HOME").unwrap_or_else(|| "/".into())).join(".config")
-    });
+    let cfg = std::env::var_os("XDG_CONFIG_HOME")
+        .filter(|v| !v.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(std::env::var_os("HOME").unwrap_or_else(|| "/".into())).join(".config"));
     cfg.join("notifd/rules.json")
 }
 
@@ -75,7 +86,9 @@ pub fn rules_path() -> PathBuf {
 pub enum SaveOutcome {
     Saved,
     /// The file on disk differs from what the draft was started from (someone edited it); nothing was written.
-    Conflict { disk: String },
+    Conflict {
+        disk: String,
+    },
     Failed(String),
 }
 
@@ -86,12 +99,11 @@ pub enum SaveOutcome {
 pub fn save(path: &Path, text: &str, expected_base: &str, force: bool) -> SaveOutcome {
     let target = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
     let disk = fs::read_to_string(&target).ok();
-    if !force {
-        if let Some(d) = &disk {
-            if d != expected_base {
-                return SaveOutcome::Conflict { disk: d.clone() };
-            }
-        }
+    if !force
+        && let Some(d) = &disk
+        && d != expected_base
+    {
+        return SaveOutcome::Conflict { disk: d.clone() };
     }
     let result = (|| -> std::io::Result<()> {
         let dir = target.parent().ok_or_else(|| std::io::Error::other("no parent directory"))?;

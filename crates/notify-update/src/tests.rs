@@ -10,7 +10,11 @@ impl Fetch for Fake {
 }
 
 fn tmp(label: &str) -> PathBuf {
-    let d = std::env::temp_dir().join(format!("notify-update-{label}-{}-{}", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+    let d = std::env::temp_dir().join(format!(
+        "notify-update-{label}-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+    ));
     fs::create_dir_all(&d).unwrap();
     d
 }
@@ -97,7 +101,10 @@ fn checksums_must_match() {
     assert!(verify_checksum(data, &line, "a.tar.gz").is_ok());
     assert!(verify_checksum(b"hellx", &line, "a.tar.gz").unwrap_err().contains("mismatch"));
     assert!(verify_checksum(data, &line, "b.tar.gz").unwrap_err().contains("does not mention"));
-    assert!(verify_checksum(data, &format!("{}  *a.tar.gz\n", sha256_hex(data).to_uppercase()), "a.tar.gz").is_ok(), "binary-mode marker and upper case are fine");
+    assert!(
+        verify_checksum(data, &format!("{}  *a.tar.gz\n", sha256_hex(data).to_uppercase()), "a.tar.gz").is_ok(),
+        "binary-mode marker and upper case are fine"
+    );
     assert_eq!(sha256_hex(b""), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
 }
 

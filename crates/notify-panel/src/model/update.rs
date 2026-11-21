@@ -77,7 +77,12 @@ impl qobject::PanelModel {
 
     /// Start a fresh copy of this program a moment from now and quit this one (the new copy waits for this one to let go of its socket).
     pub fn restart_app(mut self: Pin<&mut Self>) {
-        let _ = std::process::Command::new("sh").args(["-c", "sleep 1; exec \"$0\"", &own_path().to_string_lossy()]).stdin(std::process::Stdio::null()).stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null()).spawn();
+        let _ = std::process::Command::new("sh")
+            .args(["-c", "sleep 1; exec \"$0\"", &own_path().to_string_lossy()])
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
         self.as_mut().quit_requested();
     }
 }

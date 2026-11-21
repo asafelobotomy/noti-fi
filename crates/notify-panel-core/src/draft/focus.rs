@@ -59,7 +59,11 @@ impl Draft {
         let m = self.focus_modes_mut().get_mut(name).and_then(Value::as_object_mut).ok_or_else(|| format!("no focus mode '{name}'"))?;
         match field {
             "label" => {
-                if text.trim().is_empty() { m.remove("label") } else { m.insert("label".into(), json!(text.trim())) };
+                if text.trim().is_empty() {
+                    m.remove("label")
+                } else {
+                    m.insert("label".into(), json!(text.trim()))
+                };
             }
             "minPriority" => {
                 if !["low", "normal", "high", "urgent"].contains(&text) {
@@ -69,7 +73,11 @@ impl Draft {
             }
             "allow" => {
                 let list = allow.unwrap_or_default();
-                if list.is_empty() { m.remove("allow") } else { m.insert("allow".into(), Value::Array(list)) };
+                if list.is_empty() {
+                    m.remove("allow")
+                } else {
+                    m.insert("allow".into(), Value::Array(list))
+                };
             }
             _ => return Err(format!("unknown focus setting '{field}'")),
         }

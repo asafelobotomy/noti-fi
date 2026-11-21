@@ -74,7 +74,7 @@ Kirigami.Page {
             Layout.preferredWidth: Math.min(Kirigami.Units.gridUnit * 24, parent.width - Kirigami.Units.gridUnit * 2)
             base: ({ card: page.vals["theme.card"], border: page.vals["theme.border"], text: page.vals["theme.text"], subtext: page.vals["theme.subtext"],
                      button: page.vals["theme.button"], opacity: page.vals["theme.opacity"], fontFamily: page.vals["theme.fontFamily"],
-                     fontSize: page.vals["theme.fontSize"], width: page.vals["width"], timerStyle: page.vals["theme.timerStyle"] })
+                     fontSize: page.vals["theme.fontSize"], width: page.vals["width"], timerStyle: page.vals["theme.timerStyle"], radius: page.vals["theme.radius"] })
             timeoutMs: Number(page.vals["defaultTimeout"]) || 0
         }
 

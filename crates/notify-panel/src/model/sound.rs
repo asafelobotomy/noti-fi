@@ -12,7 +12,8 @@ use super::qobject;
 /// Where sound themes live: the user's own first, then the system's.
 fn theme_dirs() -> Vec<PathBuf> {
     let mut dirs = Vec::new();
-    if let Some(home) = std::env::var_os("XDG_DATA_HOME").map(PathBuf::from).or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/share"))) {
+    if let Some(home) = std::env::var_os("XDG_DATA_HOME").map(PathBuf::from).or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/share")))
+    {
         dirs.push(home.join("sounds"));
     }
     let system = std::env::var("XDG_DATA_DIRS").unwrap_or_else(|_| "/usr/local/share:/usr/share".into());
@@ -33,10 +34,10 @@ fn sound_files() -> Vec<(String, PathBuf)> {
                 if !["oga", "ogg", "wav"].contains(&ext) {
                     continue;
                 }
-                if let Some(stem) = p.file_stem().and_then(|s| s.to_str()) {
-                    if !out.iter().any(|(n, _)| n == stem) {
-                        out.push((stem.to_string(), p.clone()));
-                    }
+                if let Some(stem) = p.file_stem().and_then(|s| s.to_str())
+                    && !out.iter().any(|(n, _)| n == stem)
+                {
+                    out.push((stem.to_string(), p.clone()));
                 }
             }
         }

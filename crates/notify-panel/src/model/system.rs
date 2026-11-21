@@ -54,7 +54,10 @@ impl qobject::PanelModel {
     /// Run the health checks in the background.
     pub fn system_doctor(mut self: Pin<&mut Self>) {
         let plasma = is_plasma(&std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default());
-        self.as_mut().system_state(|v| { v["busy"] = json!("doctor"); v["plasma"] = json!(plasma); });
+        self.as_mut().system_state(|v| {
+            v["busy"] = json!("doctor");
+            v["plasma"] = json!(plasma);
+        });
         let qt = self.qt_thread();
         std::thread::spawn(move || {
             let (_, text) = run(&["--json", "doctor"]);
@@ -63,7 +66,11 @@ impl qobject::PanelModel {
                 m.system_state(|v| {
                     v["busy"] = json!("");
                     match parsed {
-                        Some(d) => { v["checks"] = d["checks"].clone(); v["summary"] = d["summary"].clone(); v["error"] = json!(""); }
+                        Some(d) => {
+                            v["checks"] = d["checks"].clone();
+                            v["summary"] = d["summary"].clone();
+                            v["error"] = json!("");
+                        }
                         None => v["error"] = json!(format!("The health check could not run: {text}")),
                     }
                 });
@@ -82,13 +89,24 @@ impl qobject::PanelModel {
             return;
         };
         let name = action.clone();
-        self.as_mut().system_state(|v| { v["busy"] = json!(name); v["output"] = json!(""); });
+        self.as_mut().system_state(|v| {
+            v["busy"] = json!(name);
+            v["output"] = json!("");
+        });
         let qt = self.qt_thread();
         std::thread::spawn(move || {
             let (ok, text) = run(&args);
             let _ = qt.queue(move |mut m| {
-                m.as_mut().system_state(|v| { v["busy"] = json!(""); v["ok"] = json!(ok); v["output"] = json!(text); v["applied"] = json!(apply); v["action"] = json!(action); });
-                if apply { m.system_doctor(); }
+                m.as_mut().system_state(|v| {
+                    v["busy"] = json!("");
+                    v["ok"] = json!(ok);
+                    v["output"] = json!(text);
+                    v["applied"] = json!(apply);
+                    v["action"] = json!(action);
+                });
+                if apply {
+                    m.system_doctor();
+                }
             });
         });
     }

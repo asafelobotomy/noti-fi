@@ -53,7 +53,11 @@ fn the_rules_page_edits_simulates_and_saves_through_the_real_ui() {
     let after: Value = serde_json::from_str(&std::fs::read_to_string(&rules).unwrap()).unwrap();
     let names: Vec<&str> = after["rules"].as_array().unwrap().iter().filter_map(|x| x["name"].as_str()).collect();
     assert_eq!(names.iter().filter(|n| n.starts_with("Selftest rule")).count(), 2, "the added rule and its duplicate were saved: {names:?}");
-    assert!(rules.with_extension("json.bak").exists() || std::fs::read_dir(rules.parent().unwrap()).unwrap().any(|e| e.unwrap().file_name().to_string_lossy().contains(".bak")), "saving must keep a backup");
+    assert!(
+        rules.with_extension("json.bak").exists()
+            || std::fs::read_dir(rules.parent().unwrap()).unwrap().any(|e| e.unwrap().file_name().to_string_lossy().contains(".bak")),
+        "saving must keep a backup"
+    );
     // the daemon accepted and applied the file
     let mut c = d.client();
     assert!(c.status().is_ok());
@@ -72,7 +76,10 @@ fn the_zones_and_appearance_pages_show_the_real_settings() {
     assert_eq!(ui["valid"], true, "{ui}");
     assert_eq!(ui["maxVisible"], 3, "the test config has maxVisible 3: {ui}");
     let corners = [&ui["topLeft"], &ui["topRight"], &ui["bottomLeft"], &ui["bottomRight"]];
-    assert!(corners.iter().all(|c| c.is_string()) && corners.iter().filter(|c| !c.as_str().unwrap().is_empty()).count() >= 2, "zones must be drawn in their corners: {ui}");
+    assert!(
+        corners.iter().all(|c| c.is_string()) && corners.iter().filter(|c| !c.as_str().unwrap().is_empty()).count() >= 2,
+        "zones must be drawn in their corners: {ui}"
+    );
 
     let r = run_panel_env(&d.sock, &["--page=appearance", "--quit-after=4", "--report"], &[("NOTIFD_RULES", &rules)]);
     assert_eq!(r.code, 0, "{}", r.stderr);
@@ -105,7 +112,10 @@ fn zones_and_appearance_edits_reach_the_daemon_only_when_saved() {
     assert_eq!(z["accent"], "#ff8800");
     // the running daemon accepted and applied it
     let mut c = d.client();
-    assert!(wait_until(Duration::from_secs(5), || c.config_get().map(|g| g.raw.contains("Selftest zone")).unwrap_or(false)), "the daemon must serve the saved config");
+    assert!(
+        wait_until(Duration::from_secs(5), || c.config_get().map(|g| g.raw.contains("Selftest zone")).unwrap_or(false)),
+        "the daemon must serve the saved config"
+    );
 }
 
 /// A folder of fake launchers: one messaging app that never sends, and one that is not a notifying app at all.
@@ -187,7 +197,11 @@ fn look_and_behavior_edits_are_saved_and_accepted_by_the_daemon() {
     let r = run_panel_env(&d.sock, &["--selftest-style"], &[("NOTIFD_RULES", &rules)]);
     assert_eq!(r.code, 0, "{}", r.stderr);
     assert!(r.qml_errors().is_empty(), "{:?}", r.qml_errors());
-    assert!(r.stderr.contains("SELFTEST-STYLE failures=0 toasts=3 dirty=true valid=true"), "three refusals were expected and the draft must stay valid:\n{}", r.stderr);
+    assert!(
+        r.stderr.contains("SELFTEST-STYLE failures=0 toasts=3 dirty=true valid=true"),
+        "three refusals were expected and the draft must stay valid:\n{}",
+        r.stderr
+    );
     assert_eq!(std::fs::read_to_string(&rules).unwrap(), before, "unsaved edits must not touch rules.json");
 
     let r = run_panel_env(&d.sock, &["--selftest-style", "--selftest-save"], &[("NOTIFD_RULES", &rules)]);
@@ -196,10 +210,18 @@ fn look_and_behavior_edits_are_saved_and_accepted_by_the_daemon() {
     let names: Vec<&str> = after["rules"].as_array().unwrap().iter().filter_map(|r| r["name"].as_str()).collect();
     assert_eq!(&names[..2], &["App: Styleapp mail", "App: Styleapp"], "the kind's rule goes before the app's, both before the user's rules: {names:?}");
     let user = after["rules"].as_array().unwrap().iter().find(|r| r["name"] == "business sites").expect("the user's rule is still there");
-    assert_eq!((user["opacity"].as_f64(), user["clickThrough"].as_bool(), user["noFocus"].as_bool(), user["width"].as_i64()), (Some(0.6), Some(true), Some(false), Some(480)), "{user}");
+    assert_eq!(
+        (user["opacity"].as_f64(), user["clickThrough"].as_bool(), user["noFocus"].as_bool(), user["width"].as_i64()),
+        (Some(0.6), Some(true), Some(false), Some(480)),
+        "{user}"
+    );
     assert_eq!((user["fontFamily"].as_str(), user["group"].as_str()), (Some("Serif"), Some("Sites")));
     assert_eq!(after["zones"]["personal"]["opacity"], 0.5);
-    assert_eq!((user["timerStyle"].as_str(), after["theme"]["timerStyle"].as_str()), (Some("line,frame"), Some("circle")), "the time-left indicator is saved on the rule and the theme");
+    assert_eq!(
+        (user["timerStyle"].as_str(), after["theme"]["timerStyle"].as_str()),
+        (Some("line,frame"), Some("circle")),
+        "the time-left indicator is saved on the rule and the theme"
+    );
     assert_eq!((after["theme"]["opacity"].as_f64(), after["theme"]["fontSize"].as_i64()), (Some(0.9), Some(14)));
     let kind = &after["rules"][0];
     assert_eq!(kind["match"]["category"], "^email\\.arrived$");
@@ -208,7 +230,10 @@ fn look_and_behavior_edits_are_saved_and_accepted_by_the_daemon() {
 
     // the running daemon accepts the file and the typed client reads it back (new keys included)
     let mut c = d.client();
-    assert!(wait_until(Duration::from_secs(5), || c.config_get().map(|g| g.raw.contains("Styleapp mail") && g.error.is_empty()).unwrap_or(false)), "the daemon must load the saved config");
+    assert!(
+        wait_until(Duration::from_secs(5), || c.config_get().map(|g| g.raw.contains("Styleapp mail") && g.error.is_empty()).unwrap_or(false)),
+        "the daemon must load the saved config"
+    );
     let g = c.config_get().unwrap();
     assert_eq!(g.effective.theme.font_size, 14.0);
     assert_eq!(g.effective.zones["personal"].opacity, Some(0.5));
@@ -233,7 +258,11 @@ fn focus_modes_priority_stack_and_media_settings_work_end_to_end() {
     let r = run_panel_env(&d.sock, &["--selftest-focus"], &[("NOTIFD_RULES", &rules)]);
     assert_eq!(r.code, 0, "{}", r.stderr);
     assert!(r.qml_errors().is_empty(), "{:?}", r.qml_errors());
-    assert!(r.stderr.contains("SELFTEST-FOCUS failures=0 toasts=3 dirty=true valid=true"), "three refusals were expected and the draft must stay valid:\n{}", r.stderr);
+    assert!(
+        r.stderr.contains("SELFTEST-FOCUS failures=0 toasts=3 dirty=true valid=true"),
+        "three refusals were expected and the draft must stay valid:\n{}",
+        r.stderr
+    );
     assert_eq!(std::fs::read_to_string(&rules).unwrap(), before, "unsaved edits must not touch rules.json");
     // turning a focus mode on is immediate, not part of the draft
     let mut c = d.client();
@@ -251,7 +280,10 @@ fn focus_modes_priority_stack_and_media_settings_work_end_to_end() {
     assert_eq!((r0["priority"].as_str(), r0["stack"].as_bool(), r0["media"].as_bool()), (Some("urgent"), Some(true), Some(false)), "{r0}");
 
     // the daemon accepts it, the typed client parses it, and the new mode behaves
-    assert!(wait_until(Duration::from_secs(5), || c.config_get().map(|g| g.raw.contains("mode2") && g.error.is_empty()).unwrap_or(false)), "the daemon must load the saved config");
+    assert!(
+        wait_until(Duration::from_secs(5), || c.config_get().map(|g| g.raw.contains("mode2") && g.error.is_empty()).unwrap_or(false)),
+        "the daemon must load the saved config"
+    );
     let g = c.config_get().unwrap();
     assert_eq!(g.effective.focus.modes["mode2"].min_priority.as_deref(), Some("high"));
     assert_eq!(g.effective.transfer.chart, "heatmap");
@@ -261,4 +293,3 @@ fn focus_modes_priority_stack_and_media_settings_work_end_to_end() {
     let other = sim("Somebody");
     assert_eq!((other["wouldShow"].clone(), other["hold"].clone()), (serde_json::json!(false), serde_json::json!("focus mode2")), "{other}");
 }
-

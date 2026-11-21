@@ -69,17 +69,9 @@ fn usage_error(message: &str) -> ! {
 pub fn settings(ctx: &Ctx) -> Result<()> {
     let mut c = daemon::connect(ctx.dev)?;
     let cfg = c.config_get()?.effective;
-    let zones: Vec<_> = cfg
-        .zones
-        .iter()
-        .map(|(id, z)| json!({ "id": id, "label": z.label.as_deref().filter(|l| !l.is_empty()).unwrap_or(id) }))
-        .collect();
-    let rules: Vec<String> = cfg
-        .rules
-        .iter()
-        .enumerate()
-        .map(|(i, r)| r.name.clone().filter(|n| !n.is_empty()).unwrap_or_else(|| format!("Rule {}", i + 1)))
-        .collect();
+    let zones: Vec<_> = cfg.zones.iter().map(|(id, z)| json!({ "id": id, "label": z.label.as_deref().filter(|l| !l.is_empty()).unwrap_or(id) })).collect();
+    let rules: Vec<String> =
+        cfg.rules.iter().enumerate().map(|(i, r)| r.name.clone().filter(|n| !n.is_empty()).unwrap_or_else(|| format!("Rule {}", i + 1))).collect();
     if ctx.out.json {
         ctx.out.document(&json!({
             "dnd": { "allowCritical": cfg.dnd.allow_critical },

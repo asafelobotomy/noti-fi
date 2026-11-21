@@ -17,15 +17,18 @@ fn restore_steps(ctx: &Ctx, purge: bool) -> Vec<Step> {
     }
     {
         let (st, up, fp, dp, jp) = (state.clone(), p.unit.clone(), p.fallback_unit.clone(), p.dbus.clone(), p.jobs_unit.clone());
-        steps.push(Step::new(format!("remove {}, {}, {} and the D-Bus activation override", file_name(&p.unit), file_name(&p.fallback_unit), file_name(&p.jobs_unit)), move || {
-            for (recorded, default) in [(&st.unit, &up), (&st.fallback_unit, &fp), (&st.dbus, &dp), (&st.jobs_unit, &jp)] {
-                let f = if recorded.is_empty() { default.clone() } else { PathBuf::from(recorded) };
-                if f.exists() {
-                    fs::remove_file(&f)?;
+        steps.push(Step::new(
+            format!("remove {}, {}, {} and the D-Bus activation override", file_name(&p.unit), file_name(&p.fallback_unit), file_name(&p.jobs_unit)),
+            move || {
+                for (recorded, default) in [(&st.unit, &up), (&st.fallback_unit, &fp), (&st.dbus, &dp), (&st.jobs_unit, &jp)] {
+                    let f = if recorded.is_empty() { default.clone() } else { PathBuf::from(recorded) };
+                    if f.exists() {
+                        fs::remove_file(&f)?;
+                    }
                 }
-            }
-            Ok(())
-        }));
+                Ok(())
+            },
+        ));
     }
     {
         let (c, st) = (ctx.clone(), state.clone());
@@ -119,7 +122,14 @@ pub fn restore(ctx: &Ctx, dry: bool, purge: bool, auto: bool) -> Result<()> {
             sleep_ms(500);
         }
         let _ = Command::new("notify-send")
-            .args(["-a", "noti-fi", "-u", "critical", "Notification daemon failed", "notifd kept failing, so notifications were handed back to Plasma. Check the setup, then run: notify takeover --now"])
+            .args([
+                "-a",
+                "noti-fi",
+                "-u",
+                "critical",
+                "Notification daemon failed",
+                "notifd kept failing, so notifications were handed back to Plasma. Check the setup, then run: notify takeover --now",
+            ])
             .status();
     }
     Ok(())
@@ -128,4 +138,3 @@ pub fn restore(ctx: &Ctx, dry: bool, purge: bool, auto: bool) -> Result<()> {
 fn file_name(p: &Path) -> String {
     p.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string()
 }
-

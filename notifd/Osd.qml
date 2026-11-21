@@ -29,7 +29,7 @@ PanelWindow {
         anchors.centerIn: parent
         width: pillText.implicitWidth + 56
         height: 44
-        radius: 22
+        radius: Math.min(height / 2, osd.theme.radius ?? 12)
         color: osd.theme.card
         border.width: 1
         border.color: osd.theme.border
@@ -67,7 +67,7 @@ PanelWindow {
         anchors.centerIn: parent
         width: 300
         height: 52
-        radius: 26
+        radius: Math.min(height / 2, osd.theme.radius ?? 12)
         color: osd.theme.card
         border.width: 1
         border.color: osd.theme.border

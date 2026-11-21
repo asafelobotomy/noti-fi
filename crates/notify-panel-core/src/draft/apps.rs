@@ -59,10 +59,7 @@ impl Draft {
                 let n = matches.len();
                 let rules = self.rules_mut();
                 let managed = |r: &Value| r.get("name").and_then(Value::as_str).is_some_and(|n| n.starts_with(APP_RULE_PREFIX));
-                let at = rules
-                    .iter()
-                    .position(|r| !managed(r) || r.get("match").and_then(Value::as_object).map_or(0, Map::len) < n)
-                    .unwrap_or(rules.len());
+                let at = rules.iter().position(|r| !managed(r) || r.get("match").and_then(Value::as_object).map_or(0, Map::len) < n).unwrap_or(rules.len());
                 let mut m = Map::new();
                 for (f, v) in matches {
                     m.insert((*f).into(), json!(format!("^{}$", regex_escape(v))));

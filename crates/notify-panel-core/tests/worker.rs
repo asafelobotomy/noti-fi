@@ -1,9 +1,9 @@
 //! The worker against a real daemon and against scripted fake daemons. No Qt, no display.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
@@ -76,7 +76,11 @@ fn worker_against_a_real_daemon() {
     let first = h.wait(SHORT, |m| Harness::snapshot(m).is_some());
     k.check("the first message is a full snapshot", first.is_some(), || "no snapshot".into());
     let s = first.as_ref().and_then(Harness::snapshot).unwrap();
-    k.check("the snapshot carries zones, config and the daemon version", s.status.zones.len() == 3 && s.config.zones.len() == 3 && !s.version.is_empty(), || format!("{:?}", s.status));
+    k.check(
+        "the snapshot carries zones, config and the daemon version",
+        s.status.zones.len() == 3 && s.config.zones.len() == 3 && !s.version.is_empty(),
+        || format!("{:?}", s.status),
+    );
     let connected = h.wait(SHORT, |m| matches!(m, Msg::State(Conn::Connected)));
     k.check("the state becomes connected", connected.is_some(), || format!("{:?}", h.states()));
     k.check("states arrive in order: connecting, then connected", h.states().first() == Some(&Conn::Connecting), || format!("{:?}", h.states()));
@@ -95,7 +99,11 @@ fn worker_against_a_real_daemon() {
     h.cmd.send(Cmd::Mute("nowhere".into(), true)).unwrap();
     let m = h.wait(SHORT, |m| matches!(m, Msg::Failed(_)));
     k.check("a refused command is reported with the daemon's reason", matches!(&m, Some(Msg::Failed(t)) if t.contains("unknown zone")), || format!("{m:?}"));
-    k.check("...and does not drop the connection", h.wait(Duration::from_millis(800), |m| matches!(m, Msg::State(c) if *c != Conn::Connected)).is_none(), || "state changed after a refused command".into());
+    k.check(
+        "...and does not drop the connection",
+        h.wait(Duration::from_millis(800), |m| matches!(m, Msg::State(c) if *c != Conn::Connected)).is_none(),
+        || "state changed after a refused command".into(),
+    );
 
     d.send("hello worker", "Steam", 800, &[], "normal");
     let m = h.wait(SHORT, |m| Harness::snapshot(m).map(|s| s.history.iter().any(|x| x.summary == "hello worker")).unwrap_or(false));
@@ -208,7 +216,11 @@ fn rules_editing_commands_against_a_real_daemon() {
     let first = h.wait(SHORT, |m| Harness::snapshot(m).is_some());
     let snap = first.as_ref().and_then(Harness::snapshot).expect("a snapshot");
     let mut draft = Draft::from_raw(&snap.raw).expect("the daemon's raw config text parses into a draft");
-    k.check("the snapshot carries rules.json exactly as on disk", snap.raw == std::fs::read_to_string(d.rules_path()).unwrap() && draft.rule_count() == 3, || format!("{} rules", draft.rule_count()));
+    k.check(
+        "the snapshot carries rules.json exactly as on disk",
+        snap.raw == std::fs::read_to_string(d.rules_path()).unwrap() && draft.rule_count() == 3,
+        || format!("{} rules", draft.rule_count()),
+    );
 
     // ---- validate
     h.cmd.send(Cmd::Validate { token: 1, config: draft.value().clone() }).unwrap();
@@ -218,7 +230,11 @@ fn rules_editing_commands_against_a_real_daemon() {
     bad["defaultZone"] = json!("ghost");
     h.cmd.send(Cmd::Validate { token: 2, config: bad }).unwrap();
     let m = h.wait(SHORT, |m| matches!(m, Msg::Validated { token: 2, .. }));
-    k.check("a bad draft comes back not ok, with the daemon's reason", matches!(&m, Some(Msg::Validated { ok: false, error, .. }) if error.contains("defaultZone")), || format!("{m:?}"));
+    k.check(
+        "a bad draft comes back not ok, with the daemon's reason",
+        matches!(&m, Some(Msg::Validated { ok: false, error, .. }) if error.contains("defaultZone")),
+        || format!("{m:?}"),
+    );
 
     // a burst of 40 validations: the newest is answered, most of the others are skipped
     h.seen.clear();
@@ -240,7 +256,11 @@ fn rules_editing_commands_against_a_real_daemon() {
     let m = h.wait(SHORT, |m| matches!(m, Msg::Simulated { token: 7, .. }));
     match &m {
         Some(Msg::Simulated { result: Ok(r), .. }) => {
-            k.check("simulate evaluates the DRAFT (not the running config)", r.zone == "system" && r.decided_by.zone.as_deref() == Some("all to system"), || format!("{r:?}"));
+            k.check(
+                "simulate evaluates the DRAFT (not the running config)",
+                r.zone == "system" && r.decided_by.zone.as_deref() == Some("all to system"),
+                || format!("{r:?}"),
+            );
             k.check("...and reports which rule positions matched", r.matched_idx == [0] && r.decided_idx.zone == Some(0), || format!("{r:?}"));
         }
         other => k.check("simulate answers", false, || format!("{other:?}")),
@@ -249,7 +269,11 @@ fn rules_editing_commands_against_a_real_daemon() {
     broken["defaultZone"] = json!("ghost");
     h.cmd.send(Cmd::Simulate { token: 8, request: json!({"config": broken, "notification": {"appName": "x"}}) }).unwrap();
     let m = h.wait(SHORT, |m| matches!(m, Msg::Simulated { token: 8, .. }));
-    k.check("simulating an invalid draft says why instead of guessing", matches!(&m, Some(Msg::Simulated { result: Err(e), .. }) if e.contains("defaultZone")), || format!("{m:?}"));
+    k.check(
+        "simulating an invalid draft says why instead of guessing",
+        matches!(&m, Some(Msg::Simulated { result: Err(e), .. }) if e.contains("defaultZone")),
+        || format!("{m:?}"),
+    );
 
     // ---- preview
     h.cmd.send(Cmd::Preview { config: draft.value().clone(), seconds: 3 }).unwrap();
@@ -267,7 +291,9 @@ fn rules_editing_commands_against_a_real_daemon() {
     k.check("a save reports success", matches!(&m, Some(Msg::Saved { outcome: SaveOutcome::Saved, .. })), || format!("{m:?}"));
     let m = h.wait(SHORT, |m| Harness::snapshot(m).map(|s| s.raw == text).unwrap_or(false));
     k.check("the daemon reloads it and the next snapshot carries the saved text", m.is_some(), || "snapshot never showed the saved text".into());
-    k.check("the daemon accepted what the panel wrote", d.client().config_status().map(|s| s.ok && s.rules == 4).unwrap_or(false), || "daemon rejected or did not reload".into());
+    k.check("the daemon accepted what the panel wrote", d.client().config_status().map(|s| s.ok && s.rules == 4).unwrap_or(false), || {
+        "daemon rejected or did not reload".into()
+    });
 
     // someone edits the file by hand; a save from the old base must be refused
     let hand = std::fs::read_to_string(d.rules_path()).unwrap().replace("\"defaultTimeout\": 1500", "\"defaultTimeout\": 1700");
@@ -276,12 +302,22 @@ fn rules_editing_commands_against_a_real_daemon() {
     draft.add_rule();
     h.cmd.send(Cmd::Save { path: d.rules_path(), text: draft.to_text(), expected_base: text.clone(), force: false }).unwrap();
     let m = h.wait(SHORT, |m| matches!(m, Msg::Saved { .. }));
-    k.check("saving over a hand edit is refused as a conflict", matches!(&m, Some(Msg::Saved { outcome: SaveOutcome::Conflict { .. }, .. })), || format!("{m:?}"));
+    k.check("saving over a hand edit is refused as a conflict", matches!(&m, Some(Msg::Saved { outcome: SaveOutcome::Conflict { .. }, .. })), || {
+        format!("{m:?}")
+    });
     k.check("...and nothing was written", std::fs::read_to_string(d.rules_path()).unwrap() == hand, || "file changed".into());
     h.cmd.send(Cmd::Save { path: d.rules_path(), text: draft.to_text(), expected_base: text, force: true }).unwrap();
     let m = h.wait(SHORT, |m| matches!(m, Msg::Saved { .. }));
-    k.check("forcing overwrites", matches!(&m, Some(Msg::Saved { outcome: SaveOutcome::Saved, .. })) && std::fs::read_to_string(d.rules_path()).unwrap() == draft.to_text(), || format!("{m:?}"));
-    k.check("...keeping the hand-edited version as a backup", std::fs::read_to_string(d.dir.join("p/rules.json.bak")).map(|b| b == hand).unwrap_or(false), || "no .bak with the hand edit".into());
+    k.check(
+        "forcing overwrites",
+        matches!(&m, Some(Msg::Saved { outcome: SaveOutcome::Saved, .. })) && std::fs::read_to_string(d.rules_path()).unwrap() == draft.to_text(),
+        || format!("{m:?}"),
+    );
+    k.check(
+        "...keeping the hand-edited version as a backup",
+        std::fs::read_to_string(d.dir.join("p/rules.json.bak")).map(|b| b == hand).unwrap_or(false),
+        || "no .bak with the hand edit".into(),
+    );
 
     println!("\n{} passed, {} failed", k.passed, k.failed.len());
     assert!(k.failed.is_empty(), "failures:\n{}", k.failed.join("\n"));
@@ -316,8 +352,14 @@ fn app_discovery_combines_what_the_daemon_saw_with_what_is_installed() {
     let w = apps_found.iter().find(|a| a.name == "Workerapp");
     k.check("an app that sent notifications is listed as sent, with its count", w.is_some_and(|a| a.sent && a.count >= 2), || format!("{apps_found:?}"));
     let q = apps_found.iter().find(|a| a.id == "quietchat");
-    k.check("an installed messaging app that never sent is listed as capable but silent", q.is_some_and(|a| a.capable && !a.sent), || format!("{apps_found:?}"));
-    k.check("sent apps come before silent ones", apps_found.iter().position(|a| a.name == "Workerapp") < apps_found.iter().position(|a| a.id == "quietchat"), || format!("{apps_found:?}"));
+    k.check("an installed messaging app that never sent is listed as capable but silent", q.is_some_and(|a| a.capable && !a.sent), || {
+        format!("{apps_found:?}")
+    });
+    k.check(
+        "sent apps come before silent ones",
+        apps_found.iter().position(|a| a.name == "Workerapp") < apps_found.iter().position(|a| a.id == "quietchat"),
+        || format!("{apps_found:?}"),
+    );
 
     // a bad Flatpak id is refused with a message, and nothing else breaks
     h.cmd.send(Cmd::FlatpakPermission { token: 2, roots, app: "--help".into(), allow: Some(false) }).unwrap();

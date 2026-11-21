@@ -91,15 +91,22 @@ Scope {
             }
         }
     }
+    // the keep-alive below runs only while a watcher is wanted, or while there is something left to turn off
+    // (a watcher still running, an auto hold still set after its setting was turned off)
+    readonly property bool needFull: shell.cfg.autoDnd.fullscreen === true && !onHyprland
+    readonly property bool needShare: shell.cfg.autoDnd.screenShare === true
+    readonly property bool tidyUp: kwinWatch.running || shareWatch.running || shell.auto.fullscreen || shell.auto.share
     Timer {
-        // keeps the watchers alive (respawns journalctl or pw-dump if one ever exits)
-        interval: 4000; running: true; repeat: true; triggeredOnStart: true
+        // keeps the watchers alive (respawns journalctl or pw-dump if one ever exits); idle when auto-DnD is off
+        interval: 4000; running: autoDnd.watching && (autoDnd.needFull || autoDnd.needShare || autoDnd.tidyUp)
+        repeat: true; triggeredOnStart: true
         onTriggered: {
             const s = autoDnd.shell
             if (s.cfg.autoDnd.watch === false) return      // watchers off (tests drive the state by hand)
             if (s.cfg.autoDnd.fullscreen && !kwinWatch.running && !autoDnd.onHyprland) kwinWatch.running = true
             if (s.cfg.autoDnd.screenShare && !shareWatch.running) shareWatch.running = true
             if (!s.cfg.autoDnd.screenShare && shareWatch.running) shareWatch.running = false
+            if (!autoDnd.needFull && kwinWatch.running) kwinWatch.running = false
             if (!s.cfg.autoDnd.fullscreen && s.auto.fullscreen) s.setAuto("fullscreen", false)
             if (!s.cfg.autoDnd.screenShare && s.auto.share) s.setAuto("share", false)
         }

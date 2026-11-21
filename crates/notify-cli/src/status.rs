@@ -47,15 +47,29 @@ fn print_status(ctx: &Ctx, r: &StatusReport) {
     match &r.owner {
         None => ctx.out.line(WARN, "nobody owns org.freedesktop.Notifications", Some("notifications from apps are being dropped")),
         Some(o) => {
-            ctx.out.line(if r.notifd_owns { OK } else { INFO }, &format!("owner: {} (pid {}, unit {})", o.comm, o.pid, if o.unit.is_empty() { "none" } else { &o.unit }), None);
+            ctx.out.line(
+                if r.notifd_owns { OK } else { INFO },
+                &format!("owner: {} (pid {}, unit {})", o.comm, o.pid, if o.unit.is_empty() { "none" } else { &o.unit }),
+                None,
+            );
             ctx.out.line(INFO, if r.notifd_owns { "notifd is the owner" } else { "stock owner is active (notifd is NOT in control)" }, None);
         }
     }
     match &r.jobs_owner {
-        Some(o) if o.comm == "notify" => ctx.out.line(OK, &format!("file operations (Dolphin's copy/move progress): shown by notifd's job bridge (pid {})", o.pid), None),
-        Some(o) if r.notifd_owns => ctx.out.line(WARN, &format!("file operations (Dolphin's copy/move progress): held by {}, so they do not show", o.comm), Some("the job bridge takes over at the next login (or: systemctl --user restart plasma-plasmashell)")),
+        Some(o) if o.comm == "notify" => {
+            ctx.out.line(OK, &format!("file operations (Dolphin's copy/move progress): shown by notifd's job bridge (pid {})", o.pid), None)
+        }
+        Some(o) if r.notifd_owns => ctx.out.line(
+            WARN,
+            &format!("file operations (Dolphin's copy/move progress): held by {}, so they do not show", o.comm),
+            Some("the job bridge takes over at the next login (or: systemctl --user restart plasma-plasmashell)"),
+        ),
         Some(o) => ctx.out.line(INFO, &format!("file operations (Dolphin's copy/move progress): shown by {}", o.comm), None),
-        None => ctx.out.line(if r.notifd_owns { WARN } else { INFO }, "nobody shows file operations (org.kde.JobViewServer has no owner)", r.notifd_owns.then_some("systemctl --user start notifd-jobs")),
+        None => ctx.out.line(
+            if r.notifd_owns { WARN } else { INFO },
+            "nobody shows file operations (org.kde.JobViewServer has no owner)",
+            r.notifd_owns.then_some("systemctl --user start notifd-jobs"),
+        ),
     }
     let Some(d) = &r.daemon else {
         ctx.out.line(INFO, "no notifd instance answering", None);
@@ -106,9 +120,19 @@ struct Check {
 pub fn doctor(ctx: &Ctx) -> anyhow::Result<bool> {
     let p = paths();
     let mut checks: Vec<Check> = Vec::new();
-    let mut add = |group: &'static str, level: &'static str, message: String, hint: Option<&str>| checks.push(Check { group, level, message, hint: hint.map(String::from) });
+    let mut add = |group: &'static str, level: &'static str, message: String, hint: Option<&str>| {
+        checks.push(Check { group, level, message, hint: hint.map(String::from) })
+    };
 
-    for (t, why) in [("qs", "Quickshell runs the daemon"), ("dbus-daemon", "the daemon's private bus"), ("pw-dump", "screen-share detection (pipewire)"), ("python3", "screen-share detection"), ("busctl", "inspect D-Bus ownership"), ("notify-send", "send test notifications"), ("systemctl", "manage the service")] {
+    for (t, why) in [
+        ("qs", "Quickshell runs the daemon"),
+        ("dbus-daemon", "the daemon's private bus"),
+        ("pw-dump", "screen-share detection (pipewire)"),
+        ("python3", "screen-share detection"),
+        ("busctl", "inspect D-Bus ownership"),
+        ("notify-send", "send test notifications"),
+        ("systemctl", "manage the service"),
+    ] {
         let found = which(t).is_some();
         add("Tools", if found { OK } else { WARN }, format!("{t}: {} ({why})", if found { "found" } else { "missing" }), None);
     }
@@ -123,23 +147,58 @@ pub fn doctor(ctx: &Ctx) -> anyhow::Result<bool> {
         Some(o) if !st.notifd_owns => format!("takeover not installed ({} owns notifications)", o.comm),
         _ => "takeover not installed".to_string(),
     };
-    add("Install", if installed { OK } else { INFO }, if installed { what.into() } else { not_installed }, if installed { None } else { Some("see what it changes: notify takeover --dry-run; then: notify takeover --now") });
+    add(
+        "Install",
+        if installed { OK } else { INFO },
+        if installed { what.into() } else { not_installed },
+        if installed { None } else { Some("see what it changes: notify takeover --dry-run; then: notify takeover --now") },
+    );
     if installed {
         let (_, enabled) = sh("systemctl", &["--user", "is-enabled", "notifd.service"]);
-        add("Install", if enabled == "enabled" { OK } else { WARN }, format!("notifd.service: {}", if enabled.is_empty() { "unknown" } else { &enabled }), None);
+        add(
+            "Install",
+            if enabled == "enabled" { OK } else { WARN },
+            format!("notifd.service: {}", if enabled.is_empty() { "unknown" } else { &enabled }),
+            None,
+        );
         let fb = p.fallback_unit.exists();
         if !plain {
-            add("Install", if fb { OK } else { WARN }, format!("automatic fallback to Plasma if notifd keeps failing: {}", if fb { "armed" } else { "missing" }), if fb { None } else { Some("run: notify update") });
+            add(
+                "Install",
+                if fb { OK } else { WARN },
+                format!("automatic fallback to Plasma if notifd keeps failing: {}", if fb { "armed" } else { "missing" }),
+                if fb { None } else { Some("run: notify update") },
+            );
         }
         let jobs = p.jobs_unit.exists();
-        add("Install", if jobs { OK } else { WARN }, format!("job bridge for file operations (notifd-jobs.service): {}", if jobs { "installed" } else { "missing" }), if jobs { None } else { Some("run: notify update") });
+        add(
+            "Install",
+            if jobs { OK } else { WARN },
+            format!("job bridge for file operations (notifd-jobs.service): {}", if jobs { "installed" } else { "missing" }),
+            if jobs { None } else { Some("run: notify update") },
+        );
         let portal_ok = std::fs::read_to_string(&p.portal).map(|t| t.contains(PORTAL_MARK)).unwrap_or(false);
-        add("Install", if portal_ok { OK } else { WARN }, format!("Flatpak/portal notifications routed through notifd: {}", if portal_ok { "yes" } else { "NO" }), if portal_ok { None } else { Some("run: notify portal") });
+        add(
+            "Install",
+            if portal_ok { OK } else { WARN },
+            format!("Flatpak/portal notifications routed through notifd: {}", if portal_ok { "yes" } else { "NO" }),
+            if portal_ok { None } else { Some("run: notify portal") },
+        );
         if plain {
-            add("Install", INFO, "not on Plasma: no fallback to Plasma and no KWin full-screen script (screen sharing and apps' Inhibit still hold popups)".into(), None);
+            add(
+                "Install",
+                INFO,
+                "not on Plasma: no fallback to Plasma and no KWin full-screen script (screen sharing and apps' Inhibit still hold popups)".into(),
+                None,
+            );
         } else {
             let loaded = integrations::kwin_loaded();
-            add("Install", if loaded { OK } else { WARN }, format!("automatic Do Not Disturb for full-screen windows: {}", if loaded { "active" } else { "KWin script not loaded" }), if loaded { None } else { Some("run: notify autodnd install") });
+            add(
+                "Install",
+                if loaded { OK } else { WARN },
+                format!("automatic Do Not Disturb for full-screen windows: {}", if loaded { "active" } else { "KWin script not loaded" }),
+                if loaded { None } else { Some("run: notify autodnd install") },
+            );
             if p.tray_marker.exists() {
                 add("Install", INFO, "Plasma's notification tray icon is hidden by notify (restore and the automatic fallback show it again so Plasma can take notifications back)".into(), None);
             }

@@ -9,8 +9,15 @@ use std::process::Command;
 /// the binary's resources and compiled when the panel starts (a little slower to open, but the binary runs on any Qt 6 that is not older than the
 /// one it was built with). Set `NOTIFI_QML_AOT=1` to keep Qt's ahead-of-time compilation.
 fn portable_qml(out: &Path) {
-    let qmake = std::env::var("QMAKE").unwrap_or_else(|_| ["qmake6", "qmake-qt6", "qmake"].iter().find(|q| Command::new(q).arg("-v").output().is_ok_and(|o| o.status.success())).expect("qmake6 not found").to_string());
-    let query = |var: &str| -> String { String::from_utf8_lossy(&Command::new(&qmake).args(["-query", var]).output().expect("run qmake").stdout).trim().to_string() };
+    let qmake = std::env::var("QMAKE").unwrap_or_else(|_| {
+        ["qmake6", "qmake-qt6", "qmake"]
+            .iter()
+            .find(|q| Command::new(q).arg("-v").output().is_ok_and(|o| o.status.success()))
+            .expect("qmake6 not found")
+            .to_string()
+    });
+    let query =
+        |var: &str| -> String { String::from_utf8_lossy(&Command::new(&qmake).args(["-query", var]).output().expect("run qmake").stdout).trim().to_string() };
     let real_libexec = PathBuf::from(query("QT_HOST_LIBEXECS"));
     let shim = out.join("qt-shim");
     let libexec = shim.join("libexec");
@@ -61,7 +68,13 @@ exit 0
 /// The files in qml/ that end in `ext`, so a new page needs no list edited.
 fn qml_dir(ext: &str) -> Vec<String> {
     println!("cargo:rerun-if-changed=qml");
-    let mut names: Vec<String> = std::fs::read_dir("qml").expect("read qml/").flatten().map(|e| e.file_name().to_string_lossy().into_owned()).filter(|n| n.ends_with(ext)).map(|n| format!("qml/{n}")).collect();
+    let mut names: Vec<String> = std::fs::read_dir("qml")
+        .expect("read qml/")
+        .flatten()
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .filter(|n| n.ends_with(ext))
+        .map(|n| format!("qml/{n}"))
+        .collect();
     names.sort();
     names
 }
@@ -72,14 +85,12 @@ fn main() {
     if std::env::var_os("NOTIFI_QML_AOT").is_none() {
         portable_qml(Path::new(&std::env::var("OUT_DIR").expect("OUT_DIR")));
     }
-    CxxQtBuilder::new_qml_module(
-        QmlModule::new("org.notify.panel").qml_files(qml_dir(".qml")),
-    )
-    .qrc_resources(qml_dir(".js")) // helpers the pages import by relative path (`import "Json.js" as Json`)
-    .qt_module("Quick")
-    .qt_module("QuickControls2")
-    .qt_module("Gui")
-    .files(["src/model.rs", "src/theme.rs"])
-    .cpp_file("cpp/theme.cpp")
-    .build();
+    CxxQtBuilder::new_qml_module(QmlModule::new("org.notify.panel").qml_files(qml_dir(".qml")))
+        .qrc_resources(qml_dir(".js")) // helpers the pages import by relative path (`import "Json.js" as Json`)
+        .qt_module("Quick")
+        .qt_module("QuickControls2")
+        .qt_module("Gui")
+        .files(["src/model.rs", "src/theme.rs"])
+        .cpp_file("cpp/theme.cpp")
+        .build();
 }

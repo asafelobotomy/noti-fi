@@ -122,7 +122,8 @@ fn settings_reports_the_effective_values_and_rule_names_only() {
     let f = fixture("report", START);
     let j = f.settings();
     // the uQ page's fixture is this command's output (tests/uq/fixtures/settings.json)
-    let fixture: Value = serde_json::from_str(&std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/uq/fixtures/settings.json")).unwrap()).unwrap();
+    let fixture: Value =
+        serde_json::from_str(&std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/uq/fixtures/settings.json")).unwrap()).unwrap();
     assert_eq!(j, fixture, "tests/uq/fixtures/settings.json is out of date");
     assert_eq!(j["dnd"]["allowCritical"], true);
     assert_eq!(j["history"], json!({"limit": 200, "persist": false}));

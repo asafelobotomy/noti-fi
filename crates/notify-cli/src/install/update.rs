@@ -56,11 +56,9 @@ pub fn update(ctx: &Ctx) -> Result<()> {
             out.text(&format!("  refreshed {}", path.file_name().and_then(|n| n.to_str()).unwrap_or("")));
         }
     }
-    if jobs_new {
-        if let Some(mut st) = read_state(&p) {
-            st.jobs_unit = p.jobs_unit.display().to_string();
-            atomic_write(&p.takeover_state, &serde_json::to_string_pretty(&st)?)?;
-        }
+    if jobs_new && let Some(mut st) = read_state(&p) {
+        st.jobs_unit = p.jobs_unit.display().to_string();
+        atomic_write(&p.takeover_state, &serde_json::to_string_pretty(&st)?)?;
     }
     let added = merge_new_defaults(&pl.rules, &p.rules);
     if !added.is_empty() {
@@ -85,7 +83,9 @@ pub fn update(ctx: &Ctx) -> Result<()> {
         return Ok(());
     }
     if !p.takeover_state.exists() {
-        bail!("notifd kept crashing and the automatic fallback has handed notifications back to Plasma. Fix the problem, then re-enable with: notify takeover --now");
+        bail!(
+            "notifd kept crashing and the automatic fallback has handed notifications back to Plasma. Fix the problem, then re-enable with: notify takeover --now"
+        );
     }
     out.text("  ! notifd did not come back healthy; rolling back to the previous version");
     for n in payload::file_names() {
@@ -96,5 +96,8 @@ pub fn update(ctx: &Ctx) -> Result<()> {
     systemctl(ctx, &["reset-failed", "notifd.service"]);
     systemctl(ctx, &["restart", "notifd.service"]);
     let back = healthy(None, Duration::from_secs(15));
-    bail!("the update was rolled back: {}", if back { "notifd is healthy again on the previous version" } else { "notifd is STILL NOT HEALTHY - run: notify restore" })
+    bail!(
+        "the update was rolled back: {}",
+        if back { "notifd is healthy again on the previous version" } else { "notifd is STILL NOT HEALTHY - run: notify restore" }
+    )
 }

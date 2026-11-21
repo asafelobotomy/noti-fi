@@ -53,7 +53,12 @@ fn setup() -> Setup {
         "<busconfig><type>session</type><listen>unix:path={}</listen><auth>EXTERNAL</auth><policy context=\"default\"><allow send_destination=\"*\" eavesdrop=\"true\"/><allow eavesdrop=\"true\"/><allow own=\"*\"/></policy></busconfig>",
         dir.join("session-bus").display()
     )).unwrap();
-    let mut bus = Command::new("dbus-daemon").args(["--nofork", "--nopidfile", "--print-address=1"]).arg(format!("--config-file={}", conf.display())).stdout(Stdio::piped()).spawn().expect("dbus-daemon");
+    let mut bus = Command::new("dbus-daemon")
+        .args(["--nofork", "--nopidfile", "--print-address=1"])
+        .arg(format!("--config-file={}", conf.display()))
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("dbus-daemon");
     let mut address = String::new();
     std::io::BufRead::read_line(&mut std::io::BufReader::new(bus.stdout.take().unwrap()), &mut address).unwrap();
     let address = address.trim().to_string();
@@ -107,20 +112,57 @@ fn notify_serve_forwards_everything_and_answers_inhibit() {
     let s = setup();
     let mut k = Checks::default();
     let app = connect(&s);
-    let owned = wait_until(30, || app.call_method(Some("org.freedesktop.DBus"), "/org/freedesktop/DBus", Some("org.freedesktop.DBus"), "NameHasOwner", &(NAME,)).ok().and_then(|r| r.body().deserialize::<bool>().ok()).unwrap_or(false));
+    let owned = wait_until(30, || {
+        app.call_method(Some("org.freedesktop.DBus"), "/org/freedesktop/DBus", Some("org.freedesktop.DBus"), "NameHasOwner", &(NAME,))
+            .ok()
+            .and_then(|r| r.body().deserialize::<bool>().ok())
+            .unwrap_or(false)
+    });
     assert!(owned, "notify serve did not take the notification name");
 
     let caps: Vec<String> = app.call_method(Some(NAME), PATH, Some(NAME), "GetCapabilities", &()).unwrap().body().deserialize().unwrap();
-    k.check("GetCapabilities is Quickshell's, plus inhibitions, x-kde-origin-name and body-images (so a browser sends the site as a hint, and its picture)", caps.contains(&"actions".to_string()) && caps.contains(&"inhibitions".to_string()) && caps.contains(&"x-kde-origin-name".to_string()) && caps.contains(&"body-images".to_string()), || format!("{caps:?}"));
-    let info: (String, String, String, String) = app.call_method(Some(NAME), PATH, Some(NAME), "GetServerInformation", &()).unwrap().body().deserialize().unwrap();
+    k.check(
+        "GetCapabilities is Quickshell's, plus inhibitions, x-kde-origin-name and body-images (so a browser sends the site as a hint, and its picture)",
+        caps.contains(&"actions".to_string())
+            && caps.contains(&"inhibitions".to_string())
+            && caps.contains(&"x-kde-origin-name".to_string())
+            && caps.contains(&"body-images".to_string()),
+        || format!("{caps:?}"),
+    );
+    let info: (String, String, String, String) =
+        app.call_method(Some(NAME), PATH, Some(NAME), "GetServerInformation", &()).unwrap().body().deserialize().unwrap();
     k.check("GetServerInformation is passed through", !info.0.is_empty() && info.3 == "1.2", || format!("{info:?}"));
 
     // the signals an app gets come from the name's owner, as libnotify and KNotification expect
-    let signals = MessageIterator::for_match_rule(zbus::MatchRule::builder().msg_type(zbus::message::Type::Signal).interface(NAME).unwrap().build(), &app, Some(32)).unwrap();
+    let signals =
+        MessageIterator::for_match_rule(zbus::MatchRule::builder().msg_type(zbus::message::Type::Signal).interface(NAME).unwrap().build(), &app, Some(32))
+            .unwrap();
     let id = notify(&app, "through the proxy", &["open", "Open"], 0);
-    let seen = wait_until(5, || control(&s, "history", json!({"limit": 5})).as_array().is_some_and(|h| h.iter().any(|e| e["id"] == id && e["summary"] == "through the proxy")));
+    let seen = wait_until(5, || {
+        control(&s, "history", json!({"limit": 5})).as_array().is_some_and(|h| h.iter().any(|e| e["id"] == id && e["summary"] == "through the proxy"))
+    });
     // a browser's picture arrives as an <img> in the body: the proxy takes it out, so history and rules see only the text
-    let img: u32 = app.call_method(Some(NAME), PATH, Some(NAME), "Notify", &("Brave", 0u32, "", "with a picture", "hi\n<img src=\"file:///tmp/x/image.png\" alt=\"\"/>", Vec::<String>::new(), HashMap::<String, OwnedValue>::new(), 0i32)).unwrap().body().deserialize().unwrap();
+    let img: u32 = app
+        .call_method(
+            Some(NAME),
+            PATH,
+            Some(NAME),
+            "Notify",
+            &(
+                "Brave",
+                0u32,
+                "",
+                "with a picture",
+                "hi\n<img src=\"file:///tmp/x/image.png\" alt=\"\"/>",
+                Vec::<String>::new(),
+                HashMap::<String, OwnedValue>::new(),
+                0i32,
+            ),
+        )
+        .unwrap()
+        .body()
+        .deserialize()
+        .unwrap();
     let clean = wait_until(5, || control(&s, "history", json!({"limit": 5})).as_array().is_some_and(|h| h.iter().any(|e| e["id"] == img && e["body"] == "hi")));
     k.check("a body picture is moved out of the text", clean, || control(&s, "history", json!({"limit": 5})).to_string());
     k.check("a notification sent to the session bus reaches notifd", id > 0 && seen, || control(&s, "history", json!({"limit": 5})).to_string());
@@ -132,26 +174,42 @@ fn notify_serve_forwards_everything_and_answers_inhibit() {
     let mut got = Vec::new();
     for _ in 0..4 {
         match next(&mut it) {
-            Some((member, _)) => { got.push(member.clone()); if member == "NotificationClosed" { break } }
+            Some((member, _)) => {
+                got.push(member.clone());
+                if member == "NotificationClosed" {
+                    break;
+                }
+            }
             None => break,
         }
     }
-    k.check("ActionInvoked and NotificationClosed reach the app through the proxy", got.contains(&"ActionInvoked".into()) && got.contains(&"NotificationClosed".into()), || format!("{got:?}"));
+    k.check(
+        "ActionInvoked and NotificationClosed reach the app through the proxy",
+        got.contains(&"ActionInvoked".into()) && got.contains(&"NotificationClosed".into()),
+        || format!("{got:?}"),
+    );
 
     // Inhibit holds popups until UnInhibit, or until the app leaves the bus
     let presenter = connect(&s);
     let hints: HashMap<String, OwnedValue> = HashMap::new();
-    let cookie: u32 = presenter.call_method(Some(NAME), PATH, Some(NAME), "Inhibit", &("org.kde.okular", "presenting", hints.clone())).unwrap().body().deserialize().unwrap();
+    let cookie: u32 =
+        presenter.call_method(Some(NAME), PATH, Some(NAME), "Inhibit", &("org.kde.okular", "presenting", hints.clone())).unwrap().body().deserialize().unwrap();
     let held = wait_until(5, || control(&s, "status", json!({}))["holding"] == "inhibited");
     let st = control(&s, "status", json!({}));
-    k.check("Inhibit makes notifd hold popups, and says who asked", cookie > 0 && held && st["inhibitors"] == json!([{"app": "org.kde.okular", "reason": "presenting"}]), || st.to_string());
+    k.check(
+        "Inhibit makes notifd hold popups, and says who asked",
+        cookie > 0 && held && st["inhibitors"] == json!([{"app": "org.kde.okular", "reason": "presenting"}]),
+        || st.to_string(),
+    );
     let prop = app.call_method(Some(NAME), PATH, Some("org.freedesktop.DBus.Properties"), "Get", &(NAME, "Inhibited")).unwrap();
     let inhibited: bool = prop.body().deserialize::<OwnedValue>().ok().and_then(|v| bool::try_from(v).ok()).unwrap_or(false);
     k.check("the Inhibited property says so", inhibited, String::new);
     let id2 = notify(&app, "while presenting", &[], 3000);
     let h = wait_until(5, || control(&s, "history", json!({"limit": 5})).as_array().is_some_and(|h| h.iter().any(|e| e["id"] == id2)));
     let entry = control(&s, "history", json!({"limit": 5})).as_array().and_then(|h| h.iter().find(|e| e["id"] == id2).cloned()).unwrap_or_default();
-    k.check("...a notification meanwhile is held (in history, not on screen)", h && entry["shown"] == false && entry["why"] == "inhibited", || entry.to_string());
+    k.check("...a notification meanwhile is held (in history, not on screen)", h && entry["shown"] == false && entry["why"] == "inhibited", || {
+        entry.to_string()
+    });
     let denied = app.call_method(Some(NAME), PATH, Some(NAME), "UnInhibit", &(cookie,));
     k.check("another program cannot lift someone else's inhibition", denied.is_err(), || format!("{denied:?}"));
     drop(presenter);
@@ -172,6 +230,10 @@ fn notify_serve_forwards_everything_and_answers_inhibit() {
         .output()
         .expect("second notify serve");
     let said = String::from_utf8_lossy(&second.stderr).into_owned();
-    k.check("a second notify serve refuses while one answers, and the first keeps its socket", !second.status.success() && said.contains("already running") && control(&s, "ping", json!({}))["pong"] == true, || said.clone());
+    k.check(
+        "a second notify serve refuses while one answers, and the first keeps its socket",
+        !second.status.success() && said.contains("already running") && control(&s, "ping", json!({}))["pong"] == true,
+        || said.clone(),
+    );
     k.finish();
 }

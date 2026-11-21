@@ -35,7 +35,17 @@ struct FakeServer(Arc<Mutex<Log>>);
 #[interface(name = "org.freedesktop.Notifications")]
 impl FakeServer {
     #[allow(clippy::too_many_arguments)]
-    fn notify(&self, app: String, replaces: u32, _icon: String, summary: String, body: String, actions: Vec<String>, hints: HashMap<String, OwnedValue>, expire: i32) -> u32 {
+    fn notify(
+        &self,
+        app: String,
+        replaces: u32,
+        _icon: String,
+        summary: String,
+        body: String,
+        actions: Vec<String>,
+        hints: HashMap<String, OwnedValue>,
+        expire: i32,
+    ) -> u32 {
         let mut l = self.0.lock().unwrap();
         let id = if replaces != 0 {
             replaces
@@ -111,20 +121,37 @@ fn bridge_end_to_end() {
     }
 
     let log = Arc::new(Mutex::new(Log::default()));
-    let server = zbus::blocking::connection::Builder::session().unwrap().name("org.freedesktop.Notifications").unwrap().serve_at("/org/freedesktop/Notifications", FakeServer(log.clone())).unwrap().build().unwrap();
+    let server = zbus::blocking::connection::Builder::session()
+        .unwrap()
+        .name("org.freedesktop.Notifications")
+        .unwrap()
+        .serve_at("/org/freedesktop/Notifications", FakeServer(log.clone()))
+        .unwrap()
+        .build()
+        .unwrap();
     std::thread::spawn(|| notify_jobs::run().unwrap());
     let app = Connection::session().unwrap();
     let dbus = zbus::blocking::fdo::DBusProxy::new(&app).unwrap();
-    assert!(wait(Duration::from_secs(10), || dbus.name_has_owner("org.kde.JobViewServer".try_into().unwrap()).unwrap_or(false)), "bridge did not take the job server");
+    assert!(
+        wait(Duration::from_secs(10), || dbus.name_has_owner("org.kde.JobViewServer".try_into().unwrap()).unwrap_or(false)),
+        "bridge did not take the job server"
+    );
     assert!(dbus.name_has_owner("org.kde.kuiserver".try_into().unwrap()).unwrap());
     let kui = Proxy::new(&app, "org.kde.kuiserver", "/JobViewServer", "org.kde.kuiserver").unwrap();
     assert!(!kui.call::<_, _, bool>("requiresJobTracker", &()).unwrap(), "KIO must not open its own progress windows");
 
     // 1. a V3 job (what KIO in KF6 uses): shown at once because it is "immediate", with progress and buttons
-    let path: OwnedObjectPath = job_server(&app, "org.kde.JobViewServerV2").call("requestView", &("org.kde.dolphin", 3i32, props(vec![("immediate", Value::from(true))]))).unwrap();
+    let path: OwnedObjectPath =
+        job_server(&app, "org.kde.JobViewServerV2").call("requestView", &("org.kde.dolphin", 3i32, props(vec![("immediate", Value::from(true))]))).unwrap();
     let job = view(&app, &path, "org.kde.JobViewV3");
     let upd = |p: Vec<(&str, Value<'static>)>| job.call::<_, _, ()>("update", &(props(p),)).unwrap();
-    upd(vec![("title", Value::from("Copying")), ("totalBytes", Value::from(1000u64)), ("processedBytes", Value::from(400u64)), ("totalFiles", Value::from(2u64)), ("processedFiles", Value::from(1u64))]);
+    upd(vec![
+        ("title", Value::from("Copying")),
+        ("totalBytes", Value::from(1000u64)),
+        ("processedBytes", Value::from(400u64)),
+        ("totalFiles", Value::from(2u64)),
+        ("processedFiles", Value::from(1u64)),
+    ]);
     assert!(wait(Duration::from_secs(3), || !log.lock().unwrap().sent.is_empty()), "the job was never shown");
     let first = log.lock().unwrap().sent[0].clone();
     assert_eq!(first.app, "Dolphin", "app name comes from the desktop file");

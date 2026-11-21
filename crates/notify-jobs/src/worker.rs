@@ -156,12 +156,12 @@ impl Worker<'_> {
         }
         match self.notify(job, &n, if hidden { 0 } else { nid }) {
             Ok(id) => {
-                if job.is_done() {
-                    if let Some(p) = job.dest_path() {
-                        self.finished.push_back((id, p));
-                        while self.finished.len() > KEEP_FINISHED {
-                            self.finished.pop_front();
-                        }
+                if job.is_done()
+                    && let Some(p) = job.dest_path()
+                {
+                    self.finished.push_back((id, p));
+                    while self.finished.len() > KEEP_FINISHED {
+                        self.finished.pop_front();
                     }
                 }
                 id

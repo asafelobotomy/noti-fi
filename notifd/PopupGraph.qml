@@ -17,6 +17,7 @@ ColumnLayout {
     property color cBorder: "#2c2f3a"
     property string fontFamily: ""
     property real fontSize: 12
+    property real controlRadius: 8      // the card's (theme radius - 2); pills cap it at half their height
     readonly property bool hovered: graphHover.hovered
     signal modeChosen(string mode)
     signal toggled()
@@ -42,7 +43,7 @@ ColumnLayout {
                 readonly property bool on: (g.mode !== "" ? g.mode : g.defaultMode) === modelData
                 implicitWidth: modeText.implicitWidth + 12
                 implicitHeight: modeText.implicitHeight + 4
-                radius: 8
+                radius: Math.min(height / 2, g.controlRadius)
                 color: on ? g.accent : g.cButton
                 Text {
                     id: modeText
@@ -59,7 +60,7 @@ ColumnLayout {
         Rectangle {
             implicitWidth: toggleText.implicitWidth + 12
             implicitHeight: toggleText.implicitHeight + 4
-            radius: 8
+            radius: Math.min(height / 2, g.controlRadius)
             color: g.cButton
             Text {
                 id: toggleText
