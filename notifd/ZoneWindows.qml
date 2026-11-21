@@ -156,7 +156,7 @@ Variants {
                             y: popup.y + popup.height - 2 + 6 * index
                             width: popup.width - 14 * (index + 1)
                             height: 10
-                            radius: 6
+                            radius: Math.min(height / 2, Math.max(0, (root.cfg.theme.radius ?? 12) - 2))
                             color: root.cfg.theme.card
                             opacity: 0.75 - 0.25 * index
                             border.width: 1
@@ -172,7 +172,7 @@ Variants {
                         y: slot.headH
                         width: popup.width
                         height: 22
-                        radius: 6
+                        radius: Math.min(height / 2, Math.max(0, (root.cfg.theme.radius ?? 12) - 2))
                         color: root.cfg.theme.button
                         border.width: 1
                         border.color: root.cfg.theme.border
@@ -269,7 +269,7 @@ Variants {
                     }
                     width: moreText.implicitWidth + 24
                     height: 24
-                    radius: 12
+                    radius: Math.min(height / 2, root.cfg.theme.radius ?? 12)
                     color: root.cfg.theme.card
                     border.width: 1
                     border.color: root.cfg.theme.border

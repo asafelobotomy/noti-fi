@@ -96,6 +96,8 @@ Rectangle {
 
     implicitHeight: content.implicitHeight + 24
     radius: theme.radius ?? 12
+    // uQ's rule for controls inside a card: the theme radius minus 2 (pills cap it at half their height)
+    readonly property real controlRadius: Math.max(0, (theme.radius ?? 12) - 2)
     color: Qt.rgba(cCard.r, cCard.g, cCard.b, cCard.a * bgOpacity)
     border.width: pinned ? 2 : 1
     border.color: pinned ? accent : (hover.hovered ? Qt.lighter(accent, 1.2) : Qt.rgba(cBorder.r, cBorder.g, cBorder.b, cBorder.a * Math.max(bgOpacity, 0.4)))
@@ -223,7 +225,7 @@ Rectangle {
                 visible: card.priority === "high" || card.priority === "urgent"
                 implicitWidth: prioLabel.implicitWidth + 10
                 implicitHeight: prioLabel.implicitHeight + 4
-                radius: 8
+                radius: Math.min(height / 2, card.controlRadius)
                 color: card.priority === "urgent" ? "#f87171" : "#fbbf24"
                 Text {
                     id: prioLabel
@@ -242,7 +244,7 @@ Rectangle {
                 visible: card.active && !card.clickThrough
                 implicitWidth: pinLabel.implicitWidth + 12
                 implicitHeight: pinLabel.implicitHeight + 4
-                radius: 8
+                radius: Math.min(height / 2, card.controlRadius)
                 color: card.pinned ? card.accent : (pinHover.hovered ? card.cButtonHover : card.cButton)
                 HoverHandler { id: pinHover }
                 TapHandler { onTapped: card.pinToggled() }
@@ -319,6 +321,7 @@ Rectangle {
             id: graphBox
             visible: card.samples.length >= 2
             Layout.fillWidth: true
+            controlRadius: card.controlRadius
             samples: card.samples; open: card.graphOpen; mode: card.chartMode; defaultMode: card.chartDefault
             accent: card.accent; cardColor: card.cCard; cText: card.cText; cSub: card.cSub; cButton: card.cButton; cBorder: card.cBorder
             fontFamily: card.fontFamily; fontSize: card.fontSize
@@ -332,7 +335,7 @@ Rectangle {
             visible: card.notif !== null && card.notif.hasInlineReply === true && !card.noFocus
             Layout.fillWidth: true
             active: card.active; placeholder: card.notif && card.notif.inlineReplyPlaceholder && !card.hideText ? card.notif.inlineReplyPlaceholder : "Reply…"
-            cText: card.cText; cSub: card.cSub; cButton: card.cButton; controlRadius: Math.max(0, (card.theme.radius ?? 12) - 2); accent: card.accent; fontFamily: card.fontFamily; fontSize: card.fontSize
+            cText: card.cText; cSub: card.cSub; cButton: card.cButton; controlRadius: card.controlRadius; accent: card.accent; fontFamily: card.fontFamily; fontSize: card.fontSize
             onSubmitted: text => card.sendReply(text)
             onCancelled: card.dismissed()
         }

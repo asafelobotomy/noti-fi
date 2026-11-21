@@ -40,6 +40,8 @@ Item {
     readonly property real sizeV: Number(pick("fontSize", 12)) || 12
     readonly property string familyV: String(pick("fontFamily", ""))
     readonly property string timerV: String(pick("timerStyle", "line"))
+    // the popup's corner radius (uQ's ui.radius under uQ), and its controls' (radius - 2), as notifd draws them
+    readonly property real radiusV: Math.max(0, Math.min(40, Number(pick("radius", 12))))
     readonly property color cardC: root.col(root.base.card, "#1d1f27")
     readonly property color borderC: root.col(root.base.border, "#2c2f3a")
     readonly property color titleC: root.col(root.base.text, "#f2f3f7")
@@ -60,7 +62,7 @@ Item {
         id: card
         width: root.cardW
         height: col.implicitHeight + Kirigami.Units.largeSpacing * 2
-        radius: 8
+        radius: root.radiusV
         opacity: root.opacityV
         color: root.cardC
         border.width: 1
@@ -79,7 +81,7 @@ Item {
             Rectangle {
                 Layout.topMargin: Kirigami.Units.smallSpacing
                 implicitWidth: replyLabel.implicitWidth + 16; implicitHeight: replyLabel.implicitHeight + 8
-                radius: 4; color: root.buttonC
+                radius: Math.min(height / 2, Math.max(0, root.radiusV - 2)); color: root.buttonC
                 Text { id: replyLabel; anchors.centerIn: parent; text: "Reply"; font.pixelSize: root.sizeV; font.family: root.familyV; color: root.titleC }
             }
         }
