@@ -200,7 +200,7 @@ impl Front {
         let sender = hdr.sender().map(|s| s.to_string()).unwrap_or_default();
         let app = app_label(&desktop_entry, &hints, &sender);
         let cookie = self.inhibitions.lock().unwrap().add(&sender, &app, &reason);
-        eprintln!("notify-bus: {app} holds notifications ({reason})");
+        tracing::info!("{app} holds notifications ({reason})");
         let _ = self.changed.send(());
         Ok(cookie)
     }

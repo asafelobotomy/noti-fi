@@ -43,6 +43,10 @@ jobs:
         run: cargo test --locked -p notify-jobs --test bridge
       - name: Daemon, sound, CLI, client and panel tests (headless Wayland)
         run: tests/ci-daemon.sh
+      - name: uq-diag is the pinned release, and the problem codes match uq/diag/noti-fi.toml
+        run: |
+          scripts/check-uq-diag.sh 1.0.0 crates/notify-diag/src/uq_diag.rs
+          scripts/check-diag-codes.sh uq/diag/noti-fi.toml crates notifd
       - name: Formatting (rustfmt.toml is the house style)
         run: cargo fmt --all --check
       - name: Clippy (warnings fail the build)

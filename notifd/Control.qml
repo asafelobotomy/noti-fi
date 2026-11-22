@@ -85,7 +85,7 @@ Scope {
         }
     }
 
-    Component.onCompleted: if (sockPath === "") console.warn("notifd: XDG_RUNTIME_DIR is not set; the control socket is disabled (notifications still work)")
+    Component.onCompleted: if (sockPath === "") console.warn("notifd[NOTIFI-011] XDG_RUNTIME_DIR is not set; the control socket is disabled (notifications still work)")
     SocketServer {
         active: control.sockPath !== ""
         path: control.sockPath

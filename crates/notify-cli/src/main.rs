@@ -122,6 +122,8 @@ fn run(cli: Cli) -> Result<bool> {
 }
 
 fn main() -> ExitCode {
+    // uQ's log format for the services (`notify serve`, `notify jobs`) and a crash record on a panic.
+    notify_diag::init("notify", "info");
     let cli = Cli::parse();
     let json = cli.json;
     match run(cli) {
@@ -130,6 +132,8 @@ fn main() -> ExitCode {
         Err(e) => {
             if json {
                 println!("{}", serde_json::json!({"type": "result", "ok": false, "message": format!("{e:#}")}));
+            } else if notify_diag::Style::detect() == notify_diag::Style::Journal {
+                tracing::error!("[NOTIFI-009] {e:#}");
             } else {
                 eprintln!("error: {e:#}");
             }

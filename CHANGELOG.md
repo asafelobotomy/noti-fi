@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.21.7
+
+- **noti-fi's problems show in uQ.** noti-fi uses uQ's shared uq-diag module (`crates/notify-diag`, uq-diag 1.0.0). `notify serve`, `notify jobs` and the panel log in uQ's format, so the journal files warnings as warnings, and their warnings and errors have codes (`NOTIFI-001` to `NOTIFI-015`, including notifd's own: rules.json rejected, state not saved, a notification shown plainly) that `uqctl explain`, `uqctl log` (which reads `notifd.service` and `notifd-jobs.service`) and uQ 0.3.35's Settings › Problems explain in plain words from `/usr/share/uq/diag/noti-fi.toml`. A panic in `notify` or the panel leaves a crash record there with a report to copy. CI checks the vendored copy and that the codes and the list agree.
+
 ## 0.21.6
 
 - **notifd no longer crashes on some notifications.** When an app sent a theme icon name as the notification's picture (Thunderbird, software updaters, lock-screen notices and others do), the large picture and the small icon both loaded that icon at once, one of them on Qt's image reader thread. Quickshell's icon provider is not safe off the GUI thread, so the two loads could corrupt each other and crash notifd (segfault or abort in `QIcon::pixmap`). The large picture now only shows real pictures (a file or the notification's own image data); a theme icon stays the small icon.

@@ -1,9 +1,9 @@
 [workspace]
-members = ["crates/notify-protocol", "crates/notify-client", "crates/notify-testkit", "crates/notify-cli", "crates/notify-panel", "crates/notify-panel-core", "crates/notify-apps", "crates/notify-update", "crates/notify-panel-smoke", "crates/notify-jobs", "crates/notify-bus"]
+members = ["crates/notify-protocol", "crates/notify-client", "crates/notify-testkit", "crates/notify-cli", "crates/notify-panel", "crates/notify-panel-core", "crates/notify-apps", "crates/notify-update", "crates/notify-panel-smoke", "crates/notify-jobs", "crates/notify-bus", "crates/notify-diag"]
 resolver = "3"
 
 [workspace.package]
-version = "0.21.6"
+version = "0.21.7"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT"

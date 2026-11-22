@@ -60,9 +60,9 @@ ShellRoot {
                 root.ctl = { dnd: !!d.dnd, muted: Array.isArray(d.muted) ? d.muted : [], focus: typeof d.focus === "string" ? d.focus : "" }
                 if (Array.isArray(d.history)) root.history = d.history
                 if (d.seen && typeof d.seen === "object" && !Array.isArray(d.seen)) root.seen = d.seen
-            } catch (e) { console.warn("notifd: ignoring unreadable state.json") }
+            } catch (e) { console.warn("notifd[NOTIFI-012] ignoring unreadable state.json") }
         }
-        onSaveFailed: console.warn("notifd: could not save state (is", root.stateDir, "writable?)")
+        onSaveFailed: console.warn("notifd[NOTIFI-013] could not save state (is", root.stateDir, "writable?)")
     }
     Timer { id: saveTimer; interval: 400; onTriggered: root.saveNow() }
     Timer { id: seenTimer; interval: 5000; onTriggered: root.saveNow() }
@@ -311,7 +311,7 @@ ShellRoot {
             n.closed.connect(() => root.drop(n.id))
             watchUpdates(n)
             touch()
-        } catch (e) { console.warn("notifd: could not show notification at all:", e) }
+        } catch (e) { console.warn("notifd[NOTIFI-014] could not show notification at all:", e) }
     }
 
     // fade out first, remove once the animation is done
@@ -380,7 +380,7 @@ ShellRoot {
         persistenceSupported: false
         onNotification: n => {
             try { root.show(n) }
-            catch (e) { console.warn("notifd: show() failed, showing plainly:", e); root.showPlain(n) }
+            catch (e) { console.warn("notifd[NOTIFI-015] show() failed, showing plainly:", e); root.showPlain(n) }
         }
     }
 
