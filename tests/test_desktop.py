@@ -50,7 +50,13 @@ def make_tests(check, BASE_CONFIG, Sock):
         theme_dir.mkdir(parents=True, exist_ok=True)
         (theme_dir / "tokens.json").write_text(json.dumps(tokens("#343641")))
         t = d.wait_for(lambda: (x := effective()) and x.get("card") == "#343641" and x, 6) or {}
-        check("uQ's tokens.json becomes the theme (colours, radius, font)", t.get("card") == "#343641" and t.get("subtext") == "#bababa" and t.get("radius") == 10 and t.get("fontFamily") == "Inter", str(t))
+        why = str(t)
+        if t.get("card") != "#343641":      # say what the daemon had instead: this check has failed in a release run but never locally
+            got = Sock(d.sock).call("configGet")[0] or {}
+            why = f"after 6 s: status={d.ipc('configStatus')} effective.theme={(got.get('effective') or {}).get('theme')} raw.theme={(got.get('raw') or {}).get('theme')} error={got.get('error')!r} file={(theme_dir / 'tokens.json').exists()}"
+            t = d.wait_for(lambda: (x := effective()) and x.get("card") == "#343641" and x, 35) or {}
+            why += f"; after 35 s more (the daemon's 30 s re-read): {t}"
+        check("uQ's tokens.json becomes the theme (colours, radius, font)", t.get("card") == "#343641" and t.get("subtext") == "#bababa" and t.get("radius") == 10 and t.get("fontFamily") == "Inter" and why == str(t), why)
 
         # uQ swaps the whole theme folder: write a new one beside it and rename it into place
         new = d.state / "uq" / "theme.new"
