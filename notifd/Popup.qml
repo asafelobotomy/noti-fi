@@ -80,6 +80,14 @@ Rectangle {
         if (/^[A-Za-z0-9._+-]+$/.test(src)) return "image://icon/" + src
         return ""
     }
+    // The large picture is a real image only: a file or the notification's own image data.
+    // A theme icon name is left to the small icon, and the picture never goes through
+    // image://icon. That provider calls QIcon off the GUI thread when the Image is
+    // asynchronous, racing the small icon's load of the same name, and crashed notifd.
+    function pictureSource(src) {
+        const s = iconSource(src)
+        return s.startsWith("file://") || s.startsWith("image://qsimage/") ? s : ""
+    }
 
     // ---- media: a large picture, and a player for a local audio/video file (never anything remote; see MediaFile.qml)
     MediaFile { id: mediaFiles }
@@ -276,7 +284,7 @@ Rectangle {
         Image {      // a large picture (web push images, screenshots, covers); small images stay as the icon
             id: bigImage
             // a browser's picture arrives as a body <img>, which notify serve moves to the x-notifi-image hint
-            source: card.media && card.notif && !card.hideText ? card.iconSource((card.notif.hints && card.notif.hints["x-notifi-image"]) || card.notif.image) : ""
+            source: card.media && card.notif && !card.hideText ? card.pictureSource((card.notif.hints && card.notif.hints["x-notifi-image"]) || card.notif.image) : ""
             visible: status === Image.Ready && implicitWidth >= 200
             Layout.fillWidth: true
             Layout.preferredHeight: visible ? Math.min(180, Math.round(width * implicitHeight / Math.max(1, implicitWidth))) : 0

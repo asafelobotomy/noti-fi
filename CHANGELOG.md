@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.21.6
+
+- **notifd no longer crashes on some notifications.** When an app sent a theme icon name as the notification's picture (Thunderbird, software updaters, lock-screen notices and others do), the large picture and the small icon both loaded that icon at once, one of them on Qt's image reader thread. Quickshell's icon provider is not safe off the GUI thread, so the two loads could corrupt each other and crash notifd (segfault or abort in `QIcon::pixmap`). The large picture now only shows real pictures (a file or the notification's own image data); a theme icon stays the small icon.
+
 ## 0.21.5
 
 - **Badges, pills and the OSD follow the theme radius.** The Urgent/High and Pin badges, the graph's mode buttons, a stack's header and back cards, the "+N more" pill and the volume/brightness OSD round to uQ's radius (controls: radius minus 2, capped at a pill) instead of fixed 6 to 26 px. The panel's popup preview draws the configured radius too.
