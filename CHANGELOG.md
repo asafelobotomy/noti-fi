@@ -2,7 +2,7 @@
 
 ## 0.21.7
 
-- **noti-fi's problems show in uQ.** noti-fi uses uQ's shared uq-diag module (`crates/notify-diag`, uq-diag 1.0.0). `notify serve`, `notify jobs` and the panel log in uQ's format, so the journal files warnings as warnings, and their warnings and errors have codes (`NOTIFI-001` to `NOTIFI-015`, including notifd's own: rules.json rejected, state not saved, a notification shown plainly) that `uqctl explain`, `uqctl log` (which reads `notifd.service` and `notifd-jobs.service`) and uQ 0.3.35's Settings › Problems explain in plain words from `/usr/share/uq/diag/noti-fi.toml`. A panic in `notify` or the panel leaves a crash record there with a report to copy. CI checks the vendored copy and that the codes and the list agree.
+- **noti-fi's problems show in uQ.** noti-fi uses uQ's shared uq-diag module (`crates/notify-diag`, uq-diag 1.0.1). `notify serve`, `notify jobs` and the panel log in uQ's format, so the journal files warnings as warnings, and their warnings and errors have codes (`NOTIFI-001` to `NOTIFI-015`, including notifd's own: rules.json rejected, state not saved, a notification shown plainly) that `uqctl explain`, `uqctl log` (which reads `notifd.service` and `notifd-jobs.service`) and uQ 0.3.35's Settings › Problems explain in plain words from `/usr/share/uq/diag/noti-fi.toml`. A panic in `notify` or the panel leaves a crash record there with a report to copy. CI checks the vendored copy and that the codes and the list agree.
 
 ## 0.21.6
 

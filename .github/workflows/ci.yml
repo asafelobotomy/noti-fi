@@ -45,7 +45,7 @@ jobs:
         run: tests/ci-daemon.sh
       - name: uq-diag is the pinned release, and the problem codes match uq/diag/noti-fi.toml
         run: |
-          scripts/check-uq-diag.sh 1.0.0 crates/notify-diag/src/uq_diag.rs
+          scripts/check-uq-diag.sh 1.0.1 crates/notify-diag/src/uq_diag.rs
           scripts/check-diag-codes.sh uq/diag/noti-fi.toml crates notifd
       - name: Formatting (rustfmt.toml is the house style)
         run: cargo fmt --all --check
