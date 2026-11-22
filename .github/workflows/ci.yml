@@ -57,8 +57,8 @@ jobs:
     runs-on: ubuntu-latest
     container: archlinux:latest        # the same container as above: qt6-declarative brings Qt's QML test runner
     env:
-      # The uQ release whose `uqctl` checks the page (uq_api 3 is in every release since v0.3.0).
-      UQ_TAG: v0.3.21
+      # The uQ release whose `uqctl` checks the page (uq_api 3 is in every release since v0.3.0; v0.3.35 checks uq/diag/).
+      UQ_TAG: v0.3.35
     steps:
       - name: Install build tools, the QML test runner and Node
         run: pacman -Syu --noconfirm --needed base-devel git rust qt6-base qt6-declarative nodejs
