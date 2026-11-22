@@ -39,6 +39,16 @@ Item {
             wait(300)                       // the slide-in
         }
 
+        // A theme icon name must never reach the asynchronous large picture: image://icon on
+        // the reader thread raced the small icon's load of the same name and crashed notifd.
+        function test_picture_never_uses_theme_icons() {
+            compare(card.pictureSource("system-software-update"), "")
+            compare(card.pictureSource("image://icon/gnome-lockscreen"), "")
+            compare(card.pictureSource("/tmp/shot.png"), "file:///tmp/shot.png")
+            compare(card.pictureSource("image://qsimage/1/2"), "image://qsimage/1/2")
+            compare(card.iconSource("system-software-update"), "image://icon/system-software-update")
+        }
+
         function test_tap_dismisses() {
             mouseClick(card, 200, 100)
             compare(host.dismissed, 1)
