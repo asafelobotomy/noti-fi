@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.21.7
+
+- Ships the notifd crash fix from 0.21.6, whose release build stopped on a test before publishing (0.21.6 was never published).
+- **A uQ theme that appears together with its folder is picked up at once.** A change in uQ's theme folder can arrive while the new tokens file is still being written; notifd now reads it once more 400 ms later instead of leaving it to the 30 s re-read.
+- The theme test says what notifd had when it fails.
+
 ## 0.21.6
 
 - **notifd no longer crashes on some notifications.** When an app sent a theme icon name as the notification's picture (Thunderbird, software updaters, lock-screen notices and others do), the large picture and the small icon both loaded that icon at once, one of them on Qt's image reader thread. Quickshell's icon provider is not safe off the GUI thread, so the two loads could corrupt each other and crash notifd (segfault or abort in `QIcon::pixmap`). The large picture now only shows real pictures (a file or the notification's own image data); a theme icon stays the small icon.

@@ -365,7 +365,7 @@ ShellRoot {
     Timer { id: osdTimer; interval: 1600; onTriggered: root.osdShown = false }
 
     // Versions the control socket reports (`notify` checks daemonVersion agrees with its own).
-    readonly property string daemonVersion: "0.21.6"
+    readonly property string daemonVersion: "0.21.7"
     readonly property int protocolVersion: 1
     property string rawConfig: ""          // the text of rules.json as last read (configGet)
 

@@ -52,7 +52,7 @@ Scope {
         blockLoading: false
         printErrors: false
         watchChanges: true
-        onFileChanged: reload()
+        onFileChanged: { reload(); settle.restart() }
         onLoaded: tokens.take(text())
     }
     // The file's folder: uQ swaps theme/ as a whole, so the file's own watch goes stale but the folder's changes.
@@ -62,7 +62,10 @@ Scope {
         preload: false
         printErrors: false
         watchChanges: true
-        onFileChanged: file.reload()
+        onFileChanged: { file.reload(); settle.restart() }
     }
+    // A change in the folder can arrive while uQ is still writing the new file (created empty, then filled), and the read it
+    // starts can land in between. Read once more shortly after, so a theme that appears with its folder isn't left to the 30 s read.
+    Timer { id: settle; interval: 400; onTriggered: file.reload() }
     Timer { interval: 30000; repeat: true; running: tokens.path !== ""; onTriggered: file.reload() }
 }
