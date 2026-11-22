@@ -11,11 +11,12 @@ use notify_panel_core::shell::{self, Claim};
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QQuickStyle, QString, QUrl};
 
 fn main() {
+    notify_diag::init("notify-panel", "warn");
     // only one panel: a second launch asks the first to come forward (from the tray, the launcher, or login) and exits
     match shell::instance_socket().map(|s| shell::claim_instance(&s)) {
         Some(Ok(Claim::Other)) => return,
         Some(Ok(Claim::First(l))) => *model::INSTANCE_LISTENER.lock().unwrap() = Some(l),
-        Some(Err(e)) => eprintln!("noti-fi: could not check for a running panel ({e}); starting anyway"),
+        Some(Err(e)) => tracing::warn!("[NOTIFI-008] could not check for a running panel ({e}); starting anyway"),
         None => {}
     }
     let mut app = QGuiApplication::new();

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.21.8
+
+- **noti-fi's problems show in uQ.** noti-fi uses uQ's shared uq-diag module (`crates/notify-diag`, uq-diag 1.0.1). `notify serve`, `notify jobs` and the panel log in uQ's format, so the journal files warnings as warnings, and their warnings and errors have codes (`NOTIFI-001` to `NOTIFI-015`, including notifd's own: rules.json rejected, state not saved, a notification shown plainly) that `uqctl explain`, `uqctl log` (which reads `notifd.service` and `notifd-jobs.service`) and uQ 0.3.35's Settings › Problems explain in plain words from `/usr/share/uq/diag/noti-fi.toml`. A panic in `notify` or the panel leaves a crash record there with a report to copy. CI checks the vendored copy and that the codes and the list agree.
+
 ## 0.21.7
 
 - Ships the notifd crash fix from 0.21.6, whose release build stopped on a test before publishing (0.21.6 was never published).

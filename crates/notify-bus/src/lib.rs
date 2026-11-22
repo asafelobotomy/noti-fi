@@ -80,7 +80,7 @@ fn forward_signals(inner: &Connection, session: Connection, alive: Arc<AtomicBoo
                 _ => body.deserialize::<(u32, String)>().map(|b| session.emit_signal(None::<&str>, PATH, NAME, member.as_str(), &b)),
             };
             if let Ok(Err(e)) | Err(e) = sent {
-                eprintln!("notify-bus: could not pass on {member}: {e}");
+                tracing::warn!("[NOTIFI-001] could not pass on {member}: {e}");
             }
         }
     });
@@ -101,7 +101,7 @@ fn watch_departures(session: &Connection, inh: Arc<Mutex<Inhibitions>>, changed:
         for m in it.flatten() {
             let Ok((name, _old, new)) = m.body().deserialize::<(String, String, String)>() else { continue };
             if name.starts_with(':') && new.is_empty() && inh.lock().unwrap().drop_sender(&name) {
-                eprintln!("notify-bus: {name} left; its inhibition ends");
+                tracing::info!("{name} left; its inhibition ends");
                 let _ = changed.send(());
             }
         }
@@ -123,7 +123,7 @@ fn tell_notifd(rx: Receiver<()>, inh: Arc<Mutex<Inhibitions>>, session: Connecti
                     Ok(_) => break,
                     Err(e) => {
                         if attempt == 20 {
-                            eprintln!("notify-bus: notifd does not take the inhibitions yet ({e}); still trying");
+                            tracing::warn!("[NOTIFI-002] notifd does not take the inhibitions yet ({e}); still trying");
                         }
                         std::thread::sleep(Duration::from_millis(if attempt < 20 { 250 } else { 1000 }));
                     }
@@ -193,7 +193,7 @@ pub fn serve(payload: &Path, qs: &Path) -> Result<()> {
     tell_notifd(rx, inh, session.clone());
     // queue if someone (Plasma) holds the name, and do not let it be taken from us (no AllowReplacement), as the job bridge does
     let reply = session.request_name_with_flags(NAME, RequestNameFlags::ReplaceExisting.into()).context("requesting org.freedesktop.Notifications")?;
-    eprintln!("notify-bus: {NAME}: {reply:?} (Quickshell runs on a private bus behind it)");
+    tracing::info!("{NAME}: {reply:?} (Quickshell runs on a private bus behind it)");
     let _ = changed.send(()); // start notifd with an empty list (a restart forgets earlier inhibitions, as their apps' cookies are gone too)
 
     let mut bus = bus;

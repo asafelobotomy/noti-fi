@@ -167,7 +167,7 @@ impl Worker<'_> {
                 id
             }
             Err(e) => {
-                eprintln!("notify-jobs: could not show a job: {e}");
+                tracing::warn!("[NOTIFI-003] could not show a job: {e}");
                 nid
             }
         }
@@ -201,7 +201,7 @@ impl Worker<'_> {
             };
             let iface = if v3 { "org.kde.JobViewV3" } else { "org.kde.JobViewV2" };
             if let Err(e) = self.server.emit_signal(None::<&str>, path.as_str(), iface, signal, &()) {
-                eprintln!("notify-jobs: could not pass on {signal}: {e}");
+                tracing::warn!("[NOTIFI-004] could not pass on {signal}: {e}");
             }
             return;
         }
@@ -212,7 +212,7 @@ impl Worker<'_> {
             let dir = if p.is_dir() { p.clone() } else { p.parent().map(PathBuf::from).unwrap_or_else(|| p.clone()) };
             std::thread::spawn(move || {
                 if let Err(e) = std::process::Command::new("xdg-open").arg(&dir).stdin(std::process::Stdio::null()).status() {
-                    eprintln!("notify-jobs: could not open {}: {e}", dir.display());
+                    tracing::warn!("[NOTIFI-005] could not open {}: {e}", dir.display());
                 }
             });
         }

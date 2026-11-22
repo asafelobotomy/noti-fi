@@ -57,7 +57,7 @@ Scope {
     function reject(msg) {
         const s = config.shell
         s.cfgError = msg
-        console.warn("notifd: rules.json rejected, keeping previous config:", msg)
+        console.warn("notifd[NOTIFI-010] rules.json rejected, keeping previous config:", msg)
         s.emit("config", { ok: false, error: msg, rules: s.cfg.rules.length, zones: Object.keys(s.cfg.zones) })
         s.flash("rules.json: " + msg.slice(0, 80), "#f87171", 5000)
     }

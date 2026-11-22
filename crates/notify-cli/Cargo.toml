@@ -11,6 +11,8 @@ name = "notify"
 path = "src/main.rs"
 
 [dependencies]
+notify-diag = { path = "../notify-diag" }
+tracing = "0.1"
 notify-client = { path = "../notify-client" }
 notify-protocol = { path = "../notify-protocol" }
 notify-update = { path = "../notify-update" }

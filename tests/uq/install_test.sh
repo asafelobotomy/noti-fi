@@ -40,10 +40,11 @@ same_as_page() {
         cmp -s "uq/pages/noti-fi/$f" "$1/$f" || fail "$1/$f differs from uq/pages/noti-fi/$f"
     done
 }
-# nothing but the page under $1/share/uq
+# nothing but the page and the problem-code list (diag/noti-fi.toml, unchanged) under $1/share/uq
 only_the_page() {
     n=$(cd "$1/share/uq" && find . -type f | wc -l)
-    [ "$n" -eq "$(echo "$want" | wc -l)" ] || fail "$1/share/uq holds $n files, not just the page"
+    [ "$n" -eq "$(($(echo "$want" | wc -l) + 1))" ] || fail "$1/share/uq holds $n files, not just the page and diag/noti-fi.toml"
+    cmp -s uq/diag/noti-fi.toml "$1/share/uq/diag/noti-fi.toml" || fail "$1/share/uq/diag/noti-fi.toml is missing or differs"
 }
 
 # ---- 1. the package: packaging/PKGBUILD package()
@@ -88,6 +89,7 @@ PATH="$tmp/bin:$PATH" HOME="$tmp/home" PREFIX=/usr DESTDIR="$tmp/root" "$unpacke
 same_as_page "$tmp/root/usr/share/uq/settings/pages/noti-fi"
 HOME="$tmp/home" PREFIX=/usr DESTDIR="$tmp/root" "$unpacked/install.sh" --uninstall > /dev/null
 [ ! -e "$tmp/root/usr/share/uq/settings/pages/noti-fi" ] || fail "--uninstall left the page"
+[ ! -e "$tmp/root/usr/share/uq/diag/noti-fi.toml" ] || fail "--uninstall left diag/noti-fi.toml"
 [ ! -e "$tmp/root/usr/bin/notify" ] || fail "--uninstall left notify"
 
 # ---- 4. install.sh into the home folder (and any other prefix): no page, because uQ would never read it
@@ -97,4 +99,4 @@ PATH="$tmp/bin:$PATH" HOME="$tmp/home2" "$unpacked/install.sh" > /dev/null
 PATH="$tmp/bin:$PATH" HOME="$tmp/home3" PREFIX="$tmp/other" "$unpacked/install.sh" > /dev/null
 [ ! -e "$tmp/other/share/uq" ] || fail "an install to another prefix put something under share/uq"
 
-echo "ok: the page is packaged, archived and installed system-wide only"
+echo "ok: the page and the problem codes are packaged, archived and installed system-wide only"

@@ -36,7 +36,7 @@ fn sd_ready() {
         d.send_to(b"READY=1", &*s)
     };
     if let Err(e) = sent {
-        eprintln!("notify-jobs: could not notify systemd: {e}");
+        tracing::warn!("[NOTIFI-006] could not tell systemd it is ready: {e}");
     }
 }
 
@@ -53,7 +53,7 @@ where
 {
     std::thread::spawn(move || {
         let Ok(it) = proxy.receive_signal(signal) else {
-            eprintln!("notify-jobs: cannot listen for {signal}");
+            tracing::warn!("[NOTIFI-007] cannot listen for {signal}");
             return;
         };
         for m in it {
@@ -77,8 +77,8 @@ pub fn run() -> Result<()> {
     for name in [JOB_SERVER, KUISERVER] {
         // queue (no DoNotQueue) and refuse replacement (no AllowReplacement): we keep the names once we have them
         match server.request_name_with_flags(name, RequestNameFlags::ReplaceExisting.into()).with_context(|| format!("requesting {name}"))? {
-            RequestNameReply::PrimaryOwner | RequestNameReply::AlreadyOwner => eprintln!("notify-jobs: owns {name}"),
-            _ => eprintln!("notify-jobs: {name} is held by another program (Plasma); waiting for it, file operations show here from the next login"),
+            RequestNameReply::PrimaryOwner | RequestNameReply::AlreadyOwner => tracing::info!("owns {name}"),
+            _ => tracing::info!("{name} is held by another program (Plasma); waiting for it, file operations show here from the next login"),
         }
     }
     sd_ready();

@@ -22,6 +22,7 @@ if [ "${1:-}" = "--uninstall" ]; then
     fi
     rm -f "$base/bin/notify" "$base/bin/notify-panel" "$base/share/applications/org.notify.Panel.desktop" "$base/share/metainfo/org.notify.Panel.metainfo.xml" "$base/share/icons/hicolor/scalable/apps/org.notify.Panel.svg"
     rm -rf "$base/share/doc/noti-fi" "$uq_pages_dir/noti-fi"
+    [ -z "$uq_page" ] || rm -f "$base/share/uq/diag/noti-fi.toml"
     echo "removed noti-fi from $base"
     exit 0
 fi
@@ -57,6 +58,9 @@ if [ -n "$uq_page" ] && [ -d "$here/share/uq/settings/pages/noti-fi" ]; then
     rm -rf "$uq_pages_dir/noti-fi"
     install -d "$uq_pages_dir/noti-fi"
     install -m 644 "$here/share/uq/settings/pages/noti-fi/"* "$uq_pages_dir/noti-fi/"
+fi
+if [ -n "$uq_page" ] && [ -f "$here/share/uq/diag/noti-fi.toml" ]; then
+    install -Dm644 "$here/share/uq/diag/noti-fi.toml" "$base/share/uq/diag/noti-fi.toml"
 fi
 
 echo "installed to $base"

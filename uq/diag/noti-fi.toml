@@ -1,0 +1,110 @@
+# noti-fi's problem codes for uQ (`uqctl log`, `uqctl explain`, Settings › Problems). Installed as
+# /usr/share/uq/diag/noti-fi.toml. A code never changes meaning: set `retired = true` on one nothing
+# logs any more, and give a new problem the next number.
+app = "noti-fi"
+units = ["notifd.service", "notifd-jobs.service"]
+
+[[code]]
+id = "NOTIFI-001"
+severity = "warn"
+title = "A notification event didn't reach its app"
+means = "notifd closed a notification or a button on it was pressed, but telling the app that sent it failed, so the app may not react."
+fix = "Usually nothing: the app may have quit. If an app never reacts to its notifications' buttons, restart notifd with `systemctl --user restart notifd`."
+
+[[code]]
+id = "NOTIFI-002"
+severity = "warn"
+title = "Do Not Disturb requests are waiting for notifd"
+means = "An app asked to hold notifications (a video call or a game, say) but notifd isn't answering yet, so popups may still show. noti-fi keeps trying."
+fix = "If it doesn't settle within a minute, run `notify doctor`, then `systemctl --user restart notifd`."
+
+[[code]]
+id = "NOTIFI-003"
+severity = "warn"
+title = "A file copy's progress couldn't be shown"
+means = "An app (such as the file manager) reported a job, but noti-fi couldn't show its progress card. The copy itself carries on."
+fix = "Nothing to do for this job. If it happens every time, run `notify doctor`."
+
+[[code]]
+id = "NOTIFI-004"
+severity = "warn"
+title = "A job's button press didn't reach its app"
+means = "Pause, resume or cancel on a progress card couldn't be passed to the app running the job."
+fix = "Use the app's own window to pause or cancel it."
+
+[[code]]
+id = "NOTIFI-005"
+severity = "warn"
+title = "A finished job's folder couldn't be opened"
+means = "Opening the folder of a finished copy failed, usually because no file manager is set up for folders."
+fix = "Set a default app for folders (for example `xdg-mime default org.kde.dolphin.desktop inode/directory`), or open the folder yourself."
+
+[[code]]
+id = "NOTIFI-006"
+severity = "warn"
+title = "The job bridge couldn't tell systemd it started"
+means = "notifd-jobs started but systemd didn't hear that it was ready, so systemd may restart it after a while."
+fix = "Run `systemctl --user status notifd-jobs`. If it keeps restarting, run `notify update`."
+
+[[code]]
+id = "NOTIFI-007"
+severity = "warn"
+title = "The job bridge can't follow some job updates"
+means = "noti-fi couldn't listen for one kind of job signal, so some progress cards may not update or close."
+fix = "Restart the bridge with `systemctl --user restart notifd-jobs`."
+
+[[code]]
+id = "NOTIFI-008"
+severity = "warn"
+title = "The panel couldn't check for another open panel"
+means = "noti-fi's settings panel couldn't see whether one was already open, so a second window may open."
+fix = "Close the extra window. If it keeps happening, check that XDG_RUNTIME_DIR is set in your session."
+
+[[code]]
+id = "NOTIFI-009"
+severity = "error"
+title = "A noti-fi service stopped on an error"
+means = "notifd or its job bridge (run by systemd) stopped with an error, so notifications or progress cards may be missing until it starts again."
+fix = "Run `notify doctor` to see what is wrong, then `systemctl --user restart notifd`. `notify restore` hands notifications back to your desktop if it won't start."
+
+[[code]]
+id = "NOTIFI-010"
+severity = "warn"
+title = "Your notification rules couldn't be read"
+means = "notifd found a mistake in rules.json and kept using the rules it had before."
+fix = "Open noti-fi's panel (or uQ Settings' Notifications page) and save the rules again, or run `notify rules` to see the mistake."
+
+[[code]]
+id = "NOTIFI-011"
+severity = "warn"
+title = "noti-fi's controls are off this session"
+means = "XDG_RUNTIME_DIR isn't set, so notifd can't open its control socket: notifications still show, but the panel and the notify command can't reach it."
+fix = "Log out and in. If it stays, your session isn't started by systemd-logind properly."
+
+[[code]]
+id = "NOTIFI-012"
+severity = "warn"
+title = "notifd's saved state couldn't be read"
+means = "notifd's state.json was unreadable, so it started fresh: Do Not Disturb and the history from before are gone."
+fix = "Nothing to do; notifd writes a new one."
+
+[[code]]
+id = "NOTIFI-013"
+severity = "warn"
+title = "notifd couldn't save its state"
+means = "notifd couldn't write state.json, so Do Not Disturb and history won't survive a restart."
+fix = "Check that ~/.local/state/notifd is writable and the disk isn't full."
+
+[[code]]
+id = "NOTIFI-014"
+severity = "error"
+title = "A notification couldn't be shown"
+means = "notifd failed to show a notification at all, even plainly. It is still in the history."
+fix = "Open the history to read it. If it keeps happening, copy a report from uQ Settings' Problems page."
+
+[[code]]
+id = "NOTIFI-015"
+severity = "warn"
+title = "A notification was shown plainly"
+means = "notifd couldn't draw a notification the usual way (its picture or layout), so it showed a plain version instead."
+fix = "Usually nothing. If one app's notifications always look plain, copy a report from uQ Settings' Problems page."
