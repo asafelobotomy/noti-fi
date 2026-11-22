@@ -92,5 +92,6 @@ fn main() {
         .qt_module("Gui")
         .files(["src/model.rs", "src/theme.rs"])
         .cpp_file("cpp/theme.cpp")
+        .cpp_file("cpp/uqkdetheme.cpp")
         .build();
 }

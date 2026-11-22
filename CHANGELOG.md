@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.21.9] - 2026-11-22
+
+- **The panel follows the uQ theme through uQ's shared code.** The panel's KDE colour-scheme following (`cpp/theme.cpp`) is now uQ's uq-theme 1.1.0 `uqkdetheme` module, the same one hauler uses, instead of a copy of its own; behaviour is unchanged. CI checks every vendored uQ kit with uQ's single `scripts/check-uq-native.sh` and `uq/native.toml`, replacing the two diag check scripts.
+
 ## 0.21.8
 
 - **noti-fi's problems show in uQ.** noti-fi uses uQ's shared uq-diag module (`crates/notify-diag`, uq-diag 1.0.1). `notify serve`, `notify jobs` and the panel log in uQ's format, so the journal files warnings as warnings, and their warnings and errors have codes (`NOTIFI-001` to `NOTIFI-015`, including notifd's own: rules.json rejected, state not saved, a notification shown plainly) that `uqctl explain`, `uqctl log` (which reads `notifd.service` and `notifd-jobs.service`) and uQ 0.3.35's Settings › Problems explain in plain words from `/usr/share/uq/diag/noti-fi.toml`. A panic in `notify` or the panel leaves a crash record there with a report to copy. CI checks the vendored copy and that the codes and the list agree.
