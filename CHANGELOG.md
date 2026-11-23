@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.21.9] - 2026-11-22
+## 0.21.9
 
 - **The panel follows the uQ theme through uQ's shared code.** The panel's KDE colour-scheme following (`cpp/theme.cpp`) is now uQ's uq-theme 1.1.0 `uqkdetheme` module, the same one hauler uses, instead of a copy of its own; behaviour is unchanged. CI checks every vendored uQ kit with uQ's single `scripts/check-uq-native.sh` and `uq/native.toml`, replacing the two diag check scripts.
 
