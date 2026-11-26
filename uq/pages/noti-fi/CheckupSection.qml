@@ -5,6 +5,7 @@ import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.uq.settings
 import "logic.js" as Logic
+import "reports.js" as Reports
 
 ColumnLayout {
     id: section
@@ -24,7 +25,7 @@ ColumnLayout {
             section.running = false;
             if (Logic.overlapped(result))
                 return;
-            section.report = Logic.parseDoctor(result);
+            section.report = Reports.parseDoctor(result);
         }));
     }
 
@@ -56,7 +57,7 @@ ColumnLayout {
 
     SettingRow {
         settingId: "check-up"
-        label: section.report ? Logic.summaryLine(section.report) : "Not run yet"
+        label: section.report ? Reports.summaryLine(section.report) : "Not run yet"
         highlight: section.host ? section.host.highlight : ""
         Layout.fillWidth: true
 

@@ -4,7 +4,7 @@ import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.uq.settings
-import "logic.js" as Logic
+import "reports.js" as Reports
 
 ColumnLayout {
     id: section
@@ -23,7 +23,7 @@ ColumnLayout {
         if (generation !== section.generation || (result && result.error === "already running"))
             return;
         section.loading = false;
-        const h = Logic.parseHistory(result, new Date());
+        const h = Reports.parseHistory(result, new Date());
         section.loaded = h.ok;
         section.problem = h.ok ? "" : h.message;
         section.rows = h.rows;

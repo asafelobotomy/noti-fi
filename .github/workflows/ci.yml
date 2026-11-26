@@ -45,6 +45,8 @@ jobs:
         run: tests/ci-daemon.sh
       - name: uQ's kits (uq/native.toml) are the pinned releases, and the problem codes match uq/diag/noti-fi.toml
         run: scripts/check-uq-native.sh
+      - name: Every source file is within 400 lines of code (uQ's uq-loc)
+        run: scripts/check-loc.sh
       - name: Formatting (rustfmt.toml is the house style)
         run: cargo fmt --all --check
       - name: Clippy (warnings fail the build)
