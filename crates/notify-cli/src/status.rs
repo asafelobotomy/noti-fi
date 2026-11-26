@@ -170,6 +170,21 @@ pub fn doctor(ctx: &Ctx) -> anyhow::Result<bool> {
                 if fb { None } else { Some("run: notify update") },
             );
         }
+        let stale = crate::payload::is_stale(&p.payload);
+        add(
+            "Install",
+            if stale { WARN } else { OK },
+            if stale {
+                format!(
+                    "daemon files: from {}, not this noti-fi ({})",
+                    crate::payload::stamped_version(&p.payload).unwrap_or_else(|| "an older version".into()),
+                    crate::payload::CURRENT
+                )
+            } else {
+                format!("daemon files: noti-fi {}'s", crate::payload::CURRENT)
+            },
+            if stale { Some("run: notify update (notifd also does this itself when it next starts)") } else { None },
+        );
         let jobs = p.jobs_unit.exists();
         add(
             "Install",
