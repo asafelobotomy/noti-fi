@@ -5,11 +5,14 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use zbus::blocking::Connection;
 use zbus::message::Header;
 use zbus::zvariant::OwnedValue;
 use zbus::{fdo, interface};
+
+use crate::burst::{Call, Recent};
 
 pub const NAME: &str = "org.freedesktop.Notifications";
 pub const PATH: &str = "/org/freedesktop/Notifications";
@@ -128,6 +131,8 @@ pub struct Front {
     pub inhibitions: Arc<Mutex<Inhibitions>>,
     /// Wakes the thread that tells notifd (and announces `Inhibited`).
     pub changed: Sender<()>,
+    /// Notifications sent a moment ago, so a burst of repeats becomes one (see `burst`).
+    pub recent: Mutex<Recent>,
 }
 
 impl Front {
@@ -162,6 +167,7 @@ impl Front {
     #[allow(clippy::too_many_arguments)]
     fn notify(
         &self,
+        #[zbus(header)] hdr: Header<'_>,
         app_name: String,
         replaces_id: u32,
         app_icon: String,
@@ -177,10 +183,21 @@ impl Front {
         if let Some(path) = image {
             hints.insert(IMAGE_HINT.into(), zbus::zvariant::Value::from(path).try_into().expect("a string is a valid value"));
         }
-        self.forward("Notify", &(app_name, replaces_id, app_icon, summary, body, actions, hints, expire_timeout))
+        let sender = hdr.sender().map(|s| s.to_string()).unwrap_or_default();
+        let hint = |k: &str| hints.get(k).and_then(|v| String::try_from(v.clone()).ok()).unwrap_or_default();
+        let (origin, desktop_entry) = (hint("x-kde-origin-name"), hint("desktop-entry"));
+        let call =
+            Call { sender: &sender, app_name: &app_name, summary: &summary, body: &body, actions: &actions, origin: &origin, desktop_entry: &desktop_entry };
+        // held until Quickshell answers, so a repeat that comes in meanwhile sees this one's id
+        let mut recent = self.recent.lock().unwrap_or_else(|e| e.into_inner());
+        let replaces_id = if replaces_id == 0 { recent.replaces(&call, Instant::now()) } else { replaces_id };
+        let id: u32 = self.forward("Notify", &(&app_name, replaces_id, app_icon, &summary, &body, &actions, hints, expire_timeout))?;
+        recent.sent(&call, id, Instant::now());
+        Ok(id)
     }
 
     fn close_notification(&self, id: u32) -> fdo::Result<()> {
+        self.recent.lock().unwrap_or_else(|e| e.into_inner()).closed(id);
         self.forward::<_, ()>("CloseNotification", &(id,))
     }
 

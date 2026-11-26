@@ -5,6 +5,7 @@
 //! signal (ActionInvoked, NotificationClosed, ...) is passed back, and `Inhibit` (which Quickshell does not have) is answered
 //! here. If Quickshell or the private bus stops, this stops too, and systemd starts the whole set again.
 
+mod burst;
 mod front;
 mod private;
 
@@ -186,7 +187,7 @@ pub fn serve(payload: &Path, qs: &Path) -> Result<()> {
 
     let inh = Arc::new(Mutex::new(Inhibitions::default()));
     let (changed, rx) = channel();
-    session.object_server().at(PATH, Front { inner: inner.clone(), inhibitions: inh.clone(), changed: changed.clone() })?;
+    session.object_server().at(PATH, Front { inner: inner.clone(), inhibitions: inh.clone(), changed: changed.clone(), recent: Default::default() })?;
     let (forwarding, watching) = (Arc::new(AtomicBool::new(false)), Arc::new(AtomicBool::new(false)));
     forward_signals(&inner, session.clone(), running(&forwarding))?;
     watch_departures(&session, inh.clone(), changed.clone(), running(&watching))?;
