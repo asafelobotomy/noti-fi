@@ -2,7 +2,8 @@ Tests for the Notifications page in uQ Settings (`uq/pages/noti-fi/`).
 
 ```
 logic.test.mjs     Node: logic.js, page.toml, what the page may send   node --test 'tests/uq/*.test.mjs'
-load-logic.mjs     loads logic.js (no Qt calls in it) for Node
+page.test.mjs      Node: reports.js (history, check-up, updates), what is shown, the QML and its words
+load-logic.mjs     loads logic.js and reports.js (no Qt calls in them; `.import`s followed) for Node
 toml-lite.mjs      the small TOML reader the Node tests use for page.toml
 tst_*.qml          QML: the page, tab by tab, against a fake ctx (needs Qt 6; CI runs it); PageHarness.qml is what they share
 stub/ FakeContext.qml tst_components.qml

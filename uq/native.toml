@@ -9,3 +9,7 @@ version = "1.0.1"
 files = ["crates/notify-diag/src/uq_diag.rs"]
 codes = "uq/diag/noti-fi.toml"
 sources = ["crates", "notifd"]
+
+[uq-loc]
+version = "1.0.0"
+files = ["scripts/check-loc.sh"]

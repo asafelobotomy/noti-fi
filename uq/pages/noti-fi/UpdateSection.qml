@@ -5,6 +5,7 @@ import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.uq.settings
 import "logic.js" as Logic
+import "reports.js" as Reports
 
 ColumnLayout {
     id: section
@@ -25,7 +26,7 @@ ColumnLayout {
         section.outcome = null;
         section.host.ctx.command.run("update-check", [], section.host.guard(result => {
             section.checking = false;
-            section.info = Logic.parseUpdate(result);
+            section.info = Reports.parseUpdate(result);
         }));
     }
 
@@ -38,7 +39,7 @@ ColumnLayout {
         section.last = null;
         section.outcome = null;
         section.host.ctx.command.stream("update", [], section.host.guard(ev => {
-            const p = Logic.progressOf(ev);
+            const p = Reports.progressOf(ev);
             if (p) {
                 section.fraction = p.fraction;
                 section.stepText = p.text;
@@ -50,7 +51,7 @@ ColumnLayout {
             // Cancel on the confirmation sheet changes nothing and says nothing.
             if (Logic.cancelled(done))
                 return;
-            section.outcome = Logic.updateOutcome(section.last, done);
+            section.outcome = Reports.updateOutcome(section.last, done);
             if (section.outcome.ok)
                 section.info = null;
         }));

@@ -6,6 +6,7 @@ import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.uq.settings
 import "logic.js" as Logic
+import "reports.js" as Reports
 
 SettingsPage {
     id: page
@@ -115,7 +116,7 @@ SettingsPage {
     function showRules(result) {
         if (Logic.overlapped(result))
             return;
-        page.rulesCheck = Logic.parseRules(result);
+        page.rulesCheck = Reports.parseRules(result);
     }
 
     // Read now, and again whenever the daemon saves its state or the rules file changes (page.toml `watch`).
