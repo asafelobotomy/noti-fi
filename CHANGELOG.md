@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.21.11
+
+- **One web notification is one popup again.** When a site shows the same notification several times in a burst (a backlog of push messages arriving together, or a tag shown again before the first was answered), Chromium-based browsers such as Brave send each as a new notification, keep only the last one's id and delete the others' icon files. notifd then showed a stack of identical popups, the older ones with a magenta checkerboard icon, and the browser never closed them. `notify serve` now sends a repeat that the same program sent within 2 s, with the same title, text, buttons and site, as a replacement of the first, and answers with the first one's id. Other programs (each `notify-send` is its own) and different text are never merged.
+- A popup whose icon file is gone (a browser deleted it) shows no icon instead of the checkerboard.
+
 ## 0.21.10
 
 - **Upgrading noti-fi with pacman or the AUR now updates the daemon.** A package upgrade replaced `notify` and the panel but not notifd's own files in `~/.local/share/notifd`, so notifd kept running the files of the version that first installed it (fixes such as 0.21.6's crash fix and 0.21.9's theme following never reached it). `notify serve` now replaces them with its own version's before Quickshell starts, keeping the old ones in `~/.local/share/notifd.prev` as `notify update` does, and records the version in `.noti-fi-version`. Files a version put there on purpose (`notify update --payload` from a checkout) are kept until another version starts. `notify doctor` (and uQ Settings' check-up) says when the daemon files are from another version; `NOTIFI-016` if they could not be replaced.

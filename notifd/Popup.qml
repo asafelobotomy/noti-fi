@@ -80,6 +80,12 @@ Rectangle {
         if (/^[A-Za-z0-9._+-]+$/.test(src)) return "image://icon/" + src
         return ""
     }
+    // The small icon: a file path Quickshell hands over as image://icon//path is loaded as the file, so a file that is gone (a
+    // browser deletes a notification's icon file once it replaces or closes it) shows no icon rather than the provider's checkerboard.
+    function smallIconSource(src) {
+        const s = iconSource(src)
+        return s.startsWith("image://icon//") ? "file://" + s.slice("image://icon/".length) : s
+    }
     // The large picture is a real image only: a file or the notification's own image data.
     // A theme icon name is left to the small icon, and the picture never goes through
     // image://icon. That provider calls QIcon off the GUI thread when the Image is
@@ -166,7 +172,7 @@ Rectangle {
             Layout.fillWidth: true
 
             Image {
-                source: card.notif ? card.iconSource(card.notif.image !== "" && !bigImage.visible && !card.hideText ? card.notif.image : card.notif.appIcon) : ""
+                source: card.notif ? card.smallIconSource(card.notif.image !== "" && !bigImage.visible && !card.hideText ? card.notif.image : card.notif.appIcon) : ""
                 sourceSize.width: 40; sourceSize.height: 40
                 Layout.preferredWidth: 40; Layout.preferredHeight: 40
                 visible: status === Image.Ready

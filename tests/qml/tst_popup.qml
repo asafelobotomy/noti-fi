@@ -47,6 +47,9 @@ Item {
             compare(card.pictureSource("/tmp/shot.png"), "file:///tmp/shot.png")
             compare(card.pictureSource("image://qsimage/1/2"), "image://qsimage/1/2")
             compare(card.iconSource("system-software-update"), "image://icon/system-software-update")
+            compare(card.smallIconSource("image://icon//tmp/scoped/icon.png"), "file:///tmp/scoped/icon.png")
+            compare(card.smallIconSource("system-software-update"), "image://icon/system-software-update")
+            compare(card.pictureSource("image://icon//tmp/scoped/icon.png"), "")
         }
 
         function test_tap_dismisses() {
