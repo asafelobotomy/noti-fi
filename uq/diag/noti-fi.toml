@@ -108,3 +108,10 @@ severity = "warn"
 title = "A notification was shown plainly"
 means = "notifd couldn't draw a notification the usual way (its picture or layout), so it showed a plain version instead."
 fix = "Usually nothing. If one app's notifications always look plain, copy a report from uQ Settings' Problems page."
+
+[[code]]
+id = "NOTIFI-016"
+severity = "warn"
+title = "notifd is running older daemon files"
+means = "noti-fi was updated, but notifd couldn't replace its own files with the new version's when it started, so it is still running the old ones."
+fix = "Run `notify update`. If that fails too, check that ~/.local/share/notifd is yours and writable."

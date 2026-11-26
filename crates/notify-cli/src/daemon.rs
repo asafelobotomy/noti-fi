@@ -38,7 +38,21 @@ pub fn try_connect(dev: bool) -> Option<Client> {
 
 /// `notify serve`: run notifd (the installed files, or --payload) on a private bus, owning the notification name in front of it.
 pub fn serve(ctx: &crate::ctx::Ctx) -> Result<()> {
-    let payload = ctx.payload_dir.clone().unwrap_or_else(|| paths().payload);
+    let p = paths();
+    let payload = ctx.payload_dir.clone().unwrap_or_else(|| p.payload.clone());
+    // A package upgrade replaces this binary but not the daemon files it installed: bring them up to this version
+    // before Quickshell loads them (only the installed folder; a --payload checkout is never touched).
+    if payload == p.payload {
+        match crate::payload::refresh_installed(&payload, &p.prev) {
+            Ok(Some(from)) => tracing::info!(
+                "the daemon files were from {from}; installed noti-fi {}'s (the previous ones are in {})",
+                crate::payload::CURRENT,
+                p.prev.display()
+            ),
+            Ok(None) => {}
+            Err(e) => tracing::warn!("[NOTIFI-016] could not update the daemon files, running the installed ones: {e:#}"),
+        }
+    }
     let qs = crate::sys::which("qs").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("/usr/bin/qs"));
     notify_bus::serve(&payload, &qs)
 }

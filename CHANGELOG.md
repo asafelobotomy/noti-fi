@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.21.10
+
+- **Upgrading noti-fi with pacman or the AUR now updates the daemon.** A package upgrade replaced `notify` and the panel but not notifd's own files in `~/.local/share/notifd`, so notifd kept running the files of the version that first installed it (fixes such as 0.21.6's crash fix and 0.21.9's theme following never reached it). `notify serve` now replaces them with its own version's before Quickshell starts, keeping the old ones in `~/.local/share/notifd.prev` as `notify update` does, and records the version in `.noti-fi-version`. Files a version put there on purpose (`notify update --payload` from a checkout) are kept until another version starts. `notify doctor` (and uQ Settings' check-up) says when the daemon files are from another version; `NOTIFI-016` if they could not be replaced.
+
 ## 0.21.9
 
 - **The panel follows the uQ theme through uQ's shared code.** The panel's KDE colour-scheme following (`cpp/theme.cpp`) is now uQ's uq-theme 1.1.0 `uqkdetheme` module, the same one hauler uses, instead of a copy of its own; behaviour is unchanged. CI checks every vendored uQ kit with uQ's single `scripts/check-uq-native.sh` and `uq/native.toml`, replacing the two diag check scripts.
