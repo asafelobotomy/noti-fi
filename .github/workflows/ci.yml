@@ -15,6 +15,7 @@ concurrency:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 55
     container:                         # Manjaro/Arch is the target; Qt 6 and cxx-qt build against its libraries
       image: archlinux:latest
       options: --cap-add=SYS_NICE        # labwc ships with file capability cap_sys_nice (since 0.20.3-2); without it exec fails
@@ -55,6 +56,7 @@ jobs:
   # noti-fi's page in uQ Settings (uq/pages/noti-fi): its Node and QML tests, the packaging, and uQ's own checker of the folder.
   uq:
     runs-on: ubuntu-latest
+    timeout-minutes: 55
     container: archlinux:latest        # the same container as above: qt6-declarative brings Qt's QML test runner
     env:
       # The uQ release whose `uqctl` checks the page (uq_api 3 is in every release since v0.3.0; v0.3.35 checks uq/diag/).
@@ -87,6 +89,7 @@ jobs:
 
   deny:
     runs-on: ubuntu-latest
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: EmbarkStudios/cargo-deny-action@17aeb3c839e42274e2b8adf721c8c65edfdc74dd # v2
